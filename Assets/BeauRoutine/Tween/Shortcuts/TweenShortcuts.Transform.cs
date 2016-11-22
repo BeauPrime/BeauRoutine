@@ -1,0 +1,754 @@
+﻿/*
+ * Copyright (C) 2016. Filament Games, LLC. All rights reserved.
+ * Author:  Alex Beauchesne
+ * Date:    21 Nov 2016
+ * 
+ * File:    TweenShortcuts.Transform.cs
+ * Purpose: Extension methods for creating Tweens affecting
+ *          properties on a Transform.
+*/
+
+using BeauRoutine.Internal;
+using UnityEngine;
+
+namespace BeauRoutine
+{
+    /// <summary>
+    /// Contains helper functions for generating tweens.
+    /// </summary>
+    static public partial class TweenShortcuts
+    {
+        #region Position
+
+        private sealed class TweenData_Transform_PositionFixed : ITweenData
+        {
+            private Transform m_Transform;
+            private Vector3 m_Target;
+            private Space m_Space;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+
+            public TweenData_Transform_PositionFixed(Transform inTransform, Vector3 inTarget, Space inSpace, Axis inAxis)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Space = inSpace;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = (m_Space == Space.World ? m_Transform.position : m_Transform.localPosition);
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 final = new Vector3(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent,
+                    m_Start.z + m_Delta.z * inPercent);
+
+                m_Transform.SetPosition(final, m_Axis, m_Space);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Position (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_Transform_PositionDynamic : ITweenData
+        {
+            private Transform m_Transform;
+            private Transform m_Target;
+            private Space m_Space;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+
+            public TweenData_Transform_PositionDynamic(Transform inTransform, Transform inTarget, Space inSpace, Axis inAxis)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Space = inSpace;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = (m_Space == Space.World ? m_Transform.position : m_Transform.localPosition);
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 target = (m_Space == Space.World ? m_Target.position : m_Target.localPosition);
+                Vector3 delta = target - m_Start;
+                Vector3 final = new Vector3(
+                    m_Start.x + delta.x * inPercent,
+                    m_Start.y + delta.y * inPercent,
+                    m_Start.z + delta.z * inPercent);
+
+                m_Transform.SetPosition(final, m_Axis, m_Space);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Position (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Moves the Transform to another position over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, inTarget, inSpace, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Moves the Transform to another position over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, inTarget, inSpace, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Moves the Transform to another position over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, float inPosition, float inTime, Axis inAxis, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, new Vector3(inPosition, inPosition, inPosition), inSpace, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Moves the Transform to another position over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, float inPosition, TweenSettings inSettings, Axis inAxis, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, new Vector3(inPosition, inPosition, inPosition), inSpace, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Moves the Transform to the position of another Transform over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, Transform inTarget, float inTime, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionDynamic(inTransform, inTarget, inSpace, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Moves the Transform to the position of another Transform over time.
+        /// </summary>
+        static public Tween MoveTo(this Transform inTransform, Transform inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_PositionDynamic(inTransform, inTarget, inSpace, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Moves the Transform to another position with the given average speed.
+        /// </summary>
+        static public Tween MoveToWithSpeed(this Transform inTransform, Vector3 inTarget, float inSpeed, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            float distance = (inTarget - (inSpace == Space.World ? inTransform.position : inTransform.localPosition)).magnitude;
+            return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, inTarget, inSpace, inAxis), distance / inSpeed);
+        }
+
+        #endregion
+
+        #region Scale
+
+        private sealed class TweenData_Transform_ScaleFixed : ITweenData
+        {
+            private Transform m_Transform;
+            private Vector3 m_Target;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+
+            public TweenData_Transform_ScaleFixed(Transform inTransform, Vector3 inTarget, Axis inAxis)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Transform.localScale;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 final = new Vector3(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent,
+                    m_Start.z + m_Delta.z * inPercent);
+
+                m_Transform.SetScale(final, m_Axis);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Scale (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_Transform_ScaleDynamic : ITweenData
+        {
+            private Transform m_Transform;
+            private Transform m_Target;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+
+            public TweenData_Transform_ScaleDynamic(Transform inTransform, Transform inTarget, Axis inAxis)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Transform.localScale;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 target = m_Target.localScale;
+                Vector3 delta = target - m_Start;
+                Vector3 final = new Vector3(
+                    m_Start.x + delta.x * inPercent,
+                    m_Start.y + delta.y * inPercent,
+                    m_Start.z + delta.z * inPercent);
+
+                m_Transform.SetScale(final, m_Axis);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Scale (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleFixed(inTransform, inTarget, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleFixed(inTransform, inTarget, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, float inTarget, float inTime, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleFixed(inTransform, new Vector3(inTarget, inTarget, inTarget), inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, float inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleFixed(inTransform, new Vector3(inTarget, inTarget, inTarget), inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Scales the Transform to the scale of another Transform over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, Transform inTarget, float inTime, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleDynamic(inTransform, inTarget, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the Transform to the scale of another Transform over time.
+        /// </summary>
+        static public Tween ScaleTo(this Transform inTransform, Transform inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_ScaleDynamic(inTransform, inTarget, inAxis), inSettings);
+        }
+
+        #endregion
+
+        #region Rotation
+
+        private sealed class TweenData_Transform_RotationFixed : ITweenData
+        {
+            private Transform m_Transform;
+            private Quaternion m_Target;
+            private Space m_Space;
+
+            private Quaternion m_Start;
+
+            public TweenData_Transform_RotationFixed(Transform inTransform, Quaternion inTarget, Space inSpace)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Space = inSpace;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = (m_Space == Space.World ? m_Transform.rotation : m_Transform.localRotation);
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Quaternion final = UnityEngine.Quaternion.SlerpUnclamped(m_Start, m_Target, inPercent);
+
+                switch (m_Space)
+                {
+                    case Space.Self:
+                        m_Transform.localRotation = final;
+                        break;
+                    case Space.World:
+                        m_Transform.rotation = final;
+                        break;
+                }
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Rotation (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_Transform_RotationDynamic : ITweenData
+        {
+            private Transform m_Transform;
+            private Transform m_Target;
+            private Space m_Space;
+
+            private Quaternion m_Start;
+
+            public TweenData_Transform_RotationDynamic(Transform inTransform, Transform inTarget, Space inSpace)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Space = inSpace;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = (m_Space == Space.World ? m_Transform.rotation : m_Transform.localRotation);
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Quaternion target = (m_Space == Space.World ? m_Target.rotation : m_Target.localRotation);
+                Quaternion final = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
+
+                switch (m_Space)
+                {
+                    case Space.Self:
+                        m_Transform.localRotation = final;
+                        break;
+                    case Space.World:
+                        m_Transform.rotation = final;
+                        break;
+                }
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Rotation (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another orientation over time.
+        /// </summary>
+        static public Tween RotateQuaternionTo(this Transform inTransform, Quaternion inTarget, float inTime, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_RotationFixed(inTransform, inTarget, inSpace), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another orientation over time.
+        /// </summary>
+        static public Tween RotateQuaternionTo(this Transform inTransform, Quaternion inTarget, TweenSettings inSettings, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_RotationFixed(inTransform, inTarget, inSpace), inSettings);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to the orientation of another Transform over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, Transform inTarget, float inTime, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_RotationDynamic(inTransform, inTarget, inSpace), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to the orientation of another Transform over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, Transform inTarget, TweenSettings inSettings, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_RotationDynamic(inTransform, inTarget, inSpace), inSettings);
+        }
+
+        #endregion
+
+        #region EulerRotation
+
+        private sealed class TweenData_Transform_EulerRotationFixed : ITweenData
+        {
+            private Transform m_Transform;
+            private Vector3 m_Target;
+            private Space m_Space;
+            private Axis m_Axis;
+            private AngleMode m_Mode;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+            private EulerStorage m_Record;
+            private int m_RecordID;
+
+            public TweenData_Transform_EulerRotationFixed(Transform inTransform, Vector3 inTarget, Space inSpace, Axis inAxis, AngleMode inMode)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Space = inSpace;
+                m_Axis = inAxis;
+                m_Mode = inMode;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Record = EulerStorage.AddTransform(m_Transform);
+                m_RecordID = m_Transform.GetInstanceID();
+
+                m_Start = m_Record.Get(m_Space);
+                m_Delta = m_Target - m_Start;
+
+                if (m_Mode != AngleMode.Absolute)
+                    WrapEuler(ref m_Delta);
+            }
+
+            public void OnTweenEnd()
+            {
+                EulerStorage.RemoveTransform(m_RecordID);
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 tweened = m_Start + m_Delta * inPercent;
+                Vector3 final = m_Record.Get(m_Space).CopyFrom(tweened, m_Axis);
+                WrapEuler(ref final);
+
+                m_Transform.SetRotation(final, Axis.XYZ, m_Space);
+                m_Record.Set(m_Space, final);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: Euler Rotation (Fixed)";
+            }
+
+            static private void WrapEuler(ref Vector3 ioEuler)
+            {
+                WrapAngle(ref ioEuler.x);
+                WrapAngle(ref ioEuler.y);
+                WrapAngle(ref ioEuler.z);
+            }
+
+            static private void WrapAngle(ref float ioAngle)
+            {
+                while (ioAngle >= 180)
+                    ioAngle -= 360;
+                while (ioAngle < -180)
+                    ioAngle += 360;
+            }
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another euler orientation over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ, Space inSpace = Space.World, AngleMode inMode = AngleMode.Shortest)
+        {
+            return Tween.Create(new TweenData_Transform_EulerRotationFixed(inTransform, inTarget, inSpace, inAxis, inMode), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another euler orientation over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ, Space inSpace = Space.World, AngleMode inMode = AngleMode.Shortest)
+        {
+            return Tween.Create(new TweenData_Transform_EulerRotationFixed(inTransform, inTarget, inSpace, inAxis, inMode), inSettings);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another euler orientation over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, float inTarget, float inTime, Axis inAxis, Space inSpace = Space.World, AngleMode inMode = AngleMode.Shortest)
+        {
+            return Tween.Create(new TweenData_Transform_EulerRotationFixed(inTransform, new Vector3(inTarget, inTarget, inTarget), inSpace, inAxis, inMode), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to another euler orientation over time.
+        /// </summary>
+        static public Tween RotateTo(this Transform inTransform, float inTarget, TweenSettings inSettings, Axis inAxis, Space inSpace = Space.World, AngleMode inMode = AngleMode.Shortest)
+        {
+            return Tween.Create(new TweenData_Transform_EulerRotationFixed(inTransform, new Vector3(inTarget, inTarget, inTarget), inSpace, inAxis, inMode), inSettings);
+        }
+
+        #endregion
+
+        #region LookAt
+
+        private sealed class TweenData_Transform_LookAtFixed : ITweenData
+        {
+            private Transform m_Transform;
+            private Vector3 m_Target;
+
+            private Quaternion m_Start;
+
+            public TweenData_Transform_LookAtFixed(Transform inTransform, Vector3 inTarget)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Transform.rotation;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Quaternion target = UnityEngine.Quaternion.LookRotation(m_Target - m_Transform.position);
+                m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: LookAt (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_Transform_LookAtDynamic : ITweenData
+        {
+            private Transform m_Transform;
+            private Transform m_Target;
+
+            private Quaternion m_Start;
+
+            public TweenData_Transform_LookAtDynamic(Transform inTransform, Transform inTarget)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Transform.rotation;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Quaternion target = UnityEngine.Quaternion.LookRotation(m_Target.position - m_Transform.position);
+                m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: LookAt (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Rotates the Transform to look at the given point over time.
+        /// </summary>
+        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, float inTime)
+        {
+            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to look at the given point over time.
+        /// </summary>
+        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget), inSettings);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to look at another Transform over time.
+        /// </summary>
+        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, float inTime)
+        {
+            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget), inTime);
+        }
+
+        /// <summary>
+        /// Rotates the Transform to look at another Transform over time.
+        /// </summary>
+        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget), inSettings);
+        }
+
+        #endregion
+
+        #region Transform
+
+        private sealed class TweenData_Transform_TransformState : ITweenData
+        {
+            private Transform m_Transform;
+            private TransformState m_Target;
+            private TransformProperties m_Properties;
+
+            private TransformState m_Start;
+            private int m_RecordID;
+
+            public TweenData_Transform_TransformState(Transform inTransform, TransformState inTarget, TransformProperties inProperties)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Properties = inProperties;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new TransformState(m_Transform, m_Target.Space);
+
+                if ((m_Properties & TransformProperties.Rotation) != 0)
+                {
+                    EulerStorage.AddTransform(m_Transform);
+                    m_RecordID = m_Transform.GetInstanceID();
+                }
+            }
+
+            public void OnTweenEnd()
+            {
+                if ((m_Properties & TransformProperties.Rotation) != 0)
+                    EulerStorage.RemoveTransform(m_RecordID);
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                TransformState.Lerp(m_Start, m_Target, inPercent).Apply(m_Transform, m_Properties);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: TransformState (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_Transform_Transform : ITweenData
+        {
+            private Transform m_Transform;
+            private Transform m_Target;
+            private TransformProperties m_Properties;
+
+            private TransformState m_Start;
+            private TransformState m_End;
+
+            private int m_RecordID;
+
+            public TweenData_Transform_Transform(Transform inTransform, Transform inTarget, Space inSpace, TransformProperties inProperties)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Properties = inProperties;
+                m_End = new TransformState(inTarget, inSpace);
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new TransformState(m_Transform, m_End.Space);
+                if ((m_Properties & TransformProperties.Rotation) != 0)
+                {
+                    EulerStorage.AddTransform(m_Transform);
+                    m_RecordID = m_Transform.GetInstanceID();
+                }
+            }
+
+            public void OnTweenEnd()
+            {
+                if ((m_Properties & TransformProperties.Rotation) != 0)
+                    EulerStorage.RemoveTransform(m_RecordID);
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_End.Refresh(m_Target, m_Properties);
+                TransformState.Lerp(m_Start, m_End, inPercent).Apply(m_Transform, m_Properties);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: TransformState (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Transforms the Transform to another Transform over time.
+        /// </summary>
+        static public Tween TransformTo(this Transform inTransform, TransformState inTarget, float inTime, TransformProperties inProperties = TransformProperties.All)
+        {
+            return Tween.Create(new TweenData_Transform_TransformState(inTransform, inTarget, inProperties), inTime);
+        }
+
+        /// <summary>
+        /// Transforms the Transform to another Transform over time.
+        /// </summary>
+        static public Tween TransformTo(this Transform inTransform, TransformState inTarget, TweenSettings inSettings, TransformProperties inProperties = TransformProperties.All)
+        {
+            return Tween.Create(new TweenData_Transform_TransformState(inTransform, inTarget, inProperties), inSettings);
+        }
+
+        /// <summary>
+        /// Transforms the Transform to another Transform over time.
+        /// </summary>
+        static public Tween TransformTo(this Transform inTransform, Transform inTarget, float inTime, TransformProperties inProperties = TransformProperties.All, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_Transform(inTransform, inTarget, inSpace, inProperties), inTime);
+        }
+
+        /// <summary>
+        /// Transforms the Transform to another Transform over time.
+        /// </summary>
+        static public Tween TransformTo(this Transform inTransform, Transform inTarget, TweenSettings inSettings, TransformProperties inProperties = TransformProperties.All, Space inSpace = Space.World)
+        {
+            return Tween.Create(new TweenData_Transform_Transform(inTransform, inTarget, inSpace, inProperties), inSettings);
+        }
+
+        #endregion
+    }
+}
