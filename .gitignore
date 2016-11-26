@@ -27,3 +27,4 @@ sysinfo.txt
 
 # Builds
 *.apk
+/dist

@@ -49,7 +49,6 @@ namespace BeauRoutine
 
             private float m_TimeScale = 1.0f;
 
-            private uint m_Index;
             private byte m_Counter = 0;
 
             private event Action m_OnComplete;
@@ -57,8 +56,13 @@ namespace BeauRoutine
 
             public Fiber(uint inIndex)
             {
-                m_Index = inIndex;
+                Index = inIndex;
             }
+
+            /// <summary>
+            /// Index in the Fiber Table.
+            /// </summary>
+            public readonly uint Index;
 
             #region Lifecycle
 
@@ -69,7 +73,7 @@ namespace BeauRoutine
             {
                 m_Counter = (byte)(m_Counter == byte.MaxValue ? 1 : m_Counter + 1);
 
-                m_Handle = new Routine(m_Index, m_Counter);
+                m_Handle = new Routine(Index, m_Counter);
                 m_Host = inHost;
 
                 m_HostGameObject = m_Host.gameObject;
@@ -79,13 +83,12 @@ namespace BeauRoutine
                 m_UnityWait = null;
                 m_Name = null;
 
-                m_GroupMask = m_HostIdentity == null ? 0 : 1 << m_HostIdentity.Group;
+                m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
 
                 m_Flags = inChained ? FLAG_CHAINED : (byte)0;
 
                 m_TimeScale = 1.0f;
 
-                ClearStack();
                 m_Stack.Push(inStart);
 
                 IRoutineEnumerator callback = inStart as IRoutineEnumerator;
@@ -114,6 +117,7 @@ namespace BeauRoutine
                 }
 
                 bool bKilled = m_Stack.Count > 0;
+                bool bChained = (m_Flags & FLAG_CHAINED) != 0;
 
                 ClearStack();
 
@@ -127,7 +131,9 @@ namespace BeauRoutine
 
                 m_TimeScale = 1.0f;
 
-                s_FreeFibers.AddFirst(this);
+                if (!bChained)
+                    s_Table.RemoveActiveFiber(this);
+                s_Table.AddFreeFiber(this);
 
                 if (bKilled)
                 {

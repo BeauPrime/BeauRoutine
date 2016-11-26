@@ -12,9 +12,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-#if UNITY_EDITOR
 using System.Diagnostics;
-#endif
 
 namespace BeauRoutine
 {
@@ -26,20 +24,17 @@ namespace BeauRoutine
 
         static Routine()
         {
-            Initialize();
+            InitializeInternal();
         }
 
-        static private void Initialize()
+        static private void InitializeInternal()
         {
             if (s_Initialized)
                 return;
             s_Initialized = true;
 
-            s_FiberTable = new Fiber[0];
-            s_ActiveFibers = new LinkedList<Fiber>();
-            s_FreeFibers = new LinkedList<Fiber>();
-
-            PopulateFibers(16);
+            s_Table = new FiberTable();
+            s_Table.SetCapacity(16);
             ResetDeltaTime();
             InitializeGroupTimeScales();
         }
@@ -81,7 +76,7 @@ namespace BeauRoutine
                 // Read in the delta time
                 ResetDeltaTime();
 
-                int fibersToUpdate = s_ActiveFibers.Count;
+                int fibersToUpdate = s_Table.TotalActive;
 
                 if (s_Paused || fibersToUpdate == 0)
                     return;
@@ -96,16 +91,16 @@ namespace BeauRoutine
                 // Traverse the active fiber list
                 // but only for the nodes that existed
                 // at the beginning of this frame.
-                var node = s_ActiveFibers.First;
-                while(fibersToUpdate-- > 0 && node != null)
+                int next = 0;
+                Fiber fiber = s_Table.StartActive(ref next);
+                while(fibersToUpdate-- > 0 && fiber != null)
                 {
-                    var nextNode = node.Next;
-                    Fiber fiber = node.Value;
-                    if (!fiber.Run())
-                        s_ActiveFibers.Remove(node);
-                    node = nextNode;
-                    ScaleDeltaTime(1);
+                    Fiber nextFiber = s_Table.Traverse(ref next);
+                    fiber.Run();
+                    fiber = nextFiber;
                 }
+
+                ResetDeltaTimeScale();
 
 #if UNITY_EDITOR
                 s_UpdateTimer.Stop();
@@ -131,12 +126,9 @@ namespace BeauRoutine
 
         #endregion
 
-        #region Fiber Lists
+        #region Fibers
 
-        static private Fiber[] s_FiberTable;
-
-        static private LinkedList<Fiber> s_ActiveFibers;
-        static private LinkedList<Fiber> s_FreeFibers;
+        static private FiberTable s_Table;
 
 #if UNITY_EDITOR
         static private int s_MaxConcurrent;
@@ -154,8 +146,8 @@ namespace BeauRoutine
             if (inRoutine.m_Value == 0)
                 return null;
 
-            uint index = (inRoutine.m_Value & INDEX_MASK);
-            Fiber fiber = s_FiberTable[index];
+            int index = (int)(inRoutine.m_Value & INDEX_MASK);
+            Fiber fiber = s_Table[index];
             return (fiber.HasHandle(inRoutine) ? fiber : null);
         }
 
@@ -173,10 +165,10 @@ namespace BeauRoutine
             Routine handle;
             bool needSnapshot;
             Fiber fiber = CreateFiber(inHost, inStart, false, out handle, out needSnapshot);
-            s_ActiveFibers.AddLast(fiber);
+            s_Table.AddActiveFiber(fiber);
 
 #if UNITY_EDITOR
-            if (needSnapshot)
+            if (needSnapshot && s_SnapshotEnabled)
                 s_Snapshot = Editor.GetRoutineStats();
 #endif
 
@@ -193,7 +185,7 @@ namespace BeauRoutine
             Fiber fiber = CreateFiber(s_Manager, inStart, true, out handle, out needSnapshot);
 
 #if UNITY_EDITOR
-            if (needSnapshot)
+            if (needSnapshot && s_SnapshotEnabled)
                 s_Snapshot = Editor.GetRoutineStats();
 #endif
 
@@ -204,23 +196,24 @@ namespace BeauRoutine
         // Will expand the fiber table if necessary.
         static private Fiber CreateFiber(MonoBehaviour inHost, IEnumerator inStart, bool inbChained, out Routine outHandle, out bool outNeedSnapshot)
         {
-            if (s_FreeFibers.Count == 0)
-                PopulateFibers(s_FiberTable.Length == 0 ? 16 : s_FiberTable.Length * 2);
-
-            Fiber fiber = s_FreeFibers.First.Value;
-            s_FreeFibers.RemoveFirst();
+            Fiber fiber = s_Table.GetFreeFiber();
             outHandle = fiber.Initialize(inHost, inStart, inbChained);
 
 #if UNITY_EDITOR
-            int running = s_FiberTable.Length - s_FreeFibers.Count;
-            if (running > s_MaxConcurrent)
-            {
-                s_MaxConcurrent = running;
-                outNeedSnapshot = true;
-            }
+            if (!s_SnapshotEnabled)
+                outNeedSnapshot = false;
             else
             {
-                outNeedSnapshot = false;
+                int running = s_Table.TotalRunning;
+                if (running > s_MaxConcurrent)
+                {
+                    s_MaxConcurrent = running;
+                    outNeedSnapshot = true;
+                }
+                else
+                {
+                    outNeedSnapshot = false;
+                }
             }
 #else
                 outNeedSnapshot = false;
@@ -229,22 +222,7 @@ namespace BeauRoutine
             return fiber;
         }
 
-        static private void PopulateFibers(int inDesiredAmount)
-        {
-            int currentCount = s_FiberTable.Length;
-            if (currentCount >= inDesiredAmount)
-                return;
-            if (inDesiredAmount > INDEX_MASK)
-                throw new IndexOutOfRangeException("Routine limit exceeded. Cannot have more than " + (INDEX_MASK + 1).ToString() + " running concurrently.");
-
-            Array.Resize(ref s_FiberTable, inDesiredAmount);
-            for(int i = currentCount; i < inDesiredAmount; ++i)
-            {
-                Fiber fiber = new Fiber((uint)i);
-                s_FiberTable[i] = fiber;
-                s_FreeFibers.AddLast(fiber);
-            }
-        }
+        
 
         #endregion
 
@@ -332,12 +310,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(MonoBehaviour inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 if (fiber.HasHost(inHost))
                 {
                     fiber.Stop();
@@ -345,13 +322,10 @@ namespace BeauRoutine
                     // If we aren't updating right now,
                     // we can freely dispose of the routine.
                     if (!s_Updating)
-                    {
                         fiber.Run();
-                        s_ActiveFibers.Remove(node);
-                    }
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -361,12 +335,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(MonoBehaviour inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                 {
                     fiber.Stop();
@@ -374,13 +347,10 @@ namespace BeauRoutine
                     // If we aren't updating right now,
                     // we can freely dispose of the routine.
                     if (!s_Updating)
-                    {
                         fiber.Run();
-                        s_ActiveFibers.Remove(node);
-                    }
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -390,12 +360,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(GameObject inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 if (fiber.HasHost(inHost))
                 {
                     fiber.Stop();
@@ -405,11 +374,10 @@ namespace BeauRoutine
                     if (!s_Updating)
                     {
                         fiber.Run();
-                        s_ActiveFibers.Remove(node);
                     }
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -419,12 +387,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(GameObject inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                 {
                     fiber.Stop();
@@ -434,11 +401,10 @@ namespace BeauRoutine
                     if (!s_Updating)
                     {
                         fiber.Run();
-                        s_ActiveFibers.Remove(node);
                     }
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -447,12 +413,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll()
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 fiber.Stop();
 
                 // If we aren't updating right now,
@@ -460,10 +425,9 @@ namespace BeauRoutine
                 if (!s_Updating)
                 {
                     fiber.Run();
-                    s_ActiveFibers.Remove(node);
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -472,12 +436,11 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                var nextNode = node.Next;
-                Fiber fiber = node.Value;
-
+                Fiber nextFiber = s_Table.Traverse(ref next);
                 if (fiber.HasName(inName))
                 {
                     fiber.Stop();
@@ -487,11 +450,10 @@ namespace BeauRoutine
                     if (!s_Updating)
                     {
                         fiber.Run();
-                        s_ActiveFibers.Remove(node);
                     }
                 }
 
-                node = nextNode;
+                fiber = nextFiber;
             }
         }
 
@@ -504,13 +466,13 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(MonoBehaviour inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                     fiber.Pause();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -519,13 +481,13 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(MonoBehaviour inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                     fiber.Pause();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -535,13 +497,13 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(GameObject inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                     fiber.Pause();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -551,13 +513,13 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(GameObject inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                     fiber.Pause();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -574,13 +536,13 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasName(inName))
                     fiber.Pause();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -593,13 +555,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(MonoBehaviour inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                     fiber.Resume();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -608,13 +570,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(MonoBehaviour inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                     fiber.Resume();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -624,13 +586,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(GameObject inHost)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                     fiber.Resume();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -640,13 +602,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(GameObject inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                     fiber.Resume();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -663,13 +625,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasName(inName))
                     fiber.Resume();
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -683,17 +645,17 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(MonoBehaviour inHost, ref ICollection<Routine> ioRoutines)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                 {
                     if (ioRoutines == null)
                         ioRoutines = new List<Routine>();
                     ioRoutines.Add(fiber.GetHandle());
                 }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -703,17 +665,17 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(MonoBehaviour inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                 {
                     if (ioRoutines == null)
                         ioRoutines = new List<Routine>();
                     ioRoutines.Add(fiber.GetHandle());
                 }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -723,15 +685,13 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(MonoBehaviour inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
-                {
                     return fiber.GetHandle();
-                }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
             return Routine.Null;
         }
@@ -742,17 +702,17 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(GameObject inHost, ref ICollection<Routine> ioRoutines)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost))
                 {
                     if (ioRoutines == null)
                         ioRoutines = new List<Routine>();
                     ioRoutines.Add(fiber.GetHandle());
                 }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -762,17 +722,17 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(GameObject inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
                 {
                     if (ioRoutines == null)
                         ioRoutines = new List<Routine>();
                     ioRoutines.Add(fiber.GetHandle());
                 }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -781,15 +741,13 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(GameObject inHost, string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasHost(inHost) && fiber.HasName(inName))
-                {
                     return fiber.GetHandle();
-                }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
             return Routine.Null;
         }
@@ -800,17 +758,17 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(string inName, ref ICollection<Routine> ioRoutines)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasName(inName))
                 {
                     if (ioRoutines == null)
                         ioRoutines = new List<Routine>();
                     ioRoutines.Add(fiber.GetHandle());
                 }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
         }
 
@@ -819,20 +777,60 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(string inName)
         {
-            var node = s_ActiveFibers.First;
-            while (node != null)
+            int next = 0;
+            Fiber fiber = s_Table.StartActive(ref next);
+            while (fiber != null)
             {
-                Fiber fiber = node.Value;
                 if (fiber.HasName(inName))
-                {
                     return fiber.GetHandle();
-                }
-                node = node.Next;
+                fiber = s_Table.Traverse(ref next);
             }
             return Routine.Null;
         }
 
         #endregion
+
+        #endregion
+
+        #region Global Settings
+
+#if UNITY_EDITOR
+        static private bool s_SnapshotEnabled = true;
+#endif
+
+        /// <summary>
+        /// Initializes the Routine system.
+        /// </summary>
+        static public void Initialize()
+        {
+            InitializeInternal();
+            InitializeManager();
+        }
+
+        /// <summary>
+        /// Sets the minimum number of Routines that
+        /// can be run concurrently without incurring
+        /// an additional GC cost.
+        /// </summary>
+        static public void SetCapacity(int inCapacity)
+        {
+            s_Table.SetCapacity(inCapacity);
+        }
+
+        /// <summary>
+        /// Enables/disables snapshotting.
+        /// A snapshot is created whenever a new
+        /// max number of concurrent routines is set.
+        /// </summary>
+        [Conditional("UNITY_EDITOR")]
+        static public void SetSnapshotEnabled(bool inbEnabled)
+        {
+#if UNITY_EDITOR
+            s_SnapshotEnabled = inbEnabled;
+            if (!s_SnapshotEnabled)
+                s_Snapshot = null;
+#endif
+        }
 
         #endregion
     }

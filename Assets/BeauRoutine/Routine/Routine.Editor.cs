@@ -32,18 +32,18 @@ namespace BeauRoutine
             /// </summary>
             static public RoutineStats[] GetRoutineStats()
             {
-                if (s_ActiveFibers == null || s_ActiveFibers.Count == 0)
+                if (s_Table == null || s_Table.TotalActive == 0)
                     return null;
 
-                RoutineStats[] stats = new RoutineStats[s_ActiveFibers.Count];
+                RoutineStats[] stats = new RoutineStats[s_Table.TotalActive];
 
-                var node = s_ActiveFibers.First;
+                int next = 0;
+                Fiber fiber = s_Table.StartActive(ref next);
                 int i = 0;
-                while (node != null)
+                while (fiber != null)
                 {
-                    Fiber fiber = node.Value;
                     stats[i++] = fiber.GetStats();
-                    node = node.Next;
+                    fiber = s_Table.Traverse(ref next);
                 }
 
                 return stats;
@@ -56,8 +56,8 @@ namespace BeauRoutine
             static public GlobalStats GetGlobalStats()
             {
                 GlobalStats stats = new GlobalStats();
-                stats.Running = s_FiberTable.Length - s_FreeFibers.Count;
-                stats.Capacity = s_FiberTable.Length;
+                stats.Running = s_Table.TotalRunning;
+                stats.Capacity = s_Table.TotalCapacity;
                 stats.Max = s_MaxConcurrent;
                 stats.AvgMillisecs = (s_UpdateSamples == 0 ? 0 : (s_TotalUpdateTime / 10000f) / s_UpdateSamples);
                 stats.MaxSnapshot = s_Snapshot;

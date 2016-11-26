@@ -142,6 +142,12 @@ namespace BeauRoutine
         {
             s_ScaledDeltaTime = s_RawDeltaTime * inScale;
         }
+        
+        // Resets the scaling on DeltaTime.
+        static private void ResetDeltaTimeScale()
+        {
+            s_ScaledDeltaTime = s_RawDeltaTime;
+        }
 
         #endregion
     }

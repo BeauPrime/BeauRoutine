@@ -30,6 +30,8 @@ namespace BeauRoutine
     [AttributeUsage(AttributeTargets.Enum, AllowMultiple=false, Inherited=false)]
     public sealed class RoutineGroupEnum : Attribute
     {
+        #if UNITY_EDITOR
+
         static private Type s_Type;
         static private bool s_Initialized = false;
 
@@ -69,7 +71,6 @@ namespace BeauRoutine
 
         #region Editor
 
-#if UNITY_EDITOR
         [CustomPropertyDrawer(typeof(RoutineGroupRefAttribute), true)]
         private class Editor : PropertyDrawer
         {
@@ -103,8 +104,9 @@ namespace BeauRoutine
                 EditorGUI.EndProperty();
             }
         }
-#endif
 
         #endregion
+
+#endif
     }
 }

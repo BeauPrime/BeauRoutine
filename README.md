@@ -30,8 +30,8 @@ This will bind the given object as a host. As long as the host is alive, the Bea
 If the host is deactivated, the BeauRoutine will pause until the host is again active.  Once the host is destroyed,
 any BeauRoutines it hosted will be halted.
 
-### New Coroutine Syntax
-BeauRoutines allow for more flexibility while writing your coroutine logic.
+### Expanded Coroutine Syntax
+BeauRoutines allow for more flexibility when writing your coroutine logic.
 
 ```csharp
 public IEnumerator MyCustomBeauRoutine()
@@ -71,7 +71,7 @@ public IEnumerator MyOtherBeauRoutine()
 ### Combine and Race
 ``Routine.Combine`` is a coroutine that executes multiple coroutines concurrently. This can be incredibly useful for programmatic animations or syncing operations between objects. It concludes when all the given coroutines have either concluded or halted.
 
-``Routine.Race`` is similar, but it concluded when one of the given coroutines has concluded or halted.
+``Routine.Race`` is similar, but it concludes when one of the given coroutines has concluded or halted. None of the other given coroutines are allowed to execute after one has concluded.
 
 ```csharp
 public IEnumerator MyCombineRoutine()
@@ -80,7 +80,7 @@ public IEnumerator MyCombineRoutine()
     // Both debug messages will be logged.
 	yield return Routine.Combine( Operation1(), Operation2() );
     
-    // This will only the Operation1 debug message.
+    // This will only log the Operation1 debug message.
     yield return Routine.Race( Operation1(), Operation2() );
 }
 
@@ -97,7 +97,23 @@ public IEnumerator Operation2()
 ```
 
 ### Sequences
-_This section is still under construction._
+A ``Sequence`` is a customizable sequence of coroutines, function calls, and delays. Instead of creating a new function for every combination of coroutines, you can instead construct a coroutine out of common parts using a simple fluent interface.
+
+```csharp
+public void Awake()
+{
+	// This will run FirstBeauRoutine, wait 5 seconds, then call Destroy(gameObject).
+	Routine.Start(this, Sequence.Create(FirstBeauRoutine())
+    	.Wait(5.0f)
+        .Then(() => { Destroy(gameObject); })
+        );
+}
+
+public IEnumerator FirstBeauRoutine()
+{
+	...
+}
+```
 
 ### Tweens
 _This section is still under construction._
