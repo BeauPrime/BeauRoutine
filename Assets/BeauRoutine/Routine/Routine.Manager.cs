@@ -333,7 +333,7 @@ namespace BeauRoutine
         /// Stops all routines with the given host
         /// with the given optional name.
         /// </summary>
-        static public void StopAll(MonoBehaviour inHost, string inName)
+        static public void Stop(MonoBehaviour inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -385,7 +385,7 @@ namespace BeauRoutine
         /// Stops all routines with a host that belongs
         /// to the given GameObject and have the optional name
         /// </summary>
-        static public void StopAll(GameObject inHost, string inName)
+        static public void Stop(GameObject inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -434,7 +434,7 @@ namespace BeauRoutine
         /// <summary>
         /// Stops all routines with the given optional name.
         /// </summary>
-        static public void StopAll(string inName)
+        static public void Stop(string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -479,7 +479,7 @@ namespace BeauRoutine
         /// <summary>
         /// Pauses all routines with the given host and name.
         /// </summary>
-        static public void PauseAll(MonoBehaviour inHost, string inName)
+        static public void Pause(MonoBehaviour inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -511,7 +511,7 @@ namespace BeauRoutine
         /// Pauses all routines with a host that belongs
         /// to the given GameObject and have the given name.
         /// </summary>
-        static public void PauseAll(GameObject inHost, string inName)
+        static public void Pause(GameObject inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -534,7 +534,7 @@ namespace BeauRoutine
         /// <summary>
         /// Pauses all routines with the given name.
         /// </summary>
-        static public void PauseAll(string inName)
+        static public void Pause(string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -568,7 +568,7 @@ namespace BeauRoutine
         /// <summary>
         /// Resumes all routines with the given host and given name.
         /// </summary>
-        static public void ResumeAll(MonoBehaviour inHost, string inName)
+        static public void Resume(MonoBehaviour inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -600,7 +600,7 @@ namespace BeauRoutine
         /// Resumes all routines with a host that belongs
         /// to the given GameObject and have the given name.
         /// </summary>
-        static public void ResumeAll(GameObject inHost, string inName)
+        static public void Resume(GameObject inHost, string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -623,7 +623,7 @@ namespace BeauRoutine
         /// <summary>
         /// Resumes all routines with the given name.
         /// </summary>
-        static public void ResumeAll(string inName)
+        static public void Resume(string inName)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -663,7 +663,7 @@ namespace BeauRoutine
         /// Finds all routines with the given host and name
         /// and adds their handles to the given collection.
         /// </summary>
-        static public void FindAll(MonoBehaviour inHost, string inName, ref ICollection<Routine> ioRoutines)
+        static public void Find(MonoBehaviour inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -720,7 +720,7 @@ namespace BeauRoutine
         /// Finds all routines with the given host and name
         /// and adds their handles to the given collection.
         /// </summary>
-        static public void FindAll(GameObject inHost, string inName, ref ICollection<Routine> ioRoutines)
+        static public void Find(GameObject inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);
@@ -756,7 +756,7 @@ namespace BeauRoutine
         /// Finds all routines with the given name
         /// and adds their handles to the given collection.
         /// </summary>
-        static public void FindAll(string inName, ref ICollection<Routine> ioRoutines)
+        static public void Find(string inName, ref ICollection<Routine> ioRoutines)
         {
             int next = 0;
             Fiber fiber = s_Table.StartActive(ref next);

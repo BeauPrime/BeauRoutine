@@ -4,8 +4,8 @@
  * Date:    21 Nov 2016
  * 
  * File:    Sequence.cs
- * Purpose: Allows for the sequencing of routines and actions
- *          without needing to create custom IEnumerator functions
+ * Purpose: Allows for the sequencing of coroutines and actions
+ *          without needing to create custom coroutines
  *          every time.
 */
 

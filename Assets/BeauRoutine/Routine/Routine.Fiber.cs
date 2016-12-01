@@ -38,6 +38,7 @@ namespace BeauRoutine
             private GameObject m_HostGameObject;
             private RoutineIdentity m_HostIdentity;
 
+            private IEnumerator m_RootFunction;
             private Stack<IEnumerator> m_Stack = new Stack<IEnumerator>(8);
 
             private float m_WaitTime = 0.0f;
@@ -89,6 +90,7 @@ namespace BeauRoutine
 
                 m_TimeScale = 1.0f;
 
+                m_RootFunction = inStart;
                 m_Stack.Push(inStart);
 
                 IRoutineEnumerator callback = inStart as IRoutineEnumerator;
@@ -120,6 +122,7 @@ namespace BeauRoutine
                 bool bChained = (m_Flags & FLAG_CHAINED) != 0;
 
                 ClearStack();
+                m_RootFunction = null;
 
                 m_Handle = Routine.Null;
                 m_Host = null;
@@ -165,6 +168,7 @@ namespace BeauRoutine
                     // in order to handle "using" and "try...finally" blocks.
                     ((IDisposable)enumerator).Dispose();
                 }
+                m_RootFunction = null;
             }
 
             #endregion
@@ -225,7 +229,11 @@ namespace BeauRoutine
             /// </summary>
             public string Name
             {
-                get { return m_Name; }
+                get
+                {
+                    CheckAutoName();
+                    return m_Name;
+                }
                 set { m_Name = value; }
             }
 
@@ -428,6 +436,7 @@ namespace BeauRoutine
             /// </summary>
             public bool HasName(string inName)
             {
+                CheckAutoName();
                 return m_Name == inName;
             }
 
@@ -545,6 +554,51 @@ namespace BeauRoutine
 
             #endregion
 
+            #region Auto Naming
+
+            private void CheckAutoName()
+            {
+                if (m_Name == null)
+                    m_Name = GetTypeName(m_RootFunction.GetType());
+            }
+
+            static private Dictionary<IntPtr, string> s_IteratorNames = new Dictionary<IntPtr, string>();
+
+            static private string GetTypeName(Type inType)
+            {
+                IntPtr typeID = inType.TypeHandle.Value;
+                string name;
+                if (!s_IteratorNames.TryGetValue(typeID, out name))
+                {
+                    name = CleanTypeName(inType);
+                    s_IteratorNames.Add(typeID, name);
+                }
+                return name;
+            }
+
+            static private string CleanTypeName(Type inType)
+            {
+                string name = inType.Name;
+                if (name.IndexOfAny(INVALID_NAME_CHARS) < 0)
+                    return name;
+
+                // Find the portion enclosed within the angular brackets
+                // Compiler-generated functions are named something like <FunctionName>c__Iterator78593
+                int openBracketIndex = name.IndexOf('<');
+                if (openBracketIndex >= 0)
+                {
+                    int closingBracketIndex = name.IndexOf('>', openBracketIndex + 1);
+                    if (closingBracketIndex >= 0)
+                        name = name.Substring(openBracketIndex + 1, closingBracketIndex - openBracketIndex - 1);
+                    else
+                        name = name.Substring(openBracketIndex + 1);
+                }
+
+                return name;
+            }
+
+            #endregion
+
             #region Debugger
 
 #if UNITY_EDITOR
@@ -566,7 +620,7 @@ namespace BeauRoutine
                     stats.State = Editor.RoutineState.Running;
 
                 stats.TimeScale = m_TimeScale;
-                stats.Name = m_Name;
+                stats.Name = Name;
 
                 if (m_Stack.Count > 0)
                 {
@@ -637,20 +691,14 @@ namespace BeauRoutine
 
             static public string CleanIteratorName(IEnumerator inEnumerator)
             {
+                Type type = inEnumerator.GetType();
                 string iteratorName = inEnumerator.ToString();
-                string typeName = inEnumerator.GetType().FullName;
+                string typeName = type.FullName;
 
                 if (iteratorName != typeName || iteratorName.IndexOfAny(INVALID_NAME_CHARS) < 0)
                     return iteratorName;
 
-                string functionName = iteratorName;
-                int openBracketIndex = functionName.IndexOf('<');
-                if (openBracketIndex >= 0)
-                {
-                    int closingBracketIndex = functionName.IndexOf('>', openBracketIndex + 1);
-                    if (closingBracketIndex >= 0)
-                        functionName = functionName.Substring(openBracketIndex + 1, closingBracketIndex - openBracketIndex - 1);
-                }
+                string functionName = GetTypeName(type);
                 
                 // If the function is a child of the parent, then we should get the appropriate path
                 // to the function name here
@@ -665,7 +713,7 @@ namespace BeauRoutine
                 }
 
                 List<FieldInfo> fields = new List<FieldInfo>();
-                foreach(var field in inEnumerator.GetType().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                foreach(var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                 {
                     if (field.Name.IndexOfAny(INVALID_NAME_CHARS) < 0)
                         fields.Add(field);

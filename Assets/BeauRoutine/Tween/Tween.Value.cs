@@ -254,6 +254,112 @@ namespace BeauRoutine
 
         #endregion
 
+        #region Vector4
+
+        private class TweenData_Value_Vector4 : TweenData_Value<Vector4>
+        {
+            public TweenData_Value_Vector4(Vector4 inStart, Vector4 inEnd, Action<Vector4> inSetter)
+                : base(inStart, inEnd, inSetter)
+            { }
+
+            public override void ApplyTween(float inPercent)
+            {
+                m_Setter(Vector4.LerpUnclamped(m_Start, m_End, inPercent));
+            }
+        }
+
+        /// <summary>
+        /// Tweens from one Vector4 to another over time.
+        /// </summary>
+        static public Tween Vector(Vector4 inStart, Vector4 inEnd, Action<Vector4> inSetter, float inTime)
+        {
+            return Tween.Create(new TweenData_Value_Vector4(inStart, inEnd, inSetter), inTime);
+        }
+
+        /// <summary>
+        /// Tweens from one Vector4 to another over time.
+        /// </summary>
+        static public Tween Vector(Vector4 inStart, Vector4 inEnd, Action<Vector4> inSetter, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Value_Vector4(inStart, inEnd, inSetter), inSettings);
+        }
+
+        #endregion
+
+        #region Rect
+
+        private class TweenData_Value_Rect : TweenData_Value<Rect>
+        {
+            public TweenData_Value_Rect(Rect inStart, Rect inEnd, Action<Rect> inSetter)
+                : base(inStart, inEnd, inSetter)
+            { }
+
+            public override void ApplyTween(float inPercent)
+            {
+                Rect final = new UnityEngine.Rect(
+                    m_Start.x + (m_End.x - m_Start.x) * inPercent,
+                    m_Start.y + (m_End.y - m_Start.y) * inPercent,
+                    m_Start.width + (m_End.width - m_Start.width) * inPercent,
+                    m_Start.height + (m_End.height - m_Start.height) * inPercent);
+                m_Setter(final);
+            }
+        }
+
+        /// <summary>
+        /// Tweens from one Rect to another over time.
+        /// </summary>
+        static public Tween Rect(Rect inStart, Rect inEnd, Action<Rect> inSetter, float inTime)
+        {
+            return Tween.Create(new TweenData_Value_Rect(inStart, inEnd, inSetter), inTime);
+        }
+
+        /// <summary>
+        /// Tweens from one Rect to another over time.
+        /// </summary>
+        static public Tween Rect(Rect inStart, Rect inEnd, Action<Rect> inSetter, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Value_Rect(inStart, inEnd, inSetter), inSettings);
+        }
+
+        #endregion
+
+        #region RectOffset
+
+        private class TweenData_Value_RectOffset : TweenData_Value<RectOffset>
+        {
+            public TweenData_Value_RectOffset(RectOffset inStart, RectOffset inEnd, Action<RectOffset> inSetter)
+                : base(inStart, inEnd, inSetter)
+            { }
+
+            public override void ApplyTween(float inPercent)
+            {
+                RectOffset final = new UnityEngine.RectOffset(
+                    (int)(m_Start.left + (m_End.left - m_Start.left) * inPercent),
+                    (int)(m_Start.right + (m_End.right - m_Start.right) * inPercent),
+                    (int)(m_Start.top + (m_End.top - m_Start.top) * inPercent),
+                    (int)(m_Start.bottom + (m_End.bottom - m_Start.bottom) * inPercent));
+                m_Setter(final);
+            }
+        }
+
+        /// <summary>
+        /// Tweens from one RectOffset to another over time.
+        /// </summary>
+        static public Tween RectOffset(RectOffset inStart, RectOffset inEnd, Action<RectOffset> inSetter, float inTime)
+        {
+            return Tween.Create(new TweenData_Value_RectOffset(inStart, inEnd, inSetter), inTime);
+        }
+
+        /// <summary>
+        /// Tweens from one RectOffset to another over time.
+        /// </summary>
+        static public Tween RectOffset(RectOffset inStart, RectOffset inEnd, Action<RectOffset> inSetter, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Value_RectOffset(inStart, inEnd, inSetter), inSettings);
+        }
+
+        #endregion
+
         #region Quaternion
 
         private class TweenData_Value_Quaternion : TweenData_Value<Quaternion>

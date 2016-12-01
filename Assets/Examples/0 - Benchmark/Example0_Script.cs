@@ -4,7 +4,7 @@ using System;
 using BeauRoutine;
 using System.Diagnostics;
 
-public class Benchmark : MonoBehaviour
+public class Example0_Script : MonoBehaviour
 {
     private readonly int[] ROUTINE_COUNTS = new int[] { 2000, 5000, 16000, 64000 };
     private readonly int SAMPLE_COUNT = 10;
