@@ -165,7 +165,7 @@ namespace BeauRoutine.Editor
                 m_SnapshotScroll = EditorGUILayout.BeginScrollView(m_SnapshotScroll, false, true);
                 {
                     BeginIndent();
-                    RenderStatGroup(inStats.MaxSnapshot, false);
+                    RenderStatGroup(inStats.MaxSnapshot, false, false);
                     EndIndent();
                 }
                 EditorGUILayout.EndScrollView();
@@ -252,38 +252,41 @@ namespace BeauRoutine.Editor
             m_Scroll = EditorGUILayout.BeginScrollView(m_Scroll, false, true);
             {
                 BeginIndent();
-                RenderStatGroup(stats, true);
+                RenderStatGroup(stats, true, false);
                 EndIndent();
             }
             EditorGUILayout.EndScrollView();
         }
 
-        private void RenderStatGroup(Routine.Editor.RoutineStats[] inStats, bool inbCanAdjust)
+        private void RenderStatGroup(Routine.Editor.RoutineStats[] inStats, bool inbCanAdjust, bool inbNested)
         {
             for (int i = 0; i < inStats.Length; ++i)
             {
                 if (i > 0)
                     HorizontalDivider();
-                RenderStats(inStats[i], inbCanAdjust);
+                RenderStats(inStats[i], inbCanAdjust, inbNested);
             }
         }
 
-        private void RenderStats(Routine.Editor.RoutineStats inStats, bool inbCanAdjust)
+        private void RenderStats(Routine.Editor.RoutineStats inStats, bool inbCanAdjust, bool inbNested)
         {
-            // Render name
-            EditorGUILayout.BeginHorizontal();
+            if (!inbNested)
             {
-                EditorGUILayout.LabelField("NAME/", GUILayout.Width(FIELD_NAME_WIDTH));
-                if (!inbCanAdjust)
-                    GUI.enabled = false;
-                string newName = EditorGUILayout.TextField(inStats.Name, GUILayout.ExpandWidth(true));
-                if (newName != inStats.Name)
-                    inStats.Handle.SetName(newName);
-                GUI.enabled = true;
+                // Render name
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("NAME/", GUILayout.Width(FIELD_NAME_WIDTH));
+                    if (!inbCanAdjust)
+                        GUI.enabled = false;
+                    string newName = EditorGUILayout.TextField(inStats.Name, GUILayout.ExpandWidth(true));
+                    if (newName != inStats.Name)
+                        inStats.Handle.SetName(newName);
+                    GUI.enabled = true;
+                }
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndHorizontal();
 
-            if (!ReferenceEquals(inStats.Host, null))
+            if (!inbNested && !ReferenceEquals(inStats.Host, null))
             {
                 // Render host
                 EditorGUILayout.BeginHorizontal();
@@ -305,19 +308,22 @@ namespace BeauRoutine.Editor
             EditorGUILayout.EndHorizontal();
 
             // Time Scale
-            EditorGUILayout.BeginHorizontal();
+            if (!inbNested)
             {
-                EditorGUILayout.LabelField("TIMESCALE/", GUILayout.Width(FIELD_NAME_WIDTH));
-                if (!inbCanAdjust)
-                    GUI.enabled = false;
-                float timeScale = EditorGUILayout.FloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
-                if (timeScale < 0)
-                    timeScale = 0;
-                if (timeScale != inStats.TimeScale)
-                    inStats.Handle.SetTimeScale(timeScale);
-                GUI.enabled = true;
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("TIMESCALE/", GUILayout.Width(FIELD_NAME_WIDTH));
+                    if (!inbCanAdjust)
+                        GUI.enabled = false;
+                    float timeScale = EditorGUILayout.FloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
+                    if (timeScale < 0)
+                        timeScale = 0;
+                    if (timeScale != inStats.TimeScale)
+                        inStats.Handle.SetTimeScale(timeScale);
+                    GUI.enabled = true;
+                }
+                EditorGUILayout.EndHorizontal();
             }
-            EditorGUILayout.EndHorizontal();
 
             // Current Function Name
             EditorGUILayout.BeginHorizontal();
@@ -346,12 +352,14 @@ namespace BeauRoutine.Editor
             {
                 EditorGUILayout.LabelField("NESTED/");
                 BeginIndent();
-                RenderStatGroup(inStats.Nested, inbCanAdjust);
+                RenderStatGroup(inStats.Nested, inbCanAdjust, true);
                 EndIndent();
             }
         }
 
         #endregion
+
+        #region Utils
 
         static private void BeginIndent(float inWidth = 20)
         {
@@ -375,5 +383,7 @@ namespace BeauRoutine.Editor
         {
             GUILayout.Box(string.Empty, GUILayout.ExpandHeight(true), GUILayout.Width(inWidth));
         }
+
+        #endregion
     }
 }

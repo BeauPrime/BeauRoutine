@@ -129,18 +129,14 @@ namespace BeauRoutine
             if (inRoutines.Length == 1)
                 return inRoutines[0];
 
-            List<Fiber> fibers = null;
+            int nonNullCount = 0;
             for(int i = 0; i < inRoutines.Length; ++i)
             {
                 if (inRoutines[i] != null)
-                {
-                    if (fibers == null)
-                        fibers = new List<Fiber>(inRoutines.Length - i);
-                    fibers.Add(ChainFiber(inRoutines[i]));
-                }
+                    ++nonNullCount;
             }
 
-            return fibers == null ? null : RunFibers(fibers, false);
+            return nonNullCount > 0 ? CreateCombine(inRoutines, false) : null;
         }
 
         /// <summary>
@@ -154,18 +150,14 @@ namespace BeauRoutine
             if (inRoutines.Count == 1)
                 return inRoutines[0];
 
-            List<Fiber> fibers = null;
+            int nonNullCount = 0;
             for (int i = 0; i < inRoutines.Count; ++i)
             {
                 if (inRoutines[i] != null)
-                {
-                    if (fibers == null)
-                        fibers = new List<Fiber>(inRoutines.Count - i);
-                    fibers.Add(ChainFiber(inRoutines[i]));
-                }
+                    ++nonNullCount;
             }
 
-            return fibers == null ? null : RunFibers(fibers, false);
+            return nonNullCount > 0 ? CreateCombine(inRoutines.ToArray(), false) : null;
         }
 
         /// <summary>
@@ -179,18 +171,14 @@ namespace BeauRoutine
             if (inRoutines.Length == 1)
                 return inRoutines[0];
 
-            List<Fiber> fibers = null;
+            int nonNullCount = 0;
             for (int i = 0; i < inRoutines.Length; ++i)
             {
                 if (inRoutines[i] != null)
-                {
-                    if (fibers == null)
-                        fibers = new List<Fiber>(inRoutines.Length - i);
-                    fibers.Add(ChainFiber(inRoutines[i]));
-                }
+                    ++nonNullCount;
             }
 
-            return fibers == null ? null : RunFibers(fibers, true);
+            return nonNullCount > 0 ? CreateCombine(inRoutines, true) : null;
         }
 
         /// <summary>
@@ -204,41 +192,49 @@ namespace BeauRoutine
             if (inRoutines.Count == 1)
                 return inRoutines[0];
 
-            List<Fiber> fibers = null;
+            int nonNullCount = 0;
             for (int i = 0; i < inRoutines.Count; ++i)
             {
                 if (inRoutines[i] != null)
-                {
-                    if (fibers == null)
-                        fibers = new List<Fiber>(inRoutines.Count - i);
-                    fibers.Add(ChainFiber(inRoutines[i]));
-                }
+                    ++nonNullCount;
             }
 
-            return fibers == null ? null : RunFibers(fibers, true);
+            return nonNullCount > 0 ? CreateCombine(inRoutines.ToArray(), true) : null;
         }
 
         /// <summary>
-        /// Runs all the given fibers until they complete.
+        /// Runs all the given IEnumerators
         /// </summary>
-        static private IEnumerator RunFibers(List<Fiber> inFibers, bool inbExclusiveMode)
+        static private IEnumerator CreateCombine(IEnumerator[] inEnumerators, bool inbRace)
         {
-            return new CombineIterator(inFibers, inbExclusiveMode);
+            return new CombineIterator(inEnumerators, inbRace);
         }
 
-        private sealed class CombineIterator : IEnumerator, IDisposable
+        private sealed class CombineIterator : IRoutineEnumerator
         {
+            private IEnumerator[] m_Enumerators;
             private List<Fiber> m_Fibers;
             private bool m_Race;
 
-            public CombineIterator(List<Fiber> inFibers, bool inbRace)
+            public CombineIterator(IEnumerator[] inEnumerators, bool inbRace)
             {
-                m_Fibers = inFibers;
+                m_Enumerators = inEnumerators;
                 m_Race = inbRace;
+                m_Fibers = new List<Fiber>(inEnumerators.Length);
             }
 
             public void Dispose()
             {
+                if (m_Enumerators != null)
+                {
+                    for(int i = 0; i < m_Enumerators.Length; ++i)
+                    {
+                        ((IDisposable)m_Enumerators[i]).Dispose();
+                        m_Enumerators[i] = null;
+                    }
+                    m_Enumerators = null;
+                }
+
                 for(int i = 0; i < m_Fibers.Count; ++i)
                 {
                     m_Fibers[i].Stop();
@@ -257,12 +253,12 @@ namespace BeauRoutine
             {
                 if (m_Fibers.Count > 0)
                 {
-                    for(int i = m_Fibers.Count - 1; i >= 0; --i)
+                    for(int i = 0; i < m_Fibers.Count; ++i)
                     {
                         Fiber myFiber = m_Fibers[i];
                         if (!myFiber.Run())
                         {
-                            m_Fibers.RemoveAt(i);
+                            m_Fibers.RemoveAt(i--);
                             if (m_Race)
                                 return false;
                         }
@@ -275,6 +271,19 @@ namespace BeauRoutine
             public void Reset()
             {
                 throw new NotImplementedException();
+            }
+
+            public bool OnRoutineStart()
+            {
+                for (int i = 0; i < m_Enumerators.Length; ++i)
+                {
+                    if (m_Enumerators[i] != null)
+                        m_Fibers.Add(ChainFiber(m_Enumerators[i]));
+                    m_Enumerators[i] = null;
+                }
+
+                m_Enumerators = null;
+                return m_Fibers.Count > 0;
             }
 
             public override string ToString()

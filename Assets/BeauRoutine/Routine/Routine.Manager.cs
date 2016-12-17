@@ -234,17 +234,17 @@ namespace BeauRoutine
         /// <summary>
         /// Pauses routines on the given groups.
         /// </summary>
-        static public void PauseGroups(int inLayerMask)
+        static public void PauseGroups(int inGroupMask)
         {
-            s_QueuedPausedGroups |= inLayerMask;
+            s_QueuedPausedGroups |= inGroupMask;
         }
 
         /// <summary>
         /// Resumes routines on the given layers.
         /// </summary>
-        static public void ResumeGroups(int inLayerMask)
+        static public void ResumeGroups(int inGroupMask)
         {
-            s_QueuedPausedGroups &= ~inLayerMask;
+            s_QueuedPausedGroups &= ~inGroupMask;
         }
 
         /// <summary>
