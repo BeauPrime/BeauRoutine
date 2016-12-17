@@ -121,6 +121,10 @@ if ( myRoutine ) { ... }
 // Routine.Wait will generate a coroutine that waits until
 // the coroutine that's being pointed at has expired.
 yield return myRoutine.Wait();
+
+// Yielding a Routine directly will have the same effect
+// as Routine.Wait
+yield return myRoutine;
 ```
 
 Routine objects can also be used to start BeauRoutines.
@@ -162,7 +166,7 @@ Debug.Log( implicitlyNamed.GetName() ); // "MyCoroutine"
 
 // You can stop BeauRoutines with these names!
 Routine.Stop( "MyCoroutine" ); // stops implicitlyNamed
-Routine.Stop ("explicitlyNamed" ); // stops explicitlyNamed
+Routine.Stop ("aDifferentName" ); // stops explicitlyNamed
 ```
 
 ### Combine
@@ -234,8 +238,7 @@ public IEnumerator FirstBeauRoutine()
 ## Tweens
 
 ### Tweens as coroutines
-In BeauRoutine, Tweens are implemented as a special kind of coroutine, performing animation
-over time in place of logic.
+In BeauRoutine, tweens are implemented as a special kind of coroutine called ``Tween``.  They perform animation over time.
 
 ```csharp
 // Create the tween
@@ -312,7 +315,13 @@ transform.MoveTo( new Vector3( 1.0f, 1.0f, 1.0f ), 2.0f );
 audioSource.VolumeTo( 0.0f, 2.0f );
 ```
 
-## Advanced Usage
+### Mirrored Tweens
+
+Yoyo Tweens have a property called ``Mirrored``, which affects how easing functions are applied when the Tween is reversed.  Normally, reversed Tweens apply their easing functions as if the Tween was not reversed.  An EaseOut will have the same progression over time from end to start as it did from start to end.  A mirrored Tween will reverse the easing function as well.
+
+Put in other terms, a normal Tween that starts slow and speeds up animating from start to end will also start slow and speed up when animating back to start.  The same Tween, mirrored, will start fast and slow down when animating back to start.
+
+## Advanced Features
 
 ### Time Scale
 
@@ -461,6 +470,57 @@ Routine.ResumeGroups( groupMask );
 
 It's important to note that a BeauRoutine can only belong to a single group.  This is to prevent any unwanted timescaling behavior.
 
+### Custom Tweens
+
+Tweens in BeauRoutine are highly extensible through the ``ITweenData`` interface. Tweens perform the timing, easing, and looping logic; an ITweenData object applies the animation.  To use one of your own ITweenData-derived objects, you can use the ``Tween.Create`` function with your object as an argument.
+
+```csharp
+// Making your own ITweenData
+public class SomeObjectTweenData : ITweenData
+{
+	private SomeObject m_Object;
+    
+    private float m_Start;
+    private float m_End;
+    
+    public SomeObjectTweenData( SomeObject inObject, float inEnd )
+    {
+    	m_Object = inObject;
+        
+        m_Start = inObject.MyValue;
+        m_End = inEnd;
+    }
+
+	public void OnTweenStart()
+    {
+    	...
+        // Any custom logic when a tween starts can go here
+    }
+    
+    public void ApplyTween(float inPercent)
+    {
+    	m_Object.MyValue = Mathf.Lerp( m_Start, m_End, inPercent );
+    }
+    
+    public void OnTweenEnd()
+    {
+    	..
+        // Any custom logic when a tween ends or is killed can go here
+    }
+}
+
+public class SomeObject
+{
+	public float MyValue = 0;
+    
+    public Tween MyValueTo( float inValue, float inTime )
+    {
+    	SomeObjectTweenData tweenData = new SomeObjectTween( this, inValue );
+        return Tween.Create( iTweenData, inTime );
+    }
+}
+```
+
 ### Debugger
 
 BeauRoutine includes a simple profiler and debugger, found under the menu item ``BeauRoutine/Debugger``.
@@ -518,6 +578,7 @@ BeauRoutine contains a few extension methods for generating coroutines.
 ### Tween Shortcuts
 
 Generic tween shortcuts currently exist for the following types:
+
 | Type | Function |
 | ---- | -------- |
 | Float | ``Tween.Float`` |
@@ -531,6 +592,7 @@ Generic tween shortcuts currently exist for the following types:
 | Color | ``Tween.Color`` |
 
 Tween extension methods currently exist for the following types:
+
 | Type | Property | Function |
 | ---- | ------ | ---------- |
 | Transform | Position | ``MoveTo``, ``MoveToWithSpeed`` |
@@ -544,22 +606,22 @@ Tween extension methods currently exist for the following types:
 | | Pan | ``PanTo`` |
 | Camera | Orthographic Size | ``OrthoSizeTo`` |
 | | Field of View | ``FieldOfViewTo`` |
-| **Rendering** | |
+| **Rendering** | | |
 | SpriteRenderer | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | TextMesh | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | Material | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
-| **Canvas** | |
+| **Canvas** | | |
 | CanvasGroup | Alpha | ``FadeTo`` |
 | CanvasRenderer | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | Graphic | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | Image | Fill Amount | ``FillTo`` |
 | RawImage | UV Rect | ``UVRectTo``, ``UVRectShift`` |
-| **Layout** | |
+| **Layout** | | |
 | LayoutElement | Min Width/Height, Preferred Width/Height, Flexible Width/Height | ``PropertyTo`` |
 | LayoutGroup | Padding | ``PaddingTo`` |
 | HorizontalOrVerticalLayoutGroup | Spacing | ``SpacingTo`` |
 | GridLayoutGroup | Spacing | ``SpacingTo`` |
 | | Cell Size | ``CellSizeTo`` |
-| **BeauRoutine** | |
+| **BeauRoutine** | | |
 | Routine | Time Scale | ``TimeScaleTo`` |
 | RoutineIdentity | Time Scale | ``TimeScaleTo`` |
