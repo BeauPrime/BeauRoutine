@@ -35,14 +35,25 @@ namespace BeauRoutine
             YoyoLoop
         }
 
+        private enum CancelMode : byte
+        {
+            Nothing,
+            Revert,
+            RevertNoWave,
+            ForceEnd,
+            ForceEndNoWave
+        }
+
         // Tween settings
         private LoopMode m_Mode;
         private Curve m_Curve;
+        private CancelMode m_Cancel;
         private AnimationCurve m_AnimCurve;
         private Wave m_WaveFunc;
         private float m_Duration;
         private int m_NumLoops;
         private bool m_MirrorCurve;
+        private bool m_FromMode;
 
         // Events
         private event Action<float> m_OnUpdate;
@@ -58,7 +69,7 @@ namespace BeauRoutine
         // Current data
         private ITweenData m_TweenData;
 
-        private Tween() {}
+        private Tween() { }
 
         private Tween SetData(ITweenData inData)
         {
@@ -71,6 +82,7 @@ namespace BeauRoutine
         /// <summary>
         /// Sets the tween to only play once.
         /// Percent will run from [0 -> 1].
+        /// Default behavior.
         /// </summary>
         public Tween Once()
         {
@@ -193,6 +205,26 @@ namespace BeauRoutine
             return this;
         }
 
+        /// <summary>
+        /// Sets the tween to animate from the target value
+        /// to the current value.
+        /// </summary>
+        public Tween From()
+        {
+            m_FromMode = true;
+            return this;
+        }
+
+        /// <summary>
+        /// Sets the tween to animate to the target value.
+        /// Default behavior.
+        /// </summary>
+        public Tween To()
+        {
+            m_FromMode = false;
+            return this;
+        }
+
         #endregion
 
         #region Events
@@ -212,6 +244,41 @@ namespace BeauRoutine
         public Tween OnComplete(Action inCompleteFunction)
         {
             m_OnComplete += inCompleteFunction;
+            return this;
+        }
+
+        #endregion
+
+        #region Cancel Behavior
+
+        /// <summary>
+        /// Will revert back to the starting value if the tween
+        /// is cancelled mid-animation.
+        /// </summary>
+        public Tween RevertOnCancel(bool inbApplyWave = true)
+        {
+            m_Cancel = inbApplyWave ? CancelMode.Revert : CancelMode.RevertNoWave;
+            return this;
+        }
+
+        /// <summary>
+        /// Will force to the ending value if the tween
+        /// is cancelled mid-animation.
+        /// </summary>
+        public Tween ForceOnCancel(bool inbApplyWave = true)
+        {
+            m_Cancel = inbApplyWave ? CancelMode.ForceEnd : CancelMode.ForceEndNoWave;
+            return this;
+        }
+
+        /// <summary>
+        /// Will keep the value where it ended up
+        /// if the tween is cancelled mid-animation.
+        /// Default behavior.
+        /// </summary>
+        public Tween KeepOnCancel()
+        {
+            m_Cancel = CancelMode.Nothing;
             return this;
         }
 
@@ -253,8 +320,8 @@ namespace BeauRoutine
             float curvedPercent = Evaluate(basePercent);
             m_TweenData.ApplyTween(curvedPercent);
             if (m_OnUpdate != null)
-                m_OnUpdate(curvedPercent);
-            
+                m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+
             return bAlive;
         }
 
@@ -355,29 +422,47 @@ namespace BeauRoutine
         private float Evaluate(float inPercent)
         {
             float curvedPercent;
-            if (m_Reversed)
+            if (m_Reversed ^ m_FromMode)
             {
                 if (m_MirrorCurve)
                 {
-                    curvedPercent = m_WaveFunc.Evaluate(
-                        m_AnimCurve != null ? m_AnimCurve.Evaluate(1 - inPercent)
-                        : m_Curve.Evaluate(1 - inPercent)
-                        );
+                    inPercent = 1 - inPercent;
+                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+                    curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
                 }
                 else
                 {
-                    curvedPercent = m_WaveFunc.Evaluate(
-                        m_AnimCurve != null ? 1 - m_AnimCurve.Evaluate(inPercent)
-                        : 1 - m_Curve.Evaluate(inPercent)
-                        );
+                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+                    curvedPercent = m_WaveFunc.Evaluate(1 - curvedPercent);
                 }
             }
             else
             {
-                curvedPercent = m_WaveFunc.Evaluate(
-                    m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent)
-                    : m_Curve.Evaluate(inPercent)
-                    );
+                curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+                curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
+            }
+            return curvedPercent;
+        }
+
+        private float EvaluateNoWave(float inPercent)
+        {
+            float curvedPercent;
+            if (m_Reversed ^ m_FromMode)
+            {
+                if (m_MirrorCurve)
+                {
+                    inPercent = 1 - inPercent;
+                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+                }
+                else
+                {
+                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+                    curvedPercent = 1 - curvedPercent;
+                }
+            }
+            else
+            {
+                curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
             }
             return curvedPercent;
         }
@@ -393,7 +478,7 @@ namespace BeauRoutine
 
         public bool MoveNext()
         {
-            switch(m_State)
+            switch (m_State)
             {
                 case State.Begin:
                     Start();
@@ -438,9 +523,28 @@ namespace BeauRoutine
         public void Dispose()
         {
             if (m_TweenData != null && m_State == State.Run)
+            {
+                switch (m_Cancel)
+                {
+                    case CancelMode.Revert:
+                        m_TweenData.ApplyTween(Evaluate(0));
+                        break;
+                    case CancelMode.RevertNoWave:
+                        m_TweenData.ApplyTween(EvaluateNoWave(0));
+                        break;
+                    case CancelMode.ForceEnd:
+                        m_TweenData.ApplyTween(Evaluate(1));
+                        break;
+                    case CancelMode.ForceEndNoWave:
+                        m_TweenData.ApplyTween(EvaluateNoWave(1));
+                        break;
+                }
                 m_TweenData.OnTweenEnd();
+            }
+
             m_TweenData = null;
 
+            m_Cancel = CancelMode.Nothing;
             m_Mode = LoopMode.Single;
             m_Curve = Curve.Linear;
             m_WaveFunc = default(Wave);

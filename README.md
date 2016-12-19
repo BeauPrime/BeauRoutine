@@ -264,6 +264,10 @@ tween.Yoyo(); // Run forwards then reversed once.
 tween.YoyoLoop(); // Run forwards and reversed forever.
 tween.YoyoLoop(2); // Run forwards then reversed 2 times.
 
+// You can even set the Tween to run FROM the given target
+// to the current value instead of the other way around.
+tween.From();
+
 // You can also apply easing functions.
 tween.Ease( Curve.Smooth ); // Apply a pre-made easing function.
 tween.Ease( AnimationCurve.Linear(0, 0, 1, 1) ); // Apply a Unity AnimationCurve for more customizable control.
