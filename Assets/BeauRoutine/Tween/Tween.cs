@@ -422,48 +422,42 @@ namespace BeauRoutine
         private float Evaluate(float inPercent)
         {
             float curvedPercent;
-            if (m_Reversed ^ m_FromMode)
+            bool bReverseFinal = false;
+            if (m_Reversed)
             {
                 if (m_MirrorCurve)
-                {
                     inPercent = 1 - inPercent;
-                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-                    curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
-                }
                 else
-                {
-                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-                    curvedPercent = m_WaveFunc.Evaluate(1 - curvedPercent);
-                }
+                    bReverseFinal = true;
             }
-            else
-            {
-                curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-                curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
-            }
+
+            curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+            curvedPercent = m_WaveFunc.Evaluate(bReverseFinal ? 1 - curvedPercent : curvedPercent);
+
+            if (m_FromMode)
+                curvedPercent = 1 - curvedPercent;
+
             return curvedPercent;
         }
 
         private float EvaluateNoWave(float inPercent)
         {
             float curvedPercent;
-            if (m_Reversed ^ m_FromMode)
+            bool bReverseFinal = false;
+            if (m_Reversed)
             {
                 if (m_MirrorCurve)
-                {
                     inPercent = 1 - inPercent;
-                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-                }
                 else
-                {
-                    curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-                    curvedPercent = 1 - curvedPercent;
-                }
+                    bReverseFinal = true;
             }
-            else
-            {
-                curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-            }
+
+            curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
+            curvedPercent = bReverseFinal ? 1 - curvedPercent : curvedPercent;
+
+            if (m_FromMode)
+                curvedPercent = 1 - curvedPercent;
+
             return curvedPercent;
         }
 
@@ -524,19 +518,32 @@ namespace BeauRoutine
         {
             if (m_TweenData != null && m_State == State.Run)
             {
+                float curvedPercent = 0;
                 switch (m_Cancel)
                 {
                     case CancelMode.Revert:
-                        m_TweenData.ApplyTween(Evaluate(0));
+                        curvedPercent = Evaluate(0);
+                        m_TweenData.ApplyTween(curvedPercent);
+                        if (m_OnUpdate != null)
+                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.RevertNoWave:
-                        m_TweenData.ApplyTween(EvaluateNoWave(0));
+                        curvedPercent = EvaluateNoWave(0);
+                        m_TweenData.ApplyTween(curvedPercent);
+                        if (m_OnUpdate != null)
+                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.ForceEnd:
-                        m_TweenData.ApplyTween(Evaluate(1));
+                        curvedPercent = Evaluate(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
+                        m_TweenData.ApplyTween(curvedPercent);
+                        if (m_OnUpdate != null)
+                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.ForceEndNoWave:
-                        m_TweenData.ApplyTween(EvaluateNoWave(1));
+                        curvedPercent = EvaluateNoWave(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
+                        m_TweenData.ApplyTween(curvedPercent);
+                        if (m_OnUpdate != null)
+                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                 }
                 m_TweenData.OnTweenEnd();
