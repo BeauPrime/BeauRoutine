@@ -13,7 +13,9 @@ public class Example0_Script : MonoBehaviour
     {
         yield return null;
 
+#if !UNITY_5_5
         Profiler.maxNumberOfSamplesPerFrame = 8000000;
+#endif
 
         Application.targetFrameRate = -1;
 

@@ -162,14 +162,16 @@ namespace BeauRoutine
         {
             private RectTransform m_Transform;
             private Vector2 m_Target;
+            private Axis m_Axis;
 
             private Vector2 m_Start;
             private Vector2 m_Delta;
 
-            public TweenData_RectTransform_SizeDeltaFixed(RectTransform inTransform, Vector2 inTarget)
+            public TweenData_RectTransform_SizeDeltaFixed(RectTransform inTransform, Vector2 inTarget, Axis inAxis)
             {
                 m_Transform = inTransform;
                 m_Target = inTarget;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
@@ -184,7 +186,7 @@ namespace BeauRoutine
                     m_Start.x + m_Delta.x * inPercent,
                     m_Start.y + m_Delta.y * inPercent);
 
-                m_Transform.sizeDelta = final;
+                m_Transform.SetSizeDelta(final, m_Axis);
             }
 
             public void OnTweenEnd() { }
@@ -199,13 +201,15 @@ namespace BeauRoutine
         {
             private RectTransform m_Transform;
             private RectTransform m_Target;
+            private Axis m_Axis;
 
             private Vector2 m_Start;
 
-            public TweenData_RectTransform_SizeDeltaDynamic(RectTransform inTransform, RectTransform inTarget)
+            public TweenData_RectTransform_SizeDeltaDynamic(RectTransform inTransform, RectTransform inTarget, Axis inAxis)
             {
                 m_Transform = inTransform;
                 m_Target = inTarget;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
@@ -221,7 +225,7 @@ namespace BeauRoutine
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent);
 
-                m_Transform.sizeDelta = final;
+                m_Transform.SetSizeDelta(final, m_Axis);
             }
 
             public void OnTweenEnd() { }
@@ -235,33 +239,49 @@ namespace BeauRoutine
         /// <summary>
         /// Scales the given RectTransform to another sizeDelta over time.
         /// </summary>
-        static public Tween SizeDeltaTo(this RectTransform inTransform, Vector2 inTarget, float inTime)
+        static public Tween SizeDeltaTo(this RectTransform inTransform, Vector2 inTarget, float inTime, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, inTarget), inTime);
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, inTarget, inAxis), inTime);
         }
 
         /// <summary>
         /// Scales the given RectTransform to another sizeDelta over time.
         /// </summary>
-        static public Tween SizeDeltaTo(this RectTransform inTransform, Vector2 inTarget, TweenSettings inSettings)
+        static public Tween SizeDeltaTo(this RectTransform inTransform, Vector2 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, inTarget), inSettings);
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, inTarget, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Scales the given RectTransform to another sizeDelta over time.
+        /// </summary>
+        static public Tween SizeDeltaTo(this RectTransform inTransform, float inTarget, float inTime, Axis inAxis)
+        {
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, new Vector2(inTarget, inTarget), inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the given RectTransform to another sizeDelta over time.
+        /// </summary>
+        static public Tween SizeDeltaTo(this RectTransform inTransform, float inTarget, TweenSettings inSettings, Axis inAxis)
+        {
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaFixed(inTransform, new Vector2(inTarget, inTarget), inAxis), inSettings);
         }
 
         /// <summary>
         /// Scales the given RectTransform to the sizeDelta of another RectTransform over time.
         /// </summary>
-        static public Tween SizeDeltaTo(this RectTransform inTransform, RectTransform inTarget, float inTime)
+        static public Tween SizeDeltaTo(this RectTransform inTransform, RectTransform inTarget, float inTime, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_RectTransform_SizeDeltaDynamic(inTransform, inTarget), inTime);
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaDynamic(inTransform, inTarget, inAxis), inTime);
         }
 
         /// <summary>
         /// Scales the given RectTransform to the sizeDelta of another RectTransform over time.
         /// </summary>
-        static public Tween SizeDeltaTo(this RectTransform inTransform, RectTransform inTarget, TweenSettings inSettings)
+        static public Tween SizeDeltaTo(this RectTransform inTransform, RectTransform inTarget, TweenSettings inSettings, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_RectTransform_SizeDeltaDynamic(inTransform, inTarget), inSettings);
+            return Tween.Create(new TweenData_RectTransform_SizeDeltaDynamic(inTransform, inTarget, inAxis), inSettings);
         }
 
         #endregion

@@ -266,6 +266,51 @@ namespace BeauRoutine
 
         #endregion
 
+        #region SizeDelta
+
+        /// <summary>
+        /// Returns the RectTransform's sizeDelta for the given axis.
+        /// </summary>
+        static public Vector2 GetSizeDelta(this RectTransform inTransform, Axis inAxis = Axis.XY)
+        {
+            return Vector2.zero.CopyFrom(inTransform.sizeDelta, inAxis);
+        }
+
+        /// <summary>
+        /// Sets the RectTransform's size delta on the given axis.
+        /// </summary>
+        static public void SetSizeDelta(this RectTransform inTransform, Vector2 inSize, Axis inAxis = Axis.XYZ)
+        {
+            if (inAxis != 0)
+            {
+                Vector2 pos;
+                if (inAxis == Axis.XYZ || inAxis == Axis.XY)
+                    pos = inSize;
+                else
+                    pos = inTransform.sizeDelta.CopyFrom(inSize, inAxis);
+
+                inTransform.sizeDelta = pos;
+            }
+        }
+
+        /// <summary>
+        /// Returns the RectTransform's sizeDelta for the given axis.
+        /// </summary>
+        static public float GetSizeDeltaAxis(this RectTransform inTransform, Axis inAxis)
+        {
+            return inTransform.sizeDelta.GetAxis(inAxis);
+        }
+
+        /// <summary>
+        /// Sets the RectTransform's sizeDelta on the given axis.
+        /// </summary>
+        static public void SetSizeDelta(this RectTransform inTransform, float inSize, Axis inAxis)
+        {
+            SetSizeDelta(inTransform, new Vector2(inSize, inSize), inAxis);
+        }
+
+        #endregion
+
         #endregion
 
         #region Snapping
