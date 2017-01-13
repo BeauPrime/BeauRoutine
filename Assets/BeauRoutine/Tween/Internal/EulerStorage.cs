@@ -4,7 +4,7 @@
  * Date:    21 Nov 2016
  * 
  * File:    EulerStorage.cs
- * Purpose: Internal storage for maintaining a consistent Euler basis
+ * Purpose: Internal storage for maintaining consistent Euler values
  *          when interpolating Euler angles.
 */
 

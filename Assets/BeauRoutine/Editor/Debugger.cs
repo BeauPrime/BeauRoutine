@@ -23,7 +23,7 @@ namespace BeauRoutine.Editor
         {
             Stats,
             Details,
-            Groups
+            Options
         }
 
         public Debugger()
@@ -62,7 +62,7 @@ namespace BeauRoutine.Editor
                     EditorGUILayout.LabelField("Not Running", GUILayout.Width(100));
                 GUILayout.FlexibleSpace();
                 PageTab("STATS", Page.Stats);
-                //PageTab("GROUPS", Page.Groups);
+                PageTab("OPTIONS", Page.Options);
                 PageTab("DETAILS", Page.Details);
             }
             EditorGUILayout.EndHorizontal();
@@ -75,7 +75,8 @@ namespace BeauRoutine.Editor
                 case Page.Details:
                     RenderDetails();
                     break;
-                case Page.Groups:
+                case Page.Options:
+                    RenderOptions();
                     break;
                 case Page.Stats:
                     RenderStats(globalStats);
@@ -229,6 +230,46 @@ namespace BeauRoutine.Editor
         {
             if (Event.current.type != EventType.Repaint)
                 return;
+        }
+
+        #endregion
+
+        #region Options
+
+        private void RenderOptions()
+        {
+            GUILayout.BeginHorizontal();
+            {
+                GUILayout.BeginVertical();
+                {
+                    Routine.TimeScale = Mathf.Clamp(EditorGUILayout.DelayedFloatField("Time Scale", Routine.TimeScale), 0, 100);
+                    GUILayout.BeginHorizontal();
+                    if (GUILayout.Button("Reset", GUILayout.Width(80)))
+                        Routine.TimeScale = 1.0f;
+                    GUI.enabled = (Routine.TimeScale * 2) < 100;
+                    if (GUILayout.Button("Double", GUILayout.Width(80)))
+                        Routine.TimeScale *= 2.0f;
+                    GUI.enabled = true;
+                    if (GUILayout.Button("Half", GUILayout.Width(80)))
+                        Routine.TimeScale *= 0.5f;
+                    GUILayout.EndHorizontal();
+                }
+                GUILayout.EndVertical();
+
+                GUILayout.FlexibleSpace();
+
+                if (Routine.GetSnapshotEnabled())
+                {
+                    if (GUILayout.Button("Disable Snapshot", GUILayout.Width(150)))
+                        Routine.SetSnapshotEnabled(false);
+                }
+                else
+                {
+                    if (GUILayout.Button("Enable Snapshot", GUILayout.Width(150)))
+                        Routine.SetSnapshotEnabled(true);
+                }
+            }
+            GUILayout.EndHorizontal();
         }
 
         #endregion

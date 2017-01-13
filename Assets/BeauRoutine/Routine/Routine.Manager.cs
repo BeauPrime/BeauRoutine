@@ -795,7 +795,7 @@ namespace BeauRoutine
         #region Global Settings
 
 #if UNITY_EDITOR
-        static private bool s_SnapshotEnabled = true;
+        static private bool s_SnapshotEnabled = false;
 #endif
 
         /// <summary>
@@ -829,6 +829,20 @@ namespace BeauRoutine
             s_SnapshotEnabled = inbEnabled;
             if (!s_SnapshotEnabled)
                 s_Snapshot = null;
+#endif
+        }
+
+        /// <summary>
+        /// Returns if snapshotting is enabled.
+        /// A snapshot is created whenever a new
+        /// max number of concurrent routines is set.
+        /// </summary>
+        static public bool GetSnapshotEnabled()
+        {
+#if UNITY_EDITOR
+            return s_SnapshotEnabled;
+#else
+            return false;
 #endif
         }
 
