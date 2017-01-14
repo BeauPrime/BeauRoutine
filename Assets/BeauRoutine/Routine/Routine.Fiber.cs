@@ -196,7 +196,10 @@ namespace BeauRoutine
             /// </summary>
             public void Stop()
             {
-                m_Flags |= FLAG_DISPOSING;
+                if ((m_Flags & FLAG_DISPOSING) == 0)
+                {
+                    m_Flags |= FLAG_DISPOSING;
+                }
             }
 
             /// <summary>

@@ -86,6 +86,12 @@ namespace BeauRoutine
 #if UNITY_EDITOR
                 s_UpdateTimer.Reset();
                 s_UpdateTimer.Start();
+
+                if (s_NeedsSnapshot)
+                {
+                    s_Snapshot = Editor.GetRoutineStats();
+                    s_NeedsSnapshot = false;
+                }
 #endif
 
                 // Traverse the active fiber list
@@ -132,6 +138,7 @@ namespace BeauRoutine
 
 #if UNITY_EDITOR
         static private int s_MaxConcurrent;
+        static private bool s_NeedsSnapshot = false;
         static private Editor.RoutineStats[] s_Snapshot;
 
         static private int s_UpdateSamples;
@@ -169,7 +176,7 @@ namespace BeauRoutine
 
 #if UNITY_EDITOR
             if (needSnapshot && s_SnapshotEnabled)
-                s_Snapshot = Editor.GetRoutineStats();
+                s_NeedsSnapshot = true;
 #endif
 
             return handle;
@@ -186,7 +193,7 @@ namespace BeauRoutine
 
 #if UNITY_EDITOR
             if (needSnapshot && s_SnapshotEnabled)
-                s_Snapshot = Editor.GetRoutineStats();
+                s_NeedsSnapshot = true;
 #endif
 
             return fiber;

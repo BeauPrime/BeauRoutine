@@ -6,10 +6,6 @@
  * File:    IRoutineEnumerator.cs
  * Purpose: Interface for custom routines that provides a callback
  *          when a routine is queued for execution.
- *          
- * Notes:   This is used primarily to start Tweens immediately
- *          when they are queued, not the first frame after,
- *          to ensure more predictable timing.
 */
 
 using System;

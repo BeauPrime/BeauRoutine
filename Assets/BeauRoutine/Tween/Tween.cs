@@ -472,17 +472,18 @@ namespace BeauRoutine
 
         public bool MoveNext()
         {
+            if (m_State == State.Begin)
+            {
+                Start();
+
+                if (m_Instant)
+                    return OnInstant();
+
+                m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
+            }
+
             switch (m_State)
             {
-                case State.Begin:
-                    Start();
-
-                    if (m_Instant)
-                        return OnInstant();
-
-                    m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
-                    return true;
-
                 case State.Run:
                     float deltaTime = Routine.DeltaTime;
                     if (deltaTime <= 0)
@@ -516,36 +517,29 @@ namespace BeauRoutine
         /// </summary>
         public void Dispose()
         {
-            if (m_TweenData != null && m_State == State.Run)
+            if (m_Cancel != CancelMode.Nothing && m_TweenData != null && m_State == State.Run)
             {
+                m_Reversed = false;
+
                 float curvedPercent = 0;
                 switch (m_Cancel)
                 {
                     case CancelMode.Revert:
                         curvedPercent = Evaluate(0);
-                        m_TweenData.ApplyTween(curvedPercent);
-                        if (m_OnUpdate != null)
-                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.RevertNoWave:
                         curvedPercent = EvaluateNoWave(0);
-                        m_TweenData.ApplyTween(curvedPercent);
-                        if (m_OnUpdate != null)
-                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.ForceEnd:
                         curvedPercent = Evaluate(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
-                        m_TweenData.ApplyTween(curvedPercent);
-                        if (m_OnUpdate != null)
-                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                     case CancelMode.ForceEndNoWave:
                         curvedPercent = EvaluateNoWave(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
-                        m_TweenData.ApplyTween(curvedPercent);
-                        if (m_OnUpdate != null)
-                            m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                         break;
                 }
+                m_TweenData.ApplyTween(curvedPercent);
+                if (m_OnUpdate != null)
+                    m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                 m_TweenData.OnTweenEnd();
             }
 
@@ -576,17 +570,22 @@ namespace BeauRoutine
         /// </summary>
         public bool OnRoutineStart()
         {
-            if (m_State == State.Begin)
-            {
-                Start();
+            // This actually causes issues when using OnCancel states.
+            // If replacing one Tween with another with an OnCancel
+            // and both are adjusting the same property, this will be
+            // called before the first one cancels, which can cause issues
+            // with tweens that auto-read the starting value.
 
-                // If we don't have any time
-                // just skip to the end right away
-                if (m_Instant)
-                    return OnInstant();
+            //if (m_State == State.Begin)
+            //{
+            //    Start();
 
-                m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
-            }
+            //    if (m_Instant)
+            //        return OnInstant();
+
+            //    m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
+            //    return true;
+            //}
             return true;
         }
 
