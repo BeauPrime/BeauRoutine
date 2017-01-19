@@ -386,6 +386,60 @@ namespace BeauRoutine
 
         #endregion
 
+        #region Call
+
+        /// <summary>
+        /// Executes an action at the end of the frame.
+        /// </summary>
+        static public Routine StartCall(Action inAction)
+        {
+            return Start(CallRoutine(inAction));
+        }
+
+        /// <summary>
+        /// Executes an action with an argument at the end of the frame.
+        /// </summary>
+        static public Routine StartCall<T>(Action<T> inAction, T inArg)
+        {
+            return Start(CallRoutine(inAction, inArg));
+        }
+
+        /// <summary>
+        /// Executes an action at the end of the frame.
+        /// </summary>
+        static public Routine StartCall(MonoBehaviour inHost, Action inAction)
+        {
+            return Start(inHost, CallRoutine(inAction));
+        }
+
+        /// <summary>
+        /// Executes an action with an argument at the end of the frame.
+        /// </summary>
+        static public Routine StartCall<T>(MonoBehaviour inHost, Action<T> inAction, T inArg)
+        {
+            return Start(inHost, CallRoutine(inAction, inArg));
+        }
+
+        #region Internal
+
+        static private IEnumerator CallRoutine(Action inAction)
+        {
+            if (inAction != null)
+                inAction();
+            yield break;
+        }
+
+        static private IEnumerator CallRoutine<T>(Action<T> inAction, T inArg)
+        {
+            if (inAction != null)
+                inAction(inArg);
+            yield break;
+        }
+
+        #endregion
+
+        #endregion
+
         #region Loop
 
         /// <summary>

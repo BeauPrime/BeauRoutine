@@ -73,6 +73,7 @@ namespace BeauRoutine
                 public MonoBehaviour Host;
                 public RoutineState State;
                 public float TimeScale;
+                public int Priority;
                 public string Name;
                 public string Function;
                 public int StackDepth;

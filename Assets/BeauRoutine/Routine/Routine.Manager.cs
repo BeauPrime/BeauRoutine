@@ -94,6 +94,12 @@ namespace BeauRoutine
                 }
 #endif
 
+                if (s_NeedsSort)
+                {
+                    s_Table.SortActiveList();
+                    s_NeedsSort = false;
+                }
+
                 // Traverse the active fiber list
                 // but only for the nodes that existed
                 // at the beginning of this frame.
@@ -135,6 +141,7 @@ namespace BeauRoutine
         #region Fibers
 
         static private FiberTable s_Table;
+        static private bool s_NeedsSort = false;
 
 #if UNITY_EDITOR
         static private int s_MaxConcurrent;
@@ -173,6 +180,7 @@ namespace BeauRoutine
             bool needSnapshot;
             Fiber fiber = CreateFiber(inHost, inStart, false, out handle, out needSnapshot);
             s_Table.AddActiveFiber(fiber);
+            s_NeedsSort = true;
 
 #if UNITY_EDITOR
             if (needSnapshot && s_SnapshotEnabled)

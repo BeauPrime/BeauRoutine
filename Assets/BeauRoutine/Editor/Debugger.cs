@@ -356,11 +356,27 @@ namespace BeauRoutine.Editor
                     EditorGUILayout.LabelField("TIMESCALE/", GUILayout.Width(FIELD_NAME_WIDTH));
                     if (!inbCanAdjust)
                         GUI.enabled = false;
-                    float timeScale = EditorGUILayout.FloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
+                    float timeScale = EditorGUILayout.DelayedFloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
                     if (timeScale < 0)
                         timeScale = 0;
                     if (timeScale != inStats.TimeScale)
                         inStats.Handle.SetTimeScale(timeScale);
+                    GUI.enabled = true;
+                }
+                EditorGUILayout.EndHorizontal();
+            }
+
+            // Priority
+            if (!inbNested)
+            {
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("PRIORITY/", GUILayout.Width(FIELD_NAME_WIDTH));
+                    if (!inbCanAdjust)
+                        GUI.enabled = false;
+                    int priority = EditorGUILayout.DelayedIntField(inStats.Priority, GUILayout.ExpandWidth(true));
+                    if (priority != inStats.Priority)
+                        inStats.Handle.SetPriority(priority);
                     GUI.enabled = true;
                 }
                 EditorGUILayout.EndHorizontal();

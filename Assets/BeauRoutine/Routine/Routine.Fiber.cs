@@ -19,7 +19,7 @@ namespace BeauRoutine
     public partial struct Routine
     {
         // Executes a routine.
-        private sealed class Fiber
+        private sealed class Fiber : IComparable<Fiber>
         {
             private static readonly IntPtr TYPEHANDLE_INT = typeof(int).TypeHandle.Value;
             private static readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
@@ -47,6 +47,7 @@ namespace BeauRoutine
             private int m_GroupMask;
             private byte m_Flags;
             private string m_Name;
+            private int m_Priority = 0;
 
             private float m_TimeScale = 1.0f;
 
@@ -83,6 +84,7 @@ namespace BeauRoutine
                 m_WaitTime = 0;
                 m_UnityWait = null;
                 m_Name = null;
+                m_Priority = 0;
 
                 m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
 
@@ -131,6 +133,7 @@ namespace BeauRoutine
                 m_GroupMask = 0;
                 m_Flags = 0;
                 m_Name = null;
+                m_Priority = 0;
 
                 m_TimeScale = 1.0f;
 
@@ -196,10 +199,7 @@ namespace BeauRoutine
             /// </summary>
             public void Stop()
             {
-                if ((m_Flags & FLAG_DISPOSING) == 0)
-                {
-                    m_Flags |= FLAG_DISPOSING;
-                }
+                m_Flags |= FLAG_DISPOSING;
             }
 
             /// <summary>
@@ -209,6 +209,22 @@ namespace BeauRoutine
             {
                 get { return m_TimeScale; }
                 set { m_TimeScale = value; }
+            }
+
+            /// <summary>
+            /// Execution priority.
+            /// </summary>
+            public int Priority
+            {
+                get { return m_Priority; }
+                set
+                {
+                    if (m_Priority != value)
+                    {
+                        m_Priority = value;
+                        s_NeedsSort = true;
+                    }
+                }
             }
 
             /// <summary>
@@ -624,6 +640,7 @@ namespace BeauRoutine
 
                 stats.TimeScale = m_TimeScale;
                 stats.Name = Name;
+                stats.Priority = m_Priority;
 
                 if (m_Stack.Count > 0)
                 {
@@ -743,6 +760,15 @@ namespace BeauRoutine
             }
 
             static private readonly char[] INVALID_NAME_CHARS = new char[] { '$', '<', '>' };
+
+            #endregion
+
+            #region IComparable
+
+            public int CompareTo(Fiber other)
+            {
+                return -m_Priority.CompareTo(other.m_Priority);
+            }
 
             #endregion
         }

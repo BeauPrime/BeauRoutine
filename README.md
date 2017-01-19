@@ -327,6 +327,26 @@ Put in other terms, a normal Tween that starts slow and speeds up animating from
 
 ## Advanced Features
 
+### Priority
+
+BeauRoutine provides a way of changing the priority of any individual BeauRoutine. Priority determines the order in which BeauRoutines are executed, from highest priority to lowest. This could be useful if the execution of one routine is dependent on the result of another.
+
+```csharp
+// Create the routines
+// r1 will be executed before r2, since it was created first
+Routine r1 = Routine.Start( this, MyCoroutineA() );
+Routine r2 = Routine.Start( this, MyCoroutineB() );
+
+// Set the priorities of the routines
+// Higher priorities will be executed first
+// Priority defaults to 0
+int r1Priority = r1.GetPriority(); // 0
+r2.SetPriority(r1Priority + 100); // 100
+
+// r2 will now execute before r1,
+// even though it was started after r1.
+```
+
 ### Time Scale
 
 BeauRoutine offers a powerful time scaling system.  Every BeauRoutine has its own time scaling value, which can be retrieved or set by calling ``GetTimeScale`` or ``SetTimeScale`` on a Routine object.
@@ -336,7 +356,7 @@ BeauRoutine offers a powerful time scaling system.  Every BeauRoutine has its ow
 Routine r = Routine.Start( this, MyCoroutine() );
 
 // Retrieve the time scale for the Routine and double it
-// Time scaling, by default, starts at 1.
+// Time scaling, by default, starts at 1
 float timeScale = r.GetTimeScale();
 timeScale *= 2;
 r.SetTimeScale( timeScale ); 
@@ -543,6 +563,7 @@ The ``DETAILS`` page will show you all the currently running BeauRoutines in a l
 | ``Routine.StartDelay`` | Starts a BeauRoutine that calls a function or executes a coroutine after a certain number of seconds. |
 | ``Routine.StartLoop`` | Starts a BeauRoutine that calls a function every frame. |
 | ``Routine.StartLoopRoutine`` | Starts a BeauRoutine that executes a coroutine in a never-ending loop. |
+| ``Routine.StartCall`` | Starts a BeauRoutine that calls a function at the end of the frame. |
 | **Flow** | |
 | ``Routine.Pause`` | Pauses the BeauRoutine with the given name. |
 | ``Routine.PauseAll`` | Pauses all BeauRoutines. |

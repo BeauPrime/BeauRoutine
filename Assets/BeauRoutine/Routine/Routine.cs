@@ -174,6 +174,31 @@ namespace BeauRoutine
             return this;
         }
 
+        /// <summary>
+        /// Returns the execution priority
+        /// for this routine.
+        /// </summary>
+        public int GetPriority()
+        {
+            Fiber fiber = Find(this);
+            if (fiber != null)
+                return fiber.Priority;
+            return 0;
+        }
+
+        /// <summary>
+        /// Sets the execution priority for this routine.
+        /// Routines with a greater priority are executed
+        /// first.
+        /// </summary>
+        public Routine SetPriority(int inPriority)
+        {
+            Fiber fiber = Find(this);
+            if (fiber != null)
+                fiber.Priority = inPriority;
+            return this;
+        }
+
         #endregion
 
         #region Replace
