@@ -1,7 +1,6 @@
-﻿using UnityEngine;
-using System.Collections;
+﻿using BeauRoutine;
 using System.Linq;
-using BeauRoutine;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class Example2_Script : MonoBehaviour
@@ -28,7 +27,7 @@ public class Example2_Script : MonoBehaviour
     {
         m_StartButton.onClick.AddListener(Clicked_StartButton);
 
-        m_OriginalState = TransformState.WorldState;
+        m_OriginalState = TransformState.WorldState();
         m_OriginalState.Refresh(m_Object, TransformProperties.Position);
     }
 

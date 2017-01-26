@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -67,17 +67,33 @@ namespace BeauRoutine
         /// <summary>
         /// Returns an empty world-space state.
         /// </summary>
-        static public TransformState WorldState
+        static public TransformState WorldState()
         {
-            get { return new TransformState(Space.World); }
+            return new TransformState(Space.World);
+        }
+
+        /// <summary>
+        /// Returns a new world-space state for the given transform.
+        /// </summary>
+        static public TransformState WorldState(Transform inTransform)
+        {
+            return new TransformState(inTransform, Space.World);
         }
 
         /// <summary>
         /// Returns an empty local-space state.
         /// </summary>
-        static public TransformState LocalState
+        static public TransformState LocalState()
         {
-            get { return new TransformState(Space.Self); }
+            return new TransformState(Space.Self);
+        }
+
+        /// <summary>
+        /// Returns a new local-space state for the given transform.
+        /// </summary>
+        static public TransformState LocalState(Transform inTransform)
+        {
+            return new TransformState(inTransform, Space.Self);
         }
 
         // Creates a new TransformState in the given space.
@@ -89,7 +105,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Creates a new TransformState from the given transform.
+        /// Creates a new TransformState for the given transform.
         /// </summary>
         public TransformState(Transform inTransform, Space inSpace = Space.World)
         {

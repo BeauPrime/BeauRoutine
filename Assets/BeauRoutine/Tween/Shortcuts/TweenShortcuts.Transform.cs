@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -530,13 +530,15 @@ namespace BeauRoutine
         {
             private Transform m_Transform;
             private Vector3 m_Target;
+            private Axis m_Axis;
 
             private Quaternion m_Start;
 
-            public TweenData_Transform_LookAtFixed(Transform inTransform, Vector3 inTarget)
+            public TweenData_Transform_LookAtFixed(Transform inTransform, Vector3 inTarget, Axis inAxis)
             {
                 m_Transform = inTransform;
                 m_Target = inTarget;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
@@ -548,7 +550,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Quaternion target = UnityEngine.Quaternion.LookRotation(m_Target - m_Transform.position);
+                Vector3 vector = (m_Target - m_Transform.position).CopyFrom(Vector3.zero, m_Axis);
+                Quaternion target = UnityEngine.Quaternion.LookRotation(vector);
                 m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
             }
 
@@ -562,13 +565,15 @@ namespace BeauRoutine
         {
             private Transform m_Transform;
             private Transform m_Target;
+            private Axis m_Axis;
 
             private Quaternion m_Start;
 
-            public TweenData_Transform_LookAtDynamic(Transform inTransform, Transform inTarget)
+            public TweenData_Transform_LookAtDynamic(Transform inTransform, Transform inTarget, Axis inAxis)
             {
                 m_Transform = inTransform;
                 m_Target = inTarget;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
@@ -580,7 +585,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Quaternion target = UnityEngine.Quaternion.LookRotation(m_Target.position - m_Transform.position);
+                Vector3 vector = (m_Target.position - m_Transform.position).CopyFrom(Vector3.zero, m_Axis);
+                Quaternion target = UnityEngine.Quaternion.LookRotation(vector);
                 m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
             }
 
@@ -593,33 +599,33 @@ namespace BeauRoutine
         /// <summary>
         /// Rotates the Transform to look at the given point over time.
         /// </summary>
-        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, float inTime)
+        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ)
         {
-            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget), inTime);
+            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget, inAxis), inTime);
         }
 
         /// <summary>
         /// Rotates the Transform to look at the given point over time.
         /// </summary>
-        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings)
+        static public Tween RotateLookAt(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
         {
-            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget), inSettings);
+            return Tween.Create(new TweenData_Transform_LookAtFixed(inTransform, inTarget, inAxis), inSettings);
         }
 
         /// <summary>
         /// Rotates the Transform to look at another Transform over time.
         /// </summary>
-        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, float inTime)
+        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, float inTime, Axis inAxis = Axis.XYZ)
         {
-            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget), inTime);
+            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget, inAxis), inTime);
         }
 
         /// <summary>
         /// Rotates the Transform to look at another Transform over time.
         /// </summary>
-        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, TweenSettings inSettings)
+        static public Tween RotateLookAt(this Transform inTransform, Transform inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
         {
-            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget), inSettings);
+            return Tween.Create(new TweenData_Transform_LookAtDynamic(inTransform, inTarget, inAxis), inSettings);
         }
 
         #endregion

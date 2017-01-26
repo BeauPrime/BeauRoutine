@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -320,7 +320,7 @@ namespace BeauRoutine
         /// </summary>
         static public void SnapTo(this Transform inTransform, Transform inTarget, TransformProperties inProperties = TransformProperties.All, Space inSpace = Space.World)
         {
-            TransformState state = (inSpace == Space.World ? TransformState.WorldState : TransformState.LocalState);
+            TransformState state = (inSpace == Space.World ? TransformState.WorldState() : TransformState.LocalState());
             state.Refresh(inTarget, inProperties);
             state.Apply(inTransform, inProperties);
         }

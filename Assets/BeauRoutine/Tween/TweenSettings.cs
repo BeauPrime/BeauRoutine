@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -29,5 +29,11 @@ namespace BeauRoutine
         /// Easing function for the value.
         /// </summary>
         public Curve Curve;
+
+        public TweenSettings(float inTime, Curve inCurve = default(Curve))
+        {
+            Time = inTime;
+            Curve = inCurve;
+        }
     }
 }
