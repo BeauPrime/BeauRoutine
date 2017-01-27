@@ -242,7 +242,7 @@ public class Example3_Menu : MonoBehaviour
 
         // Perform the animation
         yield return Routine.Combine(
-            m_Root.AnchorTo(0, m_SlideInSettings, Axis.Y), // Move our anchoredPosition to 0
+            m_Root.AnchorPosTo(0, m_SlideInSettings, Axis.Y), // Move our anchoredPosition to 0
             m_RootGroup.FadeTo(1f, m_SlideInSettings.Time) // Fade in
             );
 
@@ -259,7 +259,7 @@ public class Example3_Menu : MonoBehaviour
 
         // Perform the animation
         yield return Routine.Combine(
-            m_Root.AnchorTo(-m_SlideDistance, m_SlideOutSettings, Axis.Y), // Slide back to our original position
+            m_Root.AnchorPosTo(-m_SlideDistance, m_SlideOutSettings, Axis.Y), // Slide back to our original position
             m_RootGroup.FadeTo(0f, m_SlideOutSettings.Time) // Fade out
             );
 
