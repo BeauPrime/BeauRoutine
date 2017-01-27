@@ -31,6 +31,7 @@ namespace BeauRoutine
             private const byte FLAG_DISPOSING = 0x02;
             private const byte FLAG_CHAINED = 0x04;
             private const byte FLAG_IGNOREOBJECTTIMESCALE = 0x08;
+            private const byte FLAG_GLOBAL = 0x10;
 
             private Routine m_Handle;
             private MonoBehaviour m_Host;
@@ -89,6 +90,9 @@ namespace BeauRoutine
                 m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
 
                 m_Flags = inChained ? FLAG_CHAINED : (byte)0;
+
+                if (ReferenceEquals(inHost, s_Manager))
+                    m_Flags |= FLAG_GLOBAL;
 
                 m_TimeScale = 1.0f;
 
@@ -402,7 +406,7 @@ namespace BeauRoutine
                     return;
 
                 float timeScale = m_TimeScale;
-                if (!ReferenceEquals(m_HostIdentity, null))
+                if ((m_Flags & FLAG_GLOBAL) == 0 && !ReferenceEquals(m_HostIdentity, null))
                 {
                     // If we haven't been explicitly told to ignore the object's
                     // time scale, use it.
@@ -462,13 +466,13 @@ namespace BeauRoutine
             // Returns if the Fiber should dispose itself.
             private bool ShouldDispose()
             {
-                return (m_Flags & FLAG_DISPOSING) > 0 || !m_Host;
+                return (m_Flags & FLAG_DISPOSING) > 0 || ((m_Flags & FLAG_GLOBAL) == 0 && !m_Host);
             }
 
             // Returns if the Fiber has been paused.
             private bool IsPaused()
             {
-                return (m_Flags & FLAG_PAUSED) > 0 || (s_PausedGroups & m_GroupMask) != 0 || !m_Host.isActiveAndEnabled;
+                return (m_Flags & FLAG_PAUSED) > 0 || (s_PausedGroups & m_GroupMask) != 0 || ((m_Flags & FLAG_GLOBAL) == 0 && !m_Host.isActiveAndEnabled);
             }
 
             // Returns if this fiber is running.

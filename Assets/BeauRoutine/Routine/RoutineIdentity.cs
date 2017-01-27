@@ -73,8 +73,7 @@ namespace BeauRoutine
         static public RoutineIdentity Find(GameObject inGameObject)
         {
             RoutineIdentity id;
-            if (!s_IdentityRegistry.TryGetValue(inGameObject.GetInstanceID(), out id))
-                id = inGameObject.GetComponent<RoutineIdentity>();
+            s_IdentityRegistry.TryGetValue(inGameObject.GetInstanceID(), out id);
             return id;
         }
 
@@ -84,8 +83,7 @@ namespace BeauRoutine
         static public RoutineIdentity Find(MonoBehaviour inBehavior)
         {
             RoutineIdentity id;
-            if (!s_IdentityRegistry.TryGetValue(inBehavior.gameObject.GetInstanceID(), out id))
-                id = inBehavior.GetComponent<RoutineIdentity>();
+            s_IdentityRegistry.TryGetValue(inBehavior.gameObject.GetInstanceID(), out id);
             return id;
         }
 
