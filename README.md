@@ -329,7 +329,7 @@ Put in other terms, a normal Tween that starts slow and speeds up animating from
 
 ### Priority
 
-BeauRoutine provides a way of changing the priority of any individual BeauRoutine. Priority determines the order in which BeauRoutines are executed, from highest priority to lowest. This could be useful if the execution of one routine is dependent on the result of another.
+BeauRoutine provides a way of changing the priority of any individual BeauRoutine. Priority determines the order in which BeauRoutines are executed, from highest priority to lowest. This could be useful if the execution of one routine is dependent on the result of another. BeauRoutines with equal priority will be executed in order of the last time priority was set, or creation if priority was never specifically set. Priority will default to 0.
 
 ```csharp
 // Create the routines
@@ -549,9 +549,11 @@ public class SomeObject
 
 BeauRoutine includes a simple profiler and debugger, found under the menu item ``BeauRoutine/Debugger``.
 
-The ``STATS`` page will show you the number of BeauRoutines currently running, the maximum you've had running at the same time, and the total you can run concurrently without allocating more memory.  It will also keep track of the average time it takes to execute all the currently running BeauRoutines, and maintain a snapshot of what was running when the last maximum was recorded.
+The ``STATS`` page displays the number of BeauRoutines currently running, the maximum you've had running at the same time, and the total you can run concurrently without allocating more memory.  It also keeps track of the average time it takes to execute all the currently running BeauRoutines, and maintains a snapshot of what was running when the last maximum was recorded.
 
-The ``DETAILS`` page will show you all the currently running BeauRoutines in a list.  From here, you can pause, resume, or stop any of them, as well as rename them or set their time scale.  Any Combine or Race routines will presented in a hierarchical format.
+The ``OPTIONS`` page displays the current time scale, as well as options for resetting it, doubling it, or halving it. It also contains a button enabling or disabling the snapshot feature on the STATS page.
+
+The ``DETAILS`` page displays all the currently running BeauRoutines in a list.  From here, you can pause, resume, or stop any of them, as well as rename them or set their time scale.  Any Combine or Race routines are presented in a hierarchical format.
 
 ## Reference
 
@@ -573,7 +575,7 @@ The ``DETAILS`` page will show you all the currently running BeauRoutines in a l
 | ``Routine.StopAll`` | Stops all BeauRoutines. |
 | **Query** | |
 | ``Routine.Find`` | Returns the Routine for the BeauRoutine with the given name. |
-| ``Routine.FindAll`` | Returns a list of Routines for the BeauRoutines hosted on the given object. |
+| ``Routine.FindAll`` | Returns a list of Routines for the BeauRoutines with the given host. |
 | **Wait** | |
 | ``Routine.WaitFrames`` | Waits for the given number of frames. |
 | ``Routine.WaitSeconds`` | Waits for the given number of seconds. |
@@ -624,8 +626,10 @@ Tween extension methods currently exist for the following types:
 | | Scale | ``ScaleTo`` |
 | | Rotation | ``RotateTo``, ``LookAt`` |
 | | Transform | ``TransformTo`` |
-| RectTransform | Anchored Position | ``AnchorTo`` |
+| RectTransform | Anchored Position | ``AnchorPosTo`` |
+| | Anchors | ``AnchorTo`` |
 | | Size Delta | ``SizeDeltaTo`` |
+| | Pivot | ``PivotTo`` |
 | AudioSource | Volume | ``VolumeTo`` |
 | | Pitch | ``PitchTo`` |
 | | Pan | ``PanTo`` |
