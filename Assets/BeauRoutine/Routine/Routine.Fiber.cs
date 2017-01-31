@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
 
@@ -19,7 +20,7 @@ namespace BeauRoutine
     public partial struct Routine
     {
         // Executes a routine.
-        private sealed class Fiber : IComparable<Fiber>
+        private sealed class Fiber
         {
             private static readonly IntPtr TYPEHANDLE_INT = typeof(int).TypeHandle.Value;
             private static readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
@@ -27,11 +28,12 @@ namespace BeauRoutine
             private static readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
             private static readonly IntPtr TYPEHANDLE_COMMAND = typeof(Command).TypeHandle.Value;
 
-            private const byte FLAG_PAUSED = 0x01;
-            private const byte FLAG_DISPOSING = 0x02;
-            private const byte FLAG_CHAINED = 0x04;
-            private const byte FLAG_IGNOREOBJECTTIMESCALE = 0x08;
-            private const byte FLAG_GLOBAL = 0x10;
+            private const int FLAG_PAUSED = 0x01;
+            private const int FLAG_DISPOSING = 0x02;
+            private const int FLAG_CHAINED = 0x04;
+            private const int FLAG_IGNORE_OBJECT_TIMESCALE = 0x08;
+            private const int FLAG_HOSTED_BY_MANAGER = 0x10;
+            private const int FLAG_HAS_IDENTITY = 0x20;
 
             private Routine m_Handle;
             private MonoBehaviour m_Host;
@@ -40,32 +42,41 @@ namespace BeauRoutine
             private RoutineIdentity m_HostIdentity;
 
             private IEnumerator m_RootFunction;
-            private Stack<IEnumerator> m_Stack = new Stack<IEnumerator>(8);
+            private IEnumerator[] m_Stack;
+            private short m_StackPosition;
+            private short m_StackSize;
 
             private float m_WaitTime = 0.0f;
             private Coroutine m_UnityWait = null;
 
             private int m_GroupMask;
-            private byte m_Flags;
+            private int m_Flags;
             private string m_Name;
-            private int m_Priority = 0;
+
+            // HACK: Public variable instead of private here.
+            // Unity's compiler won't inline accessors,
+            // so this saves a tiny bit of time when sorting
+            public int Priority = 0;
 
             private float m_TimeScale = 1.0f;
 
-            private byte m_Counter = 0;
-
-            private event Action m_OnComplete;
-            private event Action m_OnStop;
+            private Action m_OnComplete;
+            private Action m_OnStop;
 
             public Fiber(uint inIndex)
             {
                 Index = inIndex;
+                m_Stack = new IEnumerator[4];
+                m_StackPosition = -1;
+                m_StackSize = 4;
             }
 
             /// <summary>
             /// Index in the Fiber Table.
             /// </summary>
             public readonly uint Index;
+
+            private byte m_Counter = 0;
 
             #region Lifecycle
 
@@ -85,19 +96,23 @@ namespace BeauRoutine
                 m_WaitTime = 0;
                 m_UnityWait = null;
                 m_Name = null;
-                m_Priority = 0;
+                Priority = 0;
 
                 m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
 
-                m_Flags = inChained ? FLAG_CHAINED : (byte)0;
+                // Chained routines are always hosted on the manager
+                m_Flags = inChained ? FLAG_CHAINED | FLAG_HOSTED_BY_MANAGER : 0;
 
-                if (ReferenceEquals(inHost, s_Manager))
-                    m_Flags |= FLAG_GLOBAL;
+                if (!inChained && ReferenceEquals(inHost, s_Manager))
+                    m_Flags |= FLAG_HOSTED_BY_MANAGER;
+                
+                if (!ReferenceEquals(m_HostIdentity, null))
+                    m_Flags |= FLAG_HAS_IDENTITY;
 
                 m_TimeScale = 1.0f;
 
                 m_RootFunction = inStart;
-                m_Stack.Push(inStart);
+                m_Stack[m_StackPosition = 0] = inStart;
 
                 IRoutineEnumerator callback = inStart as IRoutineEnumerator;
                 if (callback != null)
@@ -124,7 +139,7 @@ namespace BeauRoutine
                     m_UnityWait = null;
                 }
 
-                bool bKilled = m_Stack.Count > 0;
+                bool bKilled = m_StackPosition >= 0;
                 bool bChained = (m_Flags & FLAG_CHAINED) != 0;
 
                 ClearStack();
@@ -137,7 +152,7 @@ namespace BeauRoutine
                 m_GroupMask = 0;
                 m_Flags = 0;
                 m_Name = null;
-                m_Priority = 0;
+                Priority = 0;
 
                 m_TimeScale = 1.0f;
 
@@ -167,9 +182,9 @@ namespace BeauRoutine
             private void ClearStack()
             {
                 IEnumerator enumerator;
-                while (m_Stack.Count > 0)
+                while (m_StackPosition >= 0)
                 {
-                    enumerator = m_Stack.Pop();
+                    enumerator = m_Stack[m_StackPosition--];
 
                     // All auto-generated coroutines are also IDisposable
                     // in order to handle "using" and "try...finally" blocks.
@@ -195,11 +210,11 @@ namespace BeauRoutine
             /// </summary>
             public void Resume()
             {
-                m_Flags = (byte)((int)m_Flags & ~FLAG_PAUSED);
+                m_Flags &= ~FLAG_PAUSED;
             }
             
             /// <summary>
-            /// Requests the Fiber end dispose itself.
+            /// Requests the Fiber stop itself.
             /// </summary>
             public void Stop()
             {
@@ -216,18 +231,14 @@ namespace BeauRoutine
             }
 
             /// <summary>
-            /// Execution priority.
+            /// Sets the execution priority.
             /// </summary>
-            public int Priority
+            public void SetPriority(int inPriority)
             {
-                get { return m_Priority; }
-                set
+                if (Priority != inPriority)
                 {
-                    if (m_Priority != value)
-                    {
-                        m_Priority = value;
-                        s_NeedsSort = true;
-                    }
+                    Priority = inPriority;
+                    s_NeedsSort = true;
                 }
             }
 
@@ -236,7 +247,7 @@ namespace BeauRoutine
             /// </summary>
             public void UseObjectTimeScale()
             {
-                m_Flags = (byte)((int)m_Flags & ~FLAG_IGNOREOBJECTTIMESCALE);
+                m_Flags &= ~FLAG_IGNORE_OBJECT_TIMESCALE;
             }
 
             /// <summary>
@@ -244,7 +255,7 @@ namespace BeauRoutine
             /// </summary>
             public void IgnoreObjectTimeScale()
             {
-                m_Flags |= FLAG_IGNOREOBJECTTIMESCALE;
+                m_Flags |= FLAG_IGNORE_OBJECT_TIMESCALE;
             }
 
             /// <summary>
@@ -274,18 +285,11 @@ namespace BeauRoutine
                 if (m_Handle.m_Value == 0)
                     return false;
 
-                bool bContinue = Update();
-                if (!bContinue)
-                    Dispose();
-                return bContinue;
-            }
-
-            // Updates the routine.
-            // Returns if still running.
-            private bool Update()
-            {
                 if (ShouldDispose())
+                {
+                    Dispose();
                     return false;
+                }
 
                 if (IsPaused() || m_UnityWait != null)
                     return true;
@@ -299,17 +303,23 @@ namespace BeauRoutine
                         return true;
                 }
 
-                IEnumerator current = m_Stack.Peek();
+                IEnumerator current = m_Stack[m_StackPosition];
                 bool bMovedNext = current.MoveNext();
 
-                if (ShouldDispose())
+                // Don't check for the object being destroyed.
+                // Destroy won't go into effect until after
+                // all the Fibers are done processing anyways.
+                if ((m_Flags & FLAG_DISPOSING) != 0)
+                {
+                    Dispose();
                     return false;
+                }
 
                 if (bMovedNext)
                 {
                     object result = current.Current;
                     if (result == null)
-                        return true; ;
+                        return true;
 
                     IntPtr resultType = result.GetType().TypeHandle.Value;
 
@@ -332,7 +342,9 @@ namespace BeauRoutine
                         IEnumerator waitSequence = ((Routine)result).Wait();
                         if (waitSequence != null)
                         {
-                            m_Stack.Push(waitSequence);
+                            if (m_StackPosition == m_StackSize - 1)
+                                Array.Resize(ref m_Stack, m_StackSize *= 2);
+                            m_Stack[++m_StackPosition] = waitSequence;
                             return true;
                         }
                     }
@@ -346,13 +358,14 @@ namespace BeauRoutine
                     if (resultType == TYPEHANDLE_COMMAND)
                     {
                         Command c = (Command)result;
-                        switch(c)
+                        switch (c)
                         {
                             case Command.Pause:
                                 Pause();
                                 return true;
                             case Command.Stop:
                                 Stop();
+                                Dispose();
                                 return false;
                         }
                         return true;
@@ -377,21 +390,32 @@ namespace BeauRoutine
                     IEnumerator enumerator = result as IEnumerator;
                     if (enumerator != null)
                     {
-                        m_Stack.Push(enumerator);
+                        // Check if we need to resize the stack
+                        if (m_StackPosition == m_StackSize - 1)
+                            Array.Resize(ref m_Stack, m_StackSize *= 2);
+                        m_Stack[++m_StackPosition] = enumerator;
 
                         IRoutineEnumerator callback = enumerator as IRoutineEnumerator;
                         if (callback != null)
-                            return callback.OnRoutineStart();
+                        {
+                            bool bContinue = callback.OnRoutineStart();
+                            if (!bContinue)
+                                Dispose();
+                            return bContinue;
+                        }
 
                         return true;
                     }
                 }
                 else
                 {
-                    m_Stack.Pop();
+                    m_Stack[m_StackPosition--] = null;
                     ((IDisposable)current).Dispose();
-                    if (m_Stack.Count == 0)
+                    if (m_StackPosition < 0)
+                    {
+                        Dispose();
                         return false;
+                    }
                 }
 
                 return true;
@@ -406,11 +430,11 @@ namespace BeauRoutine
                     return;
 
                 float timeScale = m_TimeScale;
-                if ((m_Flags & FLAG_GLOBAL) == 0 && !ReferenceEquals(m_HostIdentity, null))
+                if ((m_Flags & FLAG_HAS_IDENTITY) != 0)
                 {
                     // If we haven't been explicitly told to ignore the object's
                     // time scale, use it.
-                    if ((m_Flags & FLAG_IGNOREOBJECTTIMESCALE) == 0)
+                    if ((m_Flags & FLAG_IGNORE_OBJECT_TIMESCALE) == 0)
                         timeScale *= m_HostIdentity.TimeScale;
                     timeScale *= s_GroupTimeScales[m_HostIdentity.Group];
                 }
@@ -466,13 +490,16 @@ namespace BeauRoutine
             // Returns if the Fiber should dispose itself.
             private bool ShouldDispose()
             {
-                return (m_Flags & FLAG_DISPOSING) > 0 || ((m_Flags & FLAG_GLOBAL) == 0 && !m_Host);
+                return (m_Flags & FLAG_DISPOSING) != 0
+                    || ((m_Flags & FLAG_HOSTED_BY_MANAGER) == 0 && !m_Host);
             }
 
             // Returns if the Fiber has been paused.
             private bool IsPaused()
             {
-                return (m_Flags & FLAG_PAUSED) > 0 || (s_PausedGroups & m_GroupMask) != 0 || ((m_Flags & FLAG_GLOBAL) == 0 && !m_Host.isActiveAndEnabled);
+                return (m_Flags & FLAG_PAUSED) != 0
+                    || (s_PausedGroups & m_GroupMask) != 0
+                    || ((m_Flags & FLAG_HOSTED_BY_MANAGER) == 0 && !m_Host.isActiveAndEnabled);
             }
 
             // Returns if this fiber is running.
@@ -644,11 +671,11 @@ namespace BeauRoutine
 
                 stats.TimeScale = m_TimeScale;
                 stats.Name = Name;
-                stats.Priority = m_Priority;
+                stats.Priority = Priority;
 
-                if (m_Stack.Count > 0)
+                if (m_StackPosition >= 0)
                 {
-                    IEnumerator current = m_Stack.Peek();
+                    IEnumerator current = m_Stack[m_StackPosition];
                     stats.Function = CleanIteratorName(current);
 
                     // HACK - to visualize combine iterators properly
@@ -661,57 +688,11 @@ namespace BeauRoutine
                     stats.Function = null;
                 }
 
-                stats.StackDepth = m_Stack.Count;
+                stats.StackDepth = m_StackPosition + 1;
 
                 return stats;
             }
 #endif
-
-            /// <summary>
-            /// Writes a description of the Fiber to the StringBuilder.
-            /// </summary>
-            public void WriteToString(StringBuilder inBuilder)
-            {
-                if ((m_Flags & FLAG_CHAINED) == 0)
-                {
-                    inBuilder.Append("HOST/");
-                    if (m_Host == null)
-                        inBuilder.Append("[Null]");
-                    else if (ReferenceEquals(m_Host, s_Manager))
-                        inBuilder.Append("[Manager]");
-                    else
-                        inBuilder.Append(m_Host.ToString());
-
-                    if (!string.IsNullOrEmpty(m_Name))
-                    {
-                        inBuilder.Append("; NAME/");
-                        inBuilder.Append(m_Name);
-                    }
-
-                    inBuilder.Append("; ");
-                }
-
-                inBuilder.Append("STATUS/");
-                if (ShouldDispose())
-                    inBuilder.Append("Disposing");
-                else if (IsPaused())
-                    inBuilder.Append("Paused");
-                else if (m_WaitTime > 0)
-                    inBuilder.Append("Waiting ").Append(m_WaitTime.ToString("0.00")).Append('s');
-                else if (m_UnityWait != null)
-                    inBuilder.Append("Waiting Unity");
-                else
-                    inBuilder.Append("Running");
-
-                inBuilder.Append("; FUNCTION/");
-                if (m_Stack.Count > 0)
-                {
-                    inBuilder.Append(m_Stack.Count - 1).Append('/');
-                    inBuilder.Append(CleanIteratorName(m_Stack.Peek()));
-                }
-                else
-                    inBuilder.Append("[Null]");
-            }
 
             static public string CleanIteratorName(IEnumerator inEnumerator)
             {
@@ -764,15 +745,6 @@ namespace BeauRoutine
             }
 
             static private readonly char[] INVALID_NAME_CHARS = new char[] { '$', '<', '>' };
-
-            #endregion
-
-            #region IComparable
-
-            public int CompareTo(Fiber other)
-            {
-                return -m_Priority.CompareTo(other.m_Priority);
-            }
 
             #endregion
         }

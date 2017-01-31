@@ -43,6 +43,7 @@ namespace BeauRoutine
 
         #region Manager Object
 
+        static private bool s_ManagerInitialized = false;
         static private Manager s_Manager;
         static private bool s_Updating = false;
 #if UNITY_EDITOR
@@ -52,6 +53,9 @@ namespace BeauRoutine
         // This has to be separate to avoid threading issues
         static private void InitializeManager()
         {
+            if (s_ManagerInitialized)
+                return;
+            s_ManagerInitialized = true;
             if (ReferenceEquals(s_Manager, null))
             {
                 GameObject managerGO = new GameObject("Routine::Manager");
@@ -171,7 +175,8 @@ namespace BeauRoutine
             if (inStart == null)
                 return Routine.Null;
 
-            InitializeManager();
+            if (!s_ManagerInitialized)
+                InitializeManager();
 
             if (ReferenceEquals(inHost, null))
                 inHost = s_Manager;
@@ -193,7 +198,8 @@ namespace BeauRoutine
         // Creates a fiber with the given routine, but doesn't auto-run it.
         static private Fiber ChainFiber(IEnumerator inStart)
         {
-            InitializeManager();
+            if (!s_ManagerInitialized)
+                InitializeManager();
 
             Routine handle;
             bool needSnapshot;

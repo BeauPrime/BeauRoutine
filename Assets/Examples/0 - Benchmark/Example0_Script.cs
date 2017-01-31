@@ -22,6 +22,8 @@ public class Example0_Script : MonoBehaviour
         Routine.Initialize();
         RoutineIdentity.Require(this);
 
+        yield return null;
+
         for(int i = 0; i < ROUTINE_COUNTS.Length; ++i)
         {
             float timeAccumulation = 0;
@@ -33,7 +35,7 @@ public class Example0_Script : MonoBehaviour
                 yield return null;
             }
             float avgTime = timeAccumulation / SAMPLE_COUNT;
-            UnityEngine.Debug.Log("[" + ROUTINE_COUNTS[i].ToString() + ", startup]: " + avgTime.ToString() + "ms");
+            print("[" + ROUTINE_COUNTS[i].ToString() + ", startup]: " + avgTime.ToString() + "ms");
         }
 
 #if UNITY_EDITOR

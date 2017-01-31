@@ -50,20 +50,22 @@ namespace BeauRoutine
         private CancelMode m_Cancel;
         private AnimationCurve m_AnimCurve;
         private Wave m_WaveFunc;
-        private float m_Duration;
         private int m_NumLoops;
-        private bool m_MirrorCurve;
-        private bool m_FromMode;
+        private int m_Flags;
+
+        // Flag values
+        private const int FLAG_MIRROR_CURVE = 0x01;
+        private const int FLAG_FROM_MODE = 0x02;
+        private const int FLAG_REVERSED = 0x04;
+        private const int FLAG_INSTANT = 0x08;
 
         // Events
-        private event Action<float> m_OnUpdate;
-        private event Action m_OnComplete;
+        private Action<float> m_OnUpdate;
+        private Action m_OnComplete;
 
         // State settings
         private float m_CurrentPercent;
         private float m_PercentIncrement;
-        private bool m_Reversed = false;
-        private bool m_Instant = false;
         private State m_State = State.Begin;
 
         // Current data
@@ -121,7 +123,10 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.Yoyo;
             m_NumLoops = 0;
-            m_MirrorCurve = inbMirrored;
+            if (inbMirrored)
+                m_Flags |= FLAG_MIRROR_CURVE;
+            else
+                m_Flags &= ~(FLAG_MIRROR_CURVE);
             return this;
         }
 
@@ -133,7 +138,10 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.YoyoLoop;
             m_NumLoops = 0;
-            m_MirrorCurve = inbMirrored;
+            if (inbMirrored)
+                m_Flags |= FLAG_MIRROR_CURVE;
+            else
+                m_Flags &= ~(FLAG_MIRROR_CURVE);
             return this;
         }
 
@@ -145,7 +153,10 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.YoyoLoop;
             m_NumLoops = inNumLoops < 1 ? 1 : inNumLoops;
-            m_MirrorCurve = inbMirrored;
+            if (inbMirrored)
+                m_Flags |= FLAG_MIRROR_CURVE;
+            else
+                m_Flags &= ~(FLAG_MIRROR_CURVE);
             return this;
         }
 
@@ -170,7 +181,7 @@ namespace BeauRoutine
         /// <returns></returns>
         public Tween Ease(AnimationCurve inCurve)
         {
-            m_Curve = Curve.Smooth;
+            m_Curve = Curve.Linear;
             m_AnimCurve = inCurve;
             return this;
         }
@@ -199,9 +210,11 @@ namespace BeauRoutine
         /// </summary>
         public Tween Duration(float inTime)
         {
-            m_Duration = inTime < 0 ? 0 : inTime;
-            m_PercentIncrement = inTime <= 0 ? 0 : 1.0f / m_Duration;
-            m_Instant = m_PercentIncrement <= 0;
+            m_PercentIncrement = inTime <= 0 ? 0 : 1.0f / inTime;
+            if (m_PercentIncrement <= 0)
+                m_Flags |= FLAG_INSTANT;
+            else
+                m_Flags &= ~FLAG_INSTANT;
             return this;
         }
 
@@ -211,7 +224,7 @@ namespace BeauRoutine
         /// </summary>
         public Tween From()
         {
-            m_FromMode = true;
+            m_Flags |= FLAG_FROM_MODE;
             return this;
         }
 
@@ -221,7 +234,7 @@ namespace BeauRoutine
         /// </summary>
         public Tween To()
         {
-            m_FromMode = false;
+            m_Flags &= ~FLAG_FROM_MODE;
             return this;
         }
 
@@ -320,7 +333,7 @@ namespace BeauRoutine
             float curvedPercent = Evaluate(basePercent);
             m_TweenData.ApplyTween(curvedPercent);
             if (m_OnUpdate != null)
-                m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+                m_OnUpdate((m_Flags & FLAG_FROM_MODE) != 0 ? 1 - curvedPercent : curvedPercent);
 
             return bAlive;
         }
@@ -366,20 +379,22 @@ namespace BeauRoutine
 
         private bool OnYoyo(int inNumLoops)
         {
-            bool nextReversed = (inNumLoops % 2) == 1 ? !m_Reversed : m_Reversed;
+            bool currentReversed = (m_Flags & FLAG_REVERSED) != 0;
+            bool nextReversed = (inNumLoops % 2) == 1 ? !currentReversed : currentReversed;
             if (!nextReversed)
             {
-                m_Reversed = true;
+                m_Flags |= FLAG_REVERSED;
                 return false;
             }
 
-            m_Reversed = nextReversed;
+            m_Flags |= FLAG_REVERSED;
             return true;
         }
 
         private bool OnYoyoLoop(int inNumLoops)
         {
-            bool nextReversed = (inNumLoops % 2) == 1 ? !m_Reversed : m_Reversed;
+            bool currentReversed = (m_Flags & FLAG_REVERSED) != 0;
+            bool nextReversed = (inNumLoops % 2) == 1 ? !currentReversed : currentReversed;
 
             // If the next time we reverse we'll be moving forward,
             // we're hitting the lower bound again
@@ -390,20 +405,18 @@ namespace BeauRoutine
                     m_NumLoops -= inNumLoops;
                     if (m_NumLoops > 0)
                     {
-                        m_Reversed = nextReversed;
+                        m_Flags &= ~FLAG_REVERSED;
                         return true;
                     }
-                    m_Reversed = true;
+                    m_Flags |= FLAG_REVERSED;
                     return false;
                 }
-                m_Reversed = nextReversed;
+                m_Flags &= ~FLAG_REVERSED;
                 return true;
             }
-            else
-            {
-                m_Reversed = nextReversed;
-                return true;
-            }
+
+            m_Flags |= FLAG_REVERSED;
+            return true;
         }
 
         private bool OnInstant()
@@ -423,18 +436,26 @@ namespace BeauRoutine
         {
             float curvedPercent;
             bool bReverseFinal = false;
-            if (m_Reversed)
+            if ((m_Flags & FLAG_REVERSED) != 0)
             {
-                if (m_MirrorCurve)
+                if ((m_Flags & FLAG_MIRROR_CURVE) != 0)
                     inPercent = 1 - inPercent;
                 else
                     bReverseFinal = true;
             }
 
-            curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
-            curvedPercent = m_WaveFunc.Evaluate(bReverseFinal ? 1 - curvedPercent : curvedPercent);
+            if (m_Curve == Curve.Linear)
+                curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : inPercent;
+            else
+                curvedPercent = m_Curve.Evaluate(inPercent);
 
-            if (m_FromMode)
+            if (bReverseFinal)
+                curvedPercent = 1 - curvedPercent;
+
+            if (m_WaveFunc.Type != BeauRoutine.Wave.Function.None)
+                curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
+
+            if ((m_Flags & FLAG_FROM_MODE) != 0)
                 curvedPercent = 1 - curvedPercent;
 
             return curvedPercent;
@@ -444,9 +465,9 @@ namespace BeauRoutine
         {
             float curvedPercent;
             bool bReverseFinal = false;
-            if (m_Reversed)
+            if ((m_Flags & FLAG_REVERSED) != 0)
             {
-                if (m_MirrorCurve)
+                if ((m_Flags & FLAG_MIRROR_CURVE) != 0)
                     inPercent = 1 - inPercent;
                 else
                     bReverseFinal = true;
@@ -455,7 +476,7 @@ namespace BeauRoutine
             curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
             curvedPercent = bReverseFinal ? 1 - curvedPercent : curvedPercent;
 
-            if (m_FromMode)
+            if ((m_Flags & FLAG_FROM_MODE) != 0)
                 curvedPercent = 1 - curvedPercent;
 
             return curvedPercent;
@@ -476,10 +497,10 @@ namespace BeauRoutine
             {
                 Start();
 
-                if (m_Instant)
+                if ((m_Flags & FLAG_INSTANT) != 0)
                     return OnInstant();
 
-                m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
+                m_TweenData.ApplyTween(Evaluate(0));
             }
 
             switch (m_State)
@@ -489,7 +510,7 @@ namespace BeauRoutine
                     if (deltaTime <= 0)
                         return true;
 
-                    if (m_PercentIncrement <= 0)
+                    if ((m_Flags & FLAG_INSTANT) != 0)
                         return OnInstant();
 
                     bool bContinue = Update(deltaTime * m_PercentIncrement);
@@ -519,7 +540,7 @@ namespace BeauRoutine
         {
             if (m_Cancel != CancelMode.Nothing && m_TweenData != null && m_State == State.Run)
             {
-                m_Reversed = false;
+                m_Flags &= ~FLAG_REVERSED;
 
                 float curvedPercent = 0;
                 switch (m_Cancel)
@@ -539,7 +560,7 @@ namespace BeauRoutine
                 }
                 m_TweenData.ApplyTween(curvedPercent);
                 if (m_OnUpdate != null)
-                    m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+                    m_OnUpdate((m_Flags & FLAG_FROM_MODE) != 0 ? 1 - curvedPercent : curvedPercent);
                 m_TweenData.OnTweenEnd();
             }
 
@@ -549,16 +570,14 @@ namespace BeauRoutine
             m_Mode = LoopMode.Single;
             m_Curve = Curve.Linear;
             m_WaveFunc = default(Wave);
-            m_Duration = 0;
             m_NumLoops = 0;
             m_OnUpdate = null;
             m_OnComplete = null;
+            m_Flags = 0;
 
             m_CurrentPercent = 0;
             m_PercentIncrement = 0;
             m_State = State.Begin;
-            m_Reversed = false;
-            m_Instant = false;
         }
 
         #endregion

@@ -17,8 +17,15 @@ namespace BeauRoutine
     /// </summary>
     public struct Wave
     {
-        private Function m_Function;
-        private float m_Frequency;
+        /// <summary>
+        /// Function type.
+        /// </summary>
+        public readonly Function Type;
+
+        /// <summary>
+        /// Wave frequency.
+        /// </summary>
+        public readonly float Frequency;
 
         /// <summary>
         /// Default Wave. Does not affect the percent.
@@ -32,8 +39,8 @@ namespace BeauRoutine
         /// <param name="inFrequency">The number of waves.</param>
         public Wave(Function inMode, float inFrequency)
         {
-            m_Function = inMode;
-            m_Frequency = inFrequency;
+            Type = inMode;
+            Frequency = inFrequency;
         }
 
         /// <summary>
@@ -41,28 +48,28 @@ namespace BeauRoutine
         /// </summary>
         public float Evaluate(float inPercent)
         {
-            switch(m_Function)
+            switch(Type)
             {
                 case Function.Sin:
-                    return Sin(inPercent, m_Frequency);
+                    return Sin(inPercent, Frequency);
                 case Function.SinFade:
-                    return SinFade(inPercent, m_Frequency);
+                    return SinFade(inPercent, Frequency);
                 case Function.Cos:
-                    return Cos(inPercent, m_Frequency);
+                    return Cos(inPercent, Frequency);
                 case Function.CosFade:
-                    return CosFade(inPercent, m_Frequency);
+                    return CosFade(inPercent, Frequency);
                 case Function.Square:
-                    return Square(inPercent, m_Frequency);
+                    return Square(inPercent, Frequency);
                 case Function.SquareFade:
-                    return SquareFade(inPercent, m_Frequency);
+                    return SquareFade(inPercent, Frequency);
                 case Function.Triangle:
-                    return Triangle(inPercent, m_Frequency);
+                    return Triangle(inPercent, Frequency);
                 case Function.TriangleFade:
-                    return TriangleFade(inPercent, m_Frequency);
+                    return TriangleFade(inPercent, Frequency);
                 case Function.TriangleOdd:
-                    return TriangleOdd(inPercent, m_Frequency);
+                    return TriangleOdd(inPercent, Frequency);
                 case Function.TriangleOddFade:
-                    return TriangleOddFade(inPercent, m_Frequency);
+                    return TriangleOddFade(inPercent, Frequency);
 
                 case Function.None:
                 default:

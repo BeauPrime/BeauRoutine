@@ -195,7 +195,7 @@ namespace BeauRoutine
         {
             Fiber fiber = Find(this);
             if (fiber != null)
-                fiber.Priority = inPriority;
+                fiber.SetPriority(inPriority);
             return this;
         }
 

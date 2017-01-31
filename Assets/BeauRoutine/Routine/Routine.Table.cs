@@ -367,7 +367,7 @@ namespace BeauRoutine
 
                 while(aPtr != -1 && bPtr != -1)
                 {
-                    if (m_Entries[aPtr].Fiber.CompareTo(m_Entries[bPtr].Fiber) <= 0)
+                    if (m_Entries[aPtr].Fiber.Priority >= m_Entries[bPtr].Fiber.Priority)
                     {
                         if (outputResult == -1)
                         {
