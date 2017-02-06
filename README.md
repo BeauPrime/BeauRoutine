@@ -646,7 +646,9 @@ Tween extension methods currently exist for the following types:
 | Image | Fill Amount | ``FillTo`` |
 | RawImage | UV Rect | ``UVRectTo``, ``UVRectShift`` |
 | **Layout** | | |
-| LayoutElement | Min Width/Height, Preferred Width/Height, Flexible Width/Height | ``PropertyTo`` |
+| LayoutElement | Min Width/Height| ``MinSizeTo``|
+| | Preferred Width/Height | ``PreferredSizeTo``| 
+| | Flexible Width/Height | ``FlexibleSizeTo`` |
 | LayoutGroup | Padding | ``PaddingTo`` |
 | HorizontalOrVerticalLayoutGroup | Spacing | ``SpacingTo`` |
 | GridLayoutGroup | Spacing | ``SpacingTo`` |

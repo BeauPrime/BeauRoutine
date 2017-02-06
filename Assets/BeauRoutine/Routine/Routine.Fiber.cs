@@ -28,12 +28,12 @@ namespace BeauRoutine
             private static readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
             private static readonly IntPtr TYPEHANDLE_COMMAND = typeof(Command).TypeHandle.Value;
 
-            private const int FLAG_PAUSED = 0x01;
-            private const int FLAG_DISPOSING = 0x02;
-            private const int FLAG_CHAINED = 0x04;
-            private const int FLAG_IGNORE_OBJECT_TIMESCALE = 0x08;
-            private const int FLAG_HOSTED_BY_MANAGER = 0x10;
-            private const int FLAG_HAS_IDENTITY = 0x20;
+            private bool m_Paused;
+            private bool m_Disposing;
+            private bool m_Chained;
+            private bool m_IgnoreObjectTimescale;
+            private bool m_HostedByManager;
+            private bool m_HasIdentity;
 
             private Routine m_Handle;
             private MonoBehaviour m_Host;
@@ -50,7 +50,6 @@ namespace BeauRoutine
             private Coroutine m_UnityWait = null;
 
             private int m_GroupMask;
-            private int m_Flags;
             private string m_Name;
 
             // HACK: Public variable instead of private here.
@@ -85,6 +84,9 @@ namespace BeauRoutine
             /// </summary>
             public Routine Initialize(MonoBehaviour inHost, IEnumerator inStart, bool inChained)
             {
+                if (s_DebugMode && !(inStart is IDisposable))
+                    throw new ArgumentException("IEnumerators must also implement IDisposable.");
+
                 m_Counter = (byte)(m_Counter == byte.MaxValue ? 1 : m_Counter + 1);
 
                 m_Handle = new Routine(Index, m_Counter);
@@ -94,6 +96,7 @@ namespace BeauRoutine
                 m_HostIdentity = RoutineIdentity.Find(m_HostGameObject);
 
                 m_WaitTime = 0;
+
                 m_UnityWait = null;
                 m_Name = null;
                 Priority = 0;
@@ -101,13 +104,14 @@ namespace BeauRoutine
                 m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
 
                 // Chained routines are always hosted on the manager
-                m_Flags = inChained ? FLAG_CHAINED | FLAG_HOSTED_BY_MANAGER : 0;
+                if (inChained)
+                    m_Chained = m_HostedByManager = true;
 
                 if (!inChained && ReferenceEquals(inHost, s_Manager))
-                    m_Flags |= FLAG_HOSTED_BY_MANAGER;
-                
+                    m_HostedByManager = true;
+
                 if (!ReferenceEquals(m_HostIdentity, null))
-                    m_Flags |= FLAG_HAS_IDENTITY;
+                    m_HasIdentity = true;
 
                 m_TimeScale = 1.0f;
 
@@ -140,7 +144,7 @@ namespace BeauRoutine
                 }
 
                 bool bKilled = m_StackPosition >= 0;
-                bool bChained = (m_Flags & FLAG_CHAINED) != 0;
+                bool bChained = m_Chained;
 
                 ClearStack();
                 m_RootFunction = null;
@@ -148,9 +152,10 @@ namespace BeauRoutine
                 m_Handle = Routine.Null;
                 m_Host = null;
 
+                m_Chained = m_Disposing = m_HasIdentity = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager = false;
+
                 m_WaitTime = 0;
                 m_GroupMask = 0;
-                m_Flags = 0;
                 m_Name = null;
                 Priority = 0;
 
@@ -202,7 +207,7 @@ namespace BeauRoutine
             /// </summary>
             public void Pause()
             {
-                m_Flags |= FLAG_PAUSED;
+                m_Paused = true;
             }
 
             /// <summary>
@@ -210,15 +215,15 @@ namespace BeauRoutine
             /// </summary>
             public void Resume()
             {
-                m_Flags &= ~FLAG_PAUSED;
+                m_Paused = false;
             }
-            
+
             /// <summary>
             /// Requests the Fiber stop itself.
             /// </summary>
             public void Stop()
             {
-                m_Flags |= FLAG_DISPOSING;
+                m_Disposing = true;
             }
 
             /// <summary>
@@ -247,7 +252,7 @@ namespace BeauRoutine
             /// </summary>
             public void UseObjectTimeScale()
             {
-                m_Flags &= ~FLAG_IGNORE_OBJECT_TIMESCALE;
+                m_IgnoreObjectTimescale = false;
             }
 
             /// <summary>
@@ -255,7 +260,7 @@ namespace BeauRoutine
             /// </summary>
             public void IgnoreObjectTimeScale()
             {
-                m_Flags |= FLAG_IGNORE_OBJECT_TIMESCALE;
+                m_IgnoreObjectTimescale = true;
             }
 
             /// <summary>
@@ -283,19 +288,21 @@ namespace BeauRoutine
             public bool Run()
             {
                 if (m_Handle.m_Value == 0)
+                {
                     return false;
+                }
 
-                if (ShouldDispose())
+                if (m_Disposing || (!m_HostedByManager && !m_Host))
                 {
                     Dispose();
                     return false;
                 }
-
+                
                 if (IsPaused() || m_UnityWait != null)
                     return true;
-
+                
                 ApplyDeltaTime();
-
+                
                 if (m_WaitTime > 0)
                 {
                     m_WaitTime -= s_ScaledDeltaTime;
@@ -305,11 +312,11 @@ namespace BeauRoutine
 
                 IEnumerator current = m_Stack[m_StackPosition];
                 bool bMovedNext = current.MoveNext();
-
+                
                 // Don't check for the object being destroyed.
                 // Destroy won't go into effect until after
                 // all the Fibers are done processing anyways.
-                if ((m_Flags & FLAG_DISPOSING) != 0)
+                if (m_Disposing)
                 {
                     Dispose();
                     return false;
@@ -426,15 +433,15 @@ namespace BeauRoutine
             {
                 // If we're a chained routine, just accept
                 // the parent's delta time.
-                if ((m_Flags & FLAG_CHAINED) > 0)
+                if (m_Chained)
                     return;
 
                 float timeScale = m_TimeScale;
-                if ((m_Flags & FLAG_HAS_IDENTITY) != 0)
+                if (m_HasIdentity)
                 {
                     // If we haven't been explicitly told to ignore the object's
                     // time scale, use it.
-                    if ((m_Flags & FLAG_IGNORE_OBJECT_TIMESCALE) == 0)
+                    if (!m_IgnoreObjectTimescale)
                         timeScale *= m_HostIdentity.TimeScale;
                     timeScale *= s_GroupTimeScales[m_HostIdentity.Group];
                 }
@@ -487,19 +494,12 @@ namespace BeauRoutine
                 return m_Name == inName;
             }
 
-            // Returns if the Fiber should dispose itself.
-            private bool ShouldDispose()
-            {
-                return (m_Flags & FLAG_DISPOSING) != 0
-                    || ((m_Flags & FLAG_HOSTED_BY_MANAGER) == 0 && !m_Host);
-            }
-
             // Returns if the Fiber has been paused.
             private bool IsPaused()
             {
-                return (m_Flags & FLAG_PAUSED) != 0
+                return m_Paused
                     || (s_PausedGroups & m_GroupMask) != 0
-                    || ((m_Flags & FLAG_HOSTED_BY_MANAGER) == 0 && !m_Host.isActiveAndEnabled);
+                    || (!m_HostedByManager && !m_Host.isActiveAndEnabled);
             }
 
             // Returns if this fiber is running.
@@ -658,7 +658,7 @@ namespace BeauRoutine
                 stats.Handle = m_Handle;
                 stats.Host = ReferenceEquals(m_Host, s_Manager) ? null : m_Host;
 
-                if (ShouldDispose())
+                if (m_Disposing || (!m_HostedByManager && !m_Host))
                     stats.State = Editor.RoutineState.Disposing;
                 else if (IsPaused())
                     stats.State = Editor.RoutineState.Paused;
@@ -704,7 +704,7 @@ namespace BeauRoutine
                     return iteratorName;
 
                 string functionName = GetTypeName(type);
-                
+
                 // If the function is a child of the parent, then we should get the appropriate path
                 // to the function name here
                 Type parentType = inEnumerator.GetType().DeclaringType;
@@ -718,7 +718,7 @@ namespace BeauRoutine
                 }
 
                 List<FieldInfo> fields = new List<FieldInfo>();
-                foreach(var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
+                foreach (var field in type.GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic))
                 {
                     if (field.Name.IndexOfAny(INVALID_NAME_CHARS) < 0)
                         fields.Add(field);
@@ -731,7 +731,7 @@ namespace BeauRoutine
                 else
                 {
                     iteratorName += "(";
-                    for(int i = 0; i < fields.Count; ++i)
+                    for (int i = 0; i < fields.Count; ++i)
                     {
                         if (i > 0)
                             iteratorName += ", ";

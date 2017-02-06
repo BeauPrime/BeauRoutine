@@ -283,14 +283,16 @@ namespace BeauRoutine
         {
             private RawImage m_Renderer;
             private Rect m_Target;
+            private Axis m_Axis;
 
             private Rect m_Start;
             private Vector4 m_Delta;
 
-            public TweenData_RawImage_UVRect(RawImage inRenderer, Rect inTarget)
+            public TweenData_RawImage_UVRect(RawImage inRenderer, Rect inTarget, Axis inAxis)
             {
                 m_Renderer = inRenderer;
                 m_Target = inTarget;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
@@ -307,6 +309,20 @@ namespace BeauRoutine
                     m_Start.y + m_Delta.y * inPercent,
                     m_Start.width + m_Delta.z * inPercent,
                     m_Start.height + m_Delta.w * inPercent);
+
+                Rect rendererRect = m_Renderer.uvRect;
+
+                if ((m_Axis & Axis.X) == 0)
+                {
+                    final.xMin = rendererRect.xMin;
+                    final.xMax = rendererRect.xMax;
+                }
+                if ((m_Axis & Axis.Y) == 0)
+                {
+                    final.yMin = rendererRect.yMin;
+                    final.yMax = rendererRect.yMax;
+                }
+
                 m_Renderer.uvRect = final;
             }
 
@@ -319,39 +335,55 @@ namespace BeauRoutine
         /// <summary>
         /// Shifts the RawImage's uvRect over time.
         /// </summary>
-        static public Tween UVRectShift(this RawImage inRenderer, Vector2 inShift, float inTime)
+        static public Tween UVRectShift(this RawImage inRenderer, Vector2 inShift, float inTime, Axis inAxis = Axis.XY)
         {
             Rect shiftedRect = inRenderer.uvRect;
             shiftedRect.x += inShift.x;
             shiftedRect.y += inShift.y;
-            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, shiftedRect), inTime);
+            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, shiftedRect, inAxis), inTime);
         }
 
         /// <summary>
         /// Shifts the RawImage's uvRect over time.
         /// </summary>
-        static public Tween UVRectShift(this RawImage inRenderer, Vector2 inShift, TweenSettings inSettings)
+        static public Tween UVRectShift(this RawImage inRenderer, float inShift, float inTime, Axis inAxis)
+        {
+            return UVRectShift(inRenderer, new Vector2(inShift, inShift), inTime, inAxis);
+        }
+
+        /// <summary>
+        /// Shifts the RawImage's uvRect over time.
+        /// </summary>
+        static public Tween UVRectShift(this RawImage inRenderer, Vector2 inShift, TweenSettings inSettings, Axis inAxis = Axis.XY)
         {
             Rect shiftedRect = inRenderer.uvRect;
             shiftedRect.x += inShift.x;
             shiftedRect.y += inShift.y;
-            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, shiftedRect), inSettings);
+            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, shiftedRect, inAxis), inSettings);
         }
 
         /// <summary>
         /// Shifts the RawImage's uvRect over time.
         /// </summary>
-        static public Tween UVRectTo(this RawImage inRenderer, Rect inTarget, float inTime)
+        static public Tween UVRectShift(this RawImage inRenderer, float inShift, TweenSettings inSettings, Axis inAxis)
         {
-            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, inTarget), inTime);
+            return UVRectShift(inRenderer, new Vector2(inShift, inShift), inSettings, inAxis);
         }
 
         /// <summary>
         /// Shifts the RawImage's uvRect over time.
         /// </summary>
-        static public Tween UVRectTo(this RawImage inRenderer, Rect inTarget, TweenSettings inSettings)
+        static public Tween UVRectTo(this RawImage inRenderer, Rect inTarget, float inTime, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, inTarget), inSettings);
+            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, inTarget, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Shifts the RawImage's uvRect over time.
+        /// </summary>
+        static public Tween UVRectTo(this RawImage inRenderer, Rect inTarget, TweenSettings inSettings, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_RawImage_UVRect(inRenderer, inTarget, inAxis), inSettings);
         }
 
         #endregion

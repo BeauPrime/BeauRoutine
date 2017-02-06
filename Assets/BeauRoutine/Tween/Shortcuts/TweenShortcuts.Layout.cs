@@ -21,94 +21,172 @@ namespace BeauRoutine
     {
         #region LayoutElement
 
-        private sealed class TweenData_LayoutElement_Property : ITweenData
+        private sealed class TweenData_LayoutElement_MinSize : ITweenData
         {
             private LayoutElement m_Layout;
-            private float m_Target;
-            private LayoutProperty m_Property;
+            private Vector2 m_Target;
+            private Axis m_Axis;
 
-            private float m_Start;
-            private float m_Delta;
+            private Vector2 m_Start;
+            private Vector2 m_Delta;
 
-            public TweenData_LayoutElement_Property(LayoutElement inLayout, float inTarget, LayoutProperty inProperty)
+            public TweenData_LayoutElement_MinSize(LayoutElement inLayout, Vector2 inTarget, Axis inAxis)
             {
                 m_Layout = inLayout;
                 m_Target = inTarget;
-                m_Property = inProperty;
+                m_Axis = inAxis;
             }
 
             public void OnTweenStart()
             {
-                switch(m_Property)
-                {
-                    case LayoutProperty.FlexWidth:
-                        m_Start = m_Layout.flexibleWidth;
-                        break;
-                    case LayoutProperty.FlexHeight:
-                        m_Start = m_Layout.flexibleHeight;
-                        break;
-                    case LayoutProperty.MinWidth:
-                        m_Start = m_Layout.minWidth;
-                        break;
-                    case LayoutProperty.MinHeight:
-                        m_Start = m_Layout.minHeight;
-                        break;
-                    case LayoutProperty.PreferredWidth:
-                        m_Start = m_Layout.preferredWidth;
-                        break;
-                    case LayoutProperty.PreferredHeight:
-                        m_Start = m_Layout.preferredHeight;
-                        break;
-                    default:
-                        throw new Exception("Unable to tween LayoutProperty." + m_Property.ToString() + " on a LayoutElement!");
-                }
-
+                m_Start = new Vector2(m_Layout.minWidth, m_Layout.minHeight);
                 m_Delta = m_Target - m_Start;
             }
 
             public void ApplyTween(float inPercent)
             {
-                float newValue = m_Start + m_Delta * inPercent;
-                switch(m_Property)
-                {
-                    case LayoutProperty.FlexWidth:
-                        m_Layout.flexibleWidth = newValue;
-                        break;
-                    case LayoutProperty.FlexHeight:
-                        m_Layout.flexibleHeight = newValue;
-                        break;
-                    case LayoutProperty.MinWidth:
-                        m_Layout.minWidth = newValue;
-                        break;
-                    case LayoutProperty.MinHeight:
-                        m_Layout.minHeight = newValue;
-                        break;
-                    case LayoutProperty.PreferredWidth:
-                        m_Layout.preferredWidth = newValue;
-                        break;
-                    case LayoutProperty.PreferredHeight:
-                        m_Layout.preferredHeight = newValue;
-                        break;
-                }
+                Vector2 newValue = m_Start + m_Delta * inPercent;
+
+                if ((m_Axis & Axis.X) != 0)
+                    m_Layout.minWidth = newValue.x;
+                if ((m_Axis & Axis.Y) != 0)
+                    m_Layout.minHeight = newValue.y;
             }
 
             public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "LayoutElement: Min Size";
+            }
+        }
+
+        private sealed class TweenData_LayoutElement_PreferredSize : ITweenData
+        {
+            private LayoutElement m_Layout;
+            private Vector2 m_Target;
+            private Axis m_Axis;
+
+            private Vector2 m_Start;
+            private Vector2 m_Delta;
+
+            public TweenData_LayoutElement_PreferredSize(LayoutElement inLayout, Vector2 inTarget, Axis inAxis)
+            {
+                m_Layout = inLayout;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new Vector2(m_Layout.preferredWidth, m_Layout.preferredHeight);
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector2 newValue = m_Start + m_Delta * inPercent;
+
+                if ((m_Axis & Axis.X) != 0)
+                    m_Layout.preferredWidth = newValue.x;
+                if ((m_Axis & Axis.Y) != 0)
+                    m_Layout.preferredHeight = newValue.y;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "LayoutElement: Perferred Size";
+            }
+        }
+
+        private sealed class TweenData_LayoutElement_FlexibleSize : ITweenData
+        {
+            private LayoutElement m_Layout;
+            private Vector2 m_Target;
+            private Axis m_Axis;
+
+            private Vector2 m_Start;
+            private Vector2 m_Delta;
+
+            public TweenData_LayoutElement_FlexibleSize(LayoutElement inLayout, Vector2 inTarget, Axis inAxis)
+            {
+                m_Layout = inLayout;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new Vector2(m_Layout.flexibleWidth, m_Layout.flexibleHeight);
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector2 newValue = m_Start + m_Delta * inPercent;
+
+                if ((m_Axis & Axis.X) != 0)
+                    m_Layout.flexibleWidth = newValue.x;
+                if ((m_Axis & Axis.Y) != 0)
+                    m_Layout.flexibleHeight = newValue.y;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "LayoutElement: Flexible Size";
+            }
         }
 
         /// <summary>
-        /// Tweens a property on a LayoutElement over time.
+        /// Tweens the minimum size on a LayoutElement over time.
         /// </summary>
-        static public Tween PropertyTo(this LayoutElement inLayout, float inValue, float inTime, LayoutProperty inProperty)
+        static public Tween MinSizeTo(this LayoutElement inLayout, Vector2 inValue, float inTime, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_LayoutElement_Property(inLayout, inValue, inProperty), inTime);
+            return Tween.Create(new TweenData_LayoutElement_MinSize(inLayout, inValue, inAxis), inTime);
         }
 
         /// <summary>
-        /// Tweens a property on a LayoutElement over time.
+        /// Tweens the minimum size on a LayoutElement over time.
         /// </summary>
-        static public Tween PropertyTo(this LayoutElement inLayout, float inValue, TweenSettings inSettings, LayoutProperty inProperty)
+        static public Tween MinSizeTo(this LayoutElement inLayout, Vector2 inValue, TweenSettings inSettings, Axis inAxis = Axis.XY)
         {
-            return Tween.Create(new TweenData_LayoutElement_Property(inLayout, inValue, inProperty), inSettings);
+            return Tween.Create(new TweenData_LayoutElement_MinSize(inLayout, inValue, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Tweens the preferred size on a LayoutElement over time.
+        /// </summary>
+        static public Tween PreferredSizeTo(this LayoutElement inLayout, Vector2 inValue, float inTime, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_LayoutElement_PreferredSize(inLayout, inValue, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Tweens the preferred size on a LayoutElement over time.
+        /// </summary>
+        static public Tween PreferredSizeTo(this LayoutElement inLayout, Vector2 inValue, TweenSettings inSettings, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_LayoutElement_PreferredSize(inLayout, inValue, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Tweens the flexible size on a LayoutElement over time.
+        /// </summary>
+        static public Tween FlexibleSizeTo(this LayoutElement inLayout, Vector2 inValue, float inTime, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_LayoutElement_FlexibleSize(inLayout, inValue, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Tweens the flexible size on a LayoutElement over time.
+        /// </summary>
+        static public Tween FlexibleSizeTo(this LayoutElement inLayout, Vector2 inValue, TweenSettings inSettings, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_LayoutElement_FlexibleSize(inLayout, inValue, inAxis), inSettings);
         }
 
         #endregion

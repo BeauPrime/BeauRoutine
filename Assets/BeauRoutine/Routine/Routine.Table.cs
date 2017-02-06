@@ -113,6 +113,21 @@ namespace BeauRoutine
             }
 
             /// <summary>
+            /// Runs all active fibers.
+            /// </summary>
+            public void RunActive()
+            {
+                int totalLeft = m_ActiveCount;
+                int currentNode = m_ActiveHead;
+                while (currentNode != -1 && totalLeft-- > 0)
+                {
+                    Entry e = m_Entries[currentNode];
+                    currentNode = e.NextIndex;
+                    e.Fiber.Run();
+                }
+            }
+
+            /// <summary>
             /// Sets the number of entries in the table.
             /// </summary>
             public void SetCapacity(int inDesiredAmount)

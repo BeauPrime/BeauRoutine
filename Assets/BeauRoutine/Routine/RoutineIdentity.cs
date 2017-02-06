@@ -18,6 +18,7 @@ namespace BeauRoutine
     /// on this GameObject.
     /// </summary>
     [DisallowMultipleComponent]
+    [AddComponentMenu("BeauRoutine/Routine Identity")]
     public sealed class RoutineIdentity : MonoBehaviour
     {
         /// <summary>

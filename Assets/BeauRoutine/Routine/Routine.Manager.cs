@@ -56,6 +56,9 @@ namespace BeauRoutine
             if (s_ManagerInitialized)
                 return;
             s_ManagerInitialized = true;
+
+            s_DebugMode = UnityEngine.Debug.isDebugBuild;
+
             if (ReferenceEquals(s_Manager, null))
             {
                 GameObject managerGO = new GameObject("Routine::Manager");
@@ -88,13 +91,16 @@ namespace BeauRoutine
                 s_Updating = true;
 
 #if UNITY_EDITOR
-                s_UpdateTimer.Reset();
-                s_UpdateTimer.Start();
-
-                if (s_NeedsSnapshot)
+                if (s_DebugMode)
                 {
-                    s_Snapshot = Editor.GetRoutineStats();
-                    s_NeedsSnapshot = false;
+                    s_UpdateTimer.Reset();
+                    s_UpdateTimer.Start();
+
+                    if (s_NeedsSnapshot)
+                    {
+                        s_Snapshot = Editor.GetRoutineStats();
+                        s_NeedsSnapshot = false;
+                    }
                 }
 #endif
 
@@ -104,30 +110,23 @@ namespace BeauRoutine
                     s_NeedsSort = false;
                 }
 
-                // Traverse the active fiber list
-                // but only for the nodes that existed
-                // at the beginning of this frame.
-                int next = 0;
-                Fiber fiber = s_Table.StartActive(ref next);
-                while(fibersToUpdate-- > 0 && fiber != null)
-                {
-                    Fiber nextFiber = s_Table.Traverse(ref next);
-                    fiber.Run();
-                    fiber = nextFiber;
-                }
+                s_Table.RunActive();
 
                 ResetDeltaTimeScale();
 
 #if UNITY_EDITOR
-                s_UpdateTimer.Stop();
-                if (s_UpdateSamples >= MAX_UPDATE_SAMPLES || s_UpdateTimer.ElapsedMilliseconds > 1000)
+                if (s_DebugMode)
                 {
-                    s_UpdateSamples = 0;
-                    s_TotalUpdateTime = 0;
-                }
+                    s_UpdateTimer.Stop();
+                    if (s_UpdateSamples >= MAX_UPDATE_SAMPLES || s_UpdateTimer.ElapsedMilliseconds > 1000)
+                    {
+                        s_UpdateSamples = 0;
+                        s_TotalUpdateTime = 0;
+                    }
 
-                s_UpdateSamples++;
-                s_TotalUpdateTime += s_UpdateTimer.ElapsedTicks;
+                    ++s_UpdateSamples;
+                    s_TotalUpdateTime += s_UpdateTimer.ElapsedTicks;
+                }
 #endif
 
                 s_Updating = false;
@@ -815,6 +814,8 @@ namespace BeauRoutine
 
         #region Global Settings
 
+        static private bool s_DebugMode = false;
+
 #if UNITY_EDITOR
         static private bool s_SnapshotEnabled = false;
 #endif
@@ -865,6 +866,16 @@ namespace BeauRoutine
 #else
             return false;
 #endif
+        }
+
+        /// <summary>
+        /// Enabled/disables Debug Mode.
+        /// Debug Mode enables additional checks.
+        /// </summary>
+        static public bool DebugMode
+        {
+            get { return s_DebugMode; }
+            set { s_DebugMode = value; }
         }
 
         #endregion

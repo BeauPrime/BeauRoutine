@@ -4,10 +4,10 @@ using System;
 using BeauRoutine;
 using System.Diagnostics;
 
-public class Example0_Script : MonoBehaviour
+public class Example0_MeasureStartupTime : MonoBehaviour
 {
     private readonly int[] ROUTINE_COUNTS = new int[] { 2000, 5000, 16000, 64000 };
-    private readonly int SAMPLE_COUNT = 10;
+    private readonly int SAMPLE_COUNT = 4;
 
     private IEnumerator Start()
     {
@@ -30,7 +30,7 @@ public class Example0_Script : MonoBehaviour
             for (int j = 0; j < SAMPLE_COUNT; ++j)
             {
                 timeAccumulation += MeasureStartupTime(ROUTINE_COUNTS[i]);
-                yield return new WaitForSeconds(1.0f);
+                yield return new WaitForSeconds(5f);
                 Routine.StopAll();
                 yield return null;
             }

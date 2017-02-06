@@ -11,6 +11,7 @@
 */
 
 using System;
+using System.Collections;
 using UnityEngine;
 
 namespace BeauRoutine
@@ -18,7 +19,7 @@ namespace BeauRoutine
     /// <summary>
     /// Runs a percentage-based tween from one value to another.
     /// </summary>
-    public sealed partial class Tween : IRoutineEnumerator
+    public sealed partial class Tween : IEnumerator, IDisposable
     {
         private enum State : byte
         {
@@ -51,13 +52,12 @@ namespace BeauRoutine
         private AnimationCurve m_AnimCurve;
         private Wave m_WaveFunc;
         private int m_NumLoops;
-        private int m_Flags;
 
-        // Flag values
-        private const int FLAG_MIRROR_CURVE = 0x01;
-        private const int FLAG_FROM_MODE = 0x02;
-        private const int FLAG_REVERSED = 0x04;
-        private const int FLAG_INSTANT = 0x08;
+        // Flags
+        private bool m_MirrorCurve;
+        private bool m_FromMode;
+        private bool m_Reversed;
+        private bool m_Instant;
 
         // Events
         private Action<float> m_OnUpdate;
@@ -123,10 +123,7 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.Yoyo;
             m_NumLoops = 0;
-            if (inbMirrored)
-                m_Flags |= FLAG_MIRROR_CURVE;
-            else
-                m_Flags &= ~(FLAG_MIRROR_CURVE);
+            m_MirrorCurve = inbMirrored;
             return this;
         }
 
@@ -138,10 +135,7 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.YoyoLoop;
             m_NumLoops = 0;
-            if (inbMirrored)
-                m_Flags |= FLAG_MIRROR_CURVE;
-            else
-                m_Flags &= ~(FLAG_MIRROR_CURVE);
+            m_MirrorCurve = inbMirrored;
             return this;
         }
 
@@ -153,10 +147,7 @@ namespace BeauRoutine
         {
             m_Mode = LoopMode.YoyoLoop;
             m_NumLoops = inNumLoops < 1 ? 1 : inNumLoops;
-            if (inbMirrored)
-                m_Flags |= FLAG_MIRROR_CURVE;
-            else
-                m_Flags &= ~(FLAG_MIRROR_CURVE);
+            m_MirrorCurve = inbMirrored;
             return this;
         }
 
@@ -211,10 +202,7 @@ namespace BeauRoutine
         public Tween Duration(float inTime)
         {
             m_PercentIncrement = inTime <= 0 ? 0 : 1.0f / inTime;
-            if (m_PercentIncrement <= 0)
-                m_Flags |= FLAG_INSTANT;
-            else
-                m_Flags &= ~FLAG_INSTANT;
+            m_Instant = (m_PercentIncrement <= 0);
             return this;
         }
 
@@ -224,7 +212,7 @@ namespace BeauRoutine
         /// </summary>
         public Tween From()
         {
-            m_Flags |= FLAG_FROM_MODE;
+            m_FromMode = true;
             return this;
         }
 
@@ -234,7 +222,7 @@ namespace BeauRoutine
         /// </summary>
         public Tween To()
         {
-            m_Flags &= ~FLAG_FROM_MODE;
+            m_FromMode = false;
             return this;
         }
 
@@ -317,27 +305,6 @@ namespace BeauRoutine
                 m_OnComplete();
         }
 
-        // Updates and applies the current percentage.
-        private bool Update(float inIncrement)
-        {
-            m_CurrentPercent += inIncrement;
-            int numCycles = (int)m_CurrentPercent;
-            float basePercent = m_CurrentPercent;
-            m_CurrentPercent = m_CurrentPercent % 1;
-
-            bool bAlive = true;
-
-            if (numCycles > 0)
-                bAlive = OnHitEnd(numCycles, ref basePercent);
-
-            float curvedPercent = Evaluate(basePercent);
-            m_TweenData.ApplyTween(curvedPercent);
-            if (m_OnUpdate != null)
-                m_OnUpdate((m_Flags & FLAG_FROM_MODE) != 0 ? 1 - curvedPercent : curvedPercent);
-
-            return bAlive;
-        }
-
         private bool OnHitEnd(int inNumCycles, ref float ioBasePercent)
         {
             bool bAlive = true;
@@ -379,22 +346,18 @@ namespace BeauRoutine
 
         private bool OnYoyo(int inNumLoops)
         {
-            bool currentReversed = (m_Flags & FLAG_REVERSED) != 0;
-            bool nextReversed = (inNumLoops % 2) == 1 ? !currentReversed : currentReversed;
-            if (!nextReversed)
-            {
-                m_Flags |= FLAG_REVERSED;
-                return false;
-            }
+            int totalLoops = 2;
+            totalLoops -= inNumLoops;
+            if (m_Reversed)
+                --totalLoops;
 
-            m_Flags |= FLAG_REVERSED;
-            return true;
+            m_Reversed = true;
+            return totalLoops > 0;
         }
 
         private bool OnYoyoLoop(int inNumLoops)
         {
-            bool currentReversed = (m_Flags & FLAG_REVERSED) != 0;
-            bool nextReversed = (inNumLoops % 2) == 1 ? !currentReversed : currentReversed;
+            bool nextReversed = (inNumLoops % 2) == 1 ? !m_Reversed : m_Reversed;
 
             // If the next time we reverse we'll be moving forward,
             // we're hitting the lower bound again
@@ -405,17 +368,17 @@ namespace BeauRoutine
                     m_NumLoops -= inNumLoops;
                     if (m_NumLoops > 0)
                     {
-                        m_Flags &= ~FLAG_REVERSED;
+                        m_Reversed = false;
                         return true;
                     }
-                    m_Flags |= FLAG_REVERSED;
+                    m_Reversed = true;
                     return false;
                 }
-                m_Flags &= ~FLAG_REVERSED;
+                m_Reversed = false;
                 return true;
             }
 
-            m_Flags |= FLAG_REVERSED;
+            m_Reversed = true;
             return true;
         }
 
@@ -436,9 +399,9 @@ namespace BeauRoutine
         {
             float curvedPercent;
             bool bReverseFinal = false;
-            if ((m_Flags & FLAG_REVERSED) != 0)
+            if (m_Reversed)
             {
-                if ((m_Flags & FLAG_MIRROR_CURVE) != 0)
+                if (m_MirrorCurve)
                     inPercent = 1 - inPercent;
                 else
                     bReverseFinal = true;
@@ -455,7 +418,7 @@ namespace BeauRoutine
             if (m_WaveFunc.Type != BeauRoutine.Wave.Function.None)
                 curvedPercent = m_WaveFunc.Evaluate(curvedPercent);
 
-            if ((m_Flags & FLAG_FROM_MODE) != 0)
+            if (m_FromMode)
                 curvedPercent = 1 - curvedPercent;
 
             return curvedPercent;
@@ -465,9 +428,9 @@ namespace BeauRoutine
         {
             float curvedPercent;
             bool bReverseFinal = false;
-            if ((m_Flags & FLAG_REVERSED) != 0)
+            if (m_Reversed)
             {
-                if ((m_Flags & FLAG_MIRROR_CURVE) != 0)
+                if (m_MirrorCurve)
                     inPercent = 1 - inPercent;
                 else
                     bReverseFinal = true;
@@ -476,7 +439,7 @@ namespace BeauRoutine
             curvedPercent = m_AnimCurve != null ? m_AnimCurve.Evaluate(inPercent) : m_Curve.Evaluate(inPercent);
             curvedPercent = bReverseFinal ? 1 - curvedPercent : curvedPercent;
 
-            if ((m_Flags & FLAG_FROM_MODE) != 0)
+            if (m_FromMode)
                 curvedPercent = 1 - curvedPercent;
 
             return curvedPercent;
@@ -497,7 +460,7 @@ namespace BeauRoutine
             {
                 Start();
 
-                if ((m_Flags & FLAG_INSTANT) != 0)
+                if (m_Instant)
                     return OnInstant();
 
                 m_TweenData.ApplyTween(Evaluate(0));
@@ -510,13 +473,29 @@ namespace BeauRoutine
                     if (deltaTime <= 0)
                         return true;
 
-                    if ((m_Flags & FLAG_INSTANT) != 0)
+                    if (m_Instant)
                         return OnInstant();
 
-                    bool bContinue = Update(deltaTime * m_PercentIncrement);
-                    if (!bContinue)
+                    // Inlined Update
+                    m_CurrentPercent += deltaTime * m_PercentIncrement;
+                    int numCycles = (int)m_CurrentPercent;
+                    float basePercent = m_CurrentPercent;
+                    m_CurrentPercent = m_CurrentPercent % 1;
+
+                    bool bAlive = true;
+
+                    if (numCycles > 0)
+                        bAlive = OnHitEnd(numCycles, ref basePercent);
+
+                    float curvedPercent = Evaluate(basePercent);
+                    m_TweenData.ApplyTween(curvedPercent);
+                    if (m_OnUpdate != null)
+                        m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+
+                    if (!bAlive)
                         End();
-                    return bContinue;
+
+                    return bAlive;
 
                 case State.End:
                 default:
@@ -540,7 +519,7 @@ namespace BeauRoutine
         {
             if (m_Cancel != CancelMode.Nothing && m_TweenData != null && m_State == State.Run)
             {
-                m_Flags &= ~FLAG_REVERSED;
+                m_Reversed = false;
 
                 float curvedPercent = 0;
                 switch (m_Cancel)
@@ -560,7 +539,7 @@ namespace BeauRoutine
                 }
                 m_TweenData.ApplyTween(curvedPercent);
                 if (m_OnUpdate != null)
-                    m_OnUpdate((m_Flags & FLAG_FROM_MODE) != 0 ? 1 - curvedPercent : curvedPercent);
+                    m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                 m_TweenData.OnTweenEnd();
             }
 
@@ -573,39 +552,15 @@ namespace BeauRoutine
             m_NumLoops = 0;
             m_OnUpdate = null;
             m_OnComplete = null;
-            m_Flags = 0;
+
+            m_Reversed = false;
+            m_MirrorCurve = false;
+            m_FromMode = false;
+            m_Instant = false;
 
             m_CurrentPercent = 0;
             m_PercentIncrement = 0;
             m_State = State.Begin;
-        }
-
-        #endregion
-
-        #region IRoutineEnumerator
-
-        /// <summary>
-        /// Called when the tween is pushed onto the stack.
-        /// </summary>
-        public bool OnRoutineStart()
-        {
-            // This actually causes issues when using OnCancel states.
-            // If replacing one Tween with another with an OnCancel
-            // and both are adjusting the same property, this will be
-            // called before the first one cancels, which can cause issues
-            // with tweens that auto-read the starting value.
-
-            //if (m_State == State.Begin)
-            //{
-            //    Start();
-
-            //    if (m_Instant)
-            //        return OnInstant();
-
-            //    m_TweenData.ApplyTween(m_WaveFunc.Evaluate(0));
-            //    return true;
-            //}
-            return true;
         }
 
         #endregion
