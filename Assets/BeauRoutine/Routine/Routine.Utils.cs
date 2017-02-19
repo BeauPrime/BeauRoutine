@@ -393,7 +393,7 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartCall(Action inAction)
         {
-            return Start(CallRoutine(inAction));
+            return Start(Call(inAction));
         }
 
         /// <summary>
@@ -401,7 +401,7 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartCall<T>(Action<T> inAction, T inArg)
         {
-            return Start(CallRoutine(inAction, inArg));
+            return Start(Call(inAction, inArg));
         }
 
         /// <summary>
@@ -409,7 +409,7 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartCall(MonoBehaviour inHost, Action inAction)
         {
-            return Start(inHost, CallRoutine(inAction));
+            return Start(inHost, Call(inAction));
         }
 
         /// <summary>
@@ -417,26 +417,28 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartCall<T>(MonoBehaviour inHost, Action<T> inAction, T inArg)
         {
-            return Start(inHost, CallRoutine(inAction, inArg));
+            return Start(inHost, Call(inAction, inArg));
         }
 
-        #region Internal
-
-        static private IEnumerator CallRoutine(Action inAction)
+        /// <summary>
+        /// Returns an IEnumerator that executes the given action.
+        /// </summary>
+        static public IEnumerator Call(Action inAction)
         {
             if (inAction != null)
                 inAction();
             yield break;
         }
 
-        static private IEnumerator CallRoutine<T>(Action<T> inAction, T inArg)
+        /// <summary>
+        /// Returns an IEnumerator that executes the given action.
+        /// </summary>
+        static public IEnumerator Call<T>(Action<T> inAction, T inArg)
         {
             if (inAction != null)
                 inAction(inArg);
             yield break;
         }
-
-        #endregion
 
         #endregion
 

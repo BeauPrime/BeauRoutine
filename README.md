@@ -585,6 +585,7 @@ The ``DETAILS`` page displays all the currently running BeauRoutines in a list. 
 | ``Routine.WaitRoutines`` | Waits until the given Routines expire. |
 | **Execution** | |
 | ``Routine.Delay`` | Calls a function after the specified number of seconds. |
+| ``Routine.Call`` | Calls a function at the end of the frame. |
 | ``Routine.PerSecond`` | Calls a function the given number of times per second. |
 | ``Routine.Combine`` | Runs multiple coroutines concurrently, and completes all. |
 | ``Routine.Race`` | Runs multiple coroutines concurrently, and stops when one expires. |

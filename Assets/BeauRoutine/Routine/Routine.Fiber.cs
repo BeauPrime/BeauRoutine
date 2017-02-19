@@ -147,10 +147,11 @@ namespace BeauRoutine
                 bool bChained = m_Chained;
 
                 ClearStack();
-                m_RootFunction = null;
 
                 m_Handle = Routine.Null;
                 m_Host = null;
+                m_HostGameObject = null;
+                m_HostIdentity = null;
 
                 m_Chained = m_Disposing = m_HasIdentity = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager = false;
 
@@ -189,7 +190,8 @@ namespace BeauRoutine
                 IEnumerator enumerator;
                 while (m_StackPosition >= 0)
                 {
-                    enumerator = m_Stack[m_StackPosition--];
+                    enumerator = m_Stack[m_StackPosition];
+                    m_Stack[m_StackPosition--] = null;
 
                     // All auto-generated coroutines are also IDisposable
                     // in order to handle "using" and "try...finally" blocks.
