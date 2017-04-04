@@ -3,7 +3,7 @@
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
- * File:    RoutineGroups.cs
+ * File:    RoutineGroupEnum.cs
  * Purpose: Attribute that marks an enum as the inspector-viewable
  *          list of routine groups, along with the inspector
  *          for fields explicitly marked as a reference to a group.

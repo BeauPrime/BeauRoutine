@@ -8,9 +8,9 @@
  *          and rotation for restoration or interpolation.
 */
 
+using BeauRoutine.Internal;
 using System;
 using UnityEngine;
-using BeauRoutine.Internal;
 
 namespace BeauRoutine
 {

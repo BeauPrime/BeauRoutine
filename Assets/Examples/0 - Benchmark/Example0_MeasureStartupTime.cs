@@ -58,8 +58,8 @@ public class Example0_MeasureStartupTime : MonoBehaviour
 
         Action<float> floatSetter = (f) => { };
 
-        Routine.SetCapacity(numFloats);
-        Routine.SetSnapshotEnabled(false);
+        Routine.Settings.SetCapacity(numFloats);
+        Routine.Settings.SnapshotEnabled = false;
 
         Stopwatch watch = Stopwatch.StartNew();
         for (int i = 0; i < numFloats; ++i)

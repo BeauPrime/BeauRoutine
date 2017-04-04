@@ -547,7 +547,7 @@ public class SomeObject
 
 ### Debugger
 
-BeauRoutine includes a simple profiler and debugger, found under the menu item ``BeauRoutine/Debugger``.
+BeauRoutine includes a simple profiler and debugger, found under the menu item ``Window/BeauRoutine Debugger``.
 
 The ``STATS`` page displays the number of BeauRoutines currently running, the maximum you've had running at the same time, and the total you can run concurrently without allocating more memory.  It also keeps track of the average time it takes to execute all the currently running BeauRoutines, and maintains a snapshot of what was running when the last maximum was recorded.
 

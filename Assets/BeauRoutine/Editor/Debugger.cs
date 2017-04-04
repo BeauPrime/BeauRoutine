@@ -11,6 +11,7 @@
 using System;
 using UnityEditor;
 using UnityEngine;
+using BeauRoutine.Internal;
 
 namespace BeauRoutine.Editor
 {
@@ -35,7 +36,7 @@ namespace BeauRoutine.Editor
         private Page m_CurrentPage = Page.Stats;
         private bool m_ShowSnapshot = false;
 
-        [MenuItem("BeauRoutine/Debugger")]
+        [MenuItem("Window/BeauRoutine Debugger", priority=1000)]
         static private void Open()
         {
             var window = EditorWindow.GetWindow<Debugger>();
@@ -68,7 +69,7 @@ namespace BeauRoutine.Editor
             EditorGUILayout.EndHorizontal();
             HorizontalDivider();
 
-            Routine.Editor.GlobalStats globalStats = Routine.Editor.GetGlobalStats();
+            GlobalStats globalStats = Manager.Instance == null ? default(GlobalStats) : Manager.Instance.GetGlobalStats();
 
             switch(m_CurrentPage)
             {
@@ -138,7 +139,7 @@ namespace BeauRoutine.Editor
 
         #region Stats
 
-        private void RenderStats(Routine.Editor.GlobalStats inStats)
+        private void RenderStats(GlobalStats inStats)
         {
             EditorGUILayout.BeginHorizontal();
             {
@@ -173,7 +174,7 @@ namespace BeauRoutine.Editor
             }
         }
 
-        private void RenderUsageStats(Routine.Editor.GlobalStats inStats)
+        private void RenderUsageStats(GlobalStats inStats)
         {
             EditorGUILayout.BeginHorizontal();
             {
@@ -204,25 +205,34 @@ namespace BeauRoutine.Editor
             EditorGUILayout.EndHorizontal();
         }
 
-        private void RenderUsageBar(Routine.Editor.GlobalStats inStats)
+        private void RenderUsageBar(GlobalStats inStats)
         {
             float barWidth = this.position.width - 40;
 
             EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
+            GUILayout.Space(20);
+
+            float remainingPercent = 1.0f;
+
             float runningPercent = (float)inStats.Running / inStats.Capacity;
             if (runningPercent > 0)
+            {
                 GUILayout.Box(inStats.Running.ToString(), m_Style_Running,
                     GUILayout.Width(barWidth * runningPercent), GUILayout.Height(BAR_HEIGHT));
+                remainingPercent -= runningPercent;
+            }
+
             float watermarkPercent = (float)inStats.Max / inStats.Capacity;
             if (watermarkPercent > runningPercent)
+            {
                 GUILayout.Box((inStats.Max).ToString(), m_Style_Watermark,
                     GUILayout.Width(barWidth * (watermarkPercent - runningPercent)), GUILayout.Height(BAR_HEIGHT));
-            float remainingPercent = 1.0f;
-            if (watermarkPercent < remainingPercent)
+                remainingPercent -= watermarkPercent - runningPercent;
+            }
+            
+            if (remainingPercent > 0)
                 GUILayout.Box((inStats.Capacity).ToString(), m_Style_Capacity,
-                    GUILayout.Width(barWidth * (remainingPercent - watermarkPercent)), GUILayout.Height(BAR_HEIGHT));
-            GUILayout.FlexibleSpace();
+                    GUILayout.Width(barWidth * (remainingPercent)), GUILayout.Height(BAR_HEIGHT));
             EditorGUILayout.EndHorizontal();
         }
 
@@ -258,15 +268,18 @@ namespace BeauRoutine.Editor
 
                 GUILayout.FlexibleSpace();
 
-                if (Routine.GetSnapshotEnabled())
+                if (Manager.Instance != null)
                 {
-                    if (GUILayout.Button("Disable Snapshot", GUILayout.Width(150)))
-                        Routine.SetSnapshotEnabled(false);
-                }
-                else
-                {
-                    if (GUILayout.Button("Enable Snapshot", GUILayout.Width(150)))
-                        Routine.SetSnapshotEnabled(true);
+                    if (Routine.Settings.SnapshotEnabled)
+                    {
+                        if (GUILayout.Button("Disable Snapshot", GUILayout.Width(150)))
+                            Routine.Settings.SnapshotEnabled = false;
+                    }
+                    else
+                    {
+                        if (GUILayout.Button("Enable Snapshot", GUILayout.Width(150)))
+                            Routine.Settings.SnapshotEnabled = true;
+                    }
                 }
             }
             GUILayout.EndHorizontal();
@@ -278,7 +291,7 @@ namespace BeauRoutine.Editor
 
         private void RenderDetails()
         {
-            var globalStats = Routine.Editor.GetGlobalStats();
+            var globalStats = Manager.Instance == null ? default(GlobalStats) : Manager.Instance.GetGlobalStats();
             EditorGUILayout.BeginHorizontal();
             {
                 EditorGUILayout.LabelField("RUNNING/", GUILayout.Width(FIELD_NAME_WIDTH));
@@ -286,7 +299,7 @@ namespace BeauRoutine.Editor
             }
             EditorGUILayout.EndHorizontal();
 
-            var stats = Routine.Editor.GetRoutineStats();
+            var stats = Manager.Instance == null ? null : Manager.Instance.GetRoutineStats();
             if (stats == null)
                 return;
 
@@ -299,7 +312,7 @@ namespace BeauRoutine.Editor
             EditorGUILayout.EndScrollView();
         }
 
-        private void RenderStatGroup(Routine.Editor.RoutineStats[] inStats, bool inbCanAdjust, bool inbNested)
+        private void RenderStatGroup(RoutineStats[] inStats, bool inbCanAdjust, bool inbNested)
         {
             for (int i = 0; i < inStats.Length; ++i)
             {
@@ -309,7 +322,7 @@ namespace BeauRoutine.Editor
             }
         }
 
-        private void RenderStats(Routine.Editor.RoutineStats inStats, bool inbCanAdjust, bool inbNested)
+        private void RenderStats(RoutineStats inStats, bool inbCanAdjust, bool inbNested)
         {
             if (!inbNested)
             {
@@ -390,7 +403,7 @@ namespace BeauRoutine.Editor
             }
             EditorGUILayout.EndHorizontal();
 
-            if (inStats.State != Routine.Editor.RoutineState.Disposing && inbCanAdjust)
+            if (inStats.State != RoutineState.Disposing && inbCanAdjust)
             {
                 // Functions
                 EditorGUILayout.BeginHorizontal();

@@ -9,9 +9,9 @@
  *          every time.
 */
 
-using System.Collections.Generic;
-using System.Collections;
 using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace BeauRoutine
 {

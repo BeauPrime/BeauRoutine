@@ -517,29 +517,33 @@ namespace BeauRoutine
         /// </summary>
         public void Dispose()
         {
-            if (m_Cancel != CancelMode.Nothing && m_TweenData != null && m_State == State.Run)
+            if (m_TweenData != null && m_State == State.Run)
             {
-                m_Reversed = false;
-
-                float curvedPercent = 0;
-                switch (m_Cancel)
+                if (m_Cancel != CancelMode.Nothing)
                 {
-                    case CancelMode.Revert:
-                        curvedPercent = Evaluate(0);
-                        break;
-                    case CancelMode.RevertNoWave:
-                        curvedPercent = EvaluateNoWave(0);
-                        break;
-                    case CancelMode.ForceEnd:
-                        curvedPercent = Evaluate(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
-                        break;
-                    case CancelMode.ForceEndNoWave:
-                        curvedPercent = EvaluateNoWave(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
-                        break;
+                    m_Reversed = false;
+
+                    float curvedPercent = 0;
+                    switch (m_Cancel)
+                    {
+                        case CancelMode.Revert:
+                            curvedPercent = Evaluate(0);
+                            break;
+                        case CancelMode.RevertNoWave:
+                            curvedPercent = EvaluateNoWave(0);
+                            break;
+                        case CancelMode.ForceEnd:
+                            curvedPercent = Evaluate(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
+                            break;
+                        case CancelMode.ForceEndNoWave:
+                            curvedPercent = EvaluateNoWave(m_Mode == LoopMode.Yoyo || m_Mode == LoopMode.YoyoLoop ? 0 : 1);
+                            break;
+                    }
+                    m_TweenData.ApplyTween(curvedPercent);
+                    if (m_OnUpdate != null)
+                        m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
                 }
-                m_TweenData.ApplyTween(curvedPercent);
-                if (m_OnUpdate != null)
-                    m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+
                 m_TweenData.OnTweenEnd();
             }
 

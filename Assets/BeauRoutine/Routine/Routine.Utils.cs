@@ -6,11 +6,9 @@
  * File:    Routine.Utils.cs
  * Purpose: Set of utility functions for both running Routines
  *          and creating routine functions for common tasks.
- *          
- * Note:    Combine and Race are slightly hacky, but incredibly
- *          useful.
 */
 
+using BeauRoutine.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -20,6 +18,35 @@ namespace BeauRoutine
 {
     public partial struct Routine
     {
+        #region Time
+
+        /// <summary>
+        /// Global time scale.
+        /// </summary>
+        static public float TimeScale
+        {
+            get { return Time.timeScale; }
+            set { Time.timeScale = value; }
+        }
+
+        /// <summary>
+        /// Current delta time.
+        /// </summary>
+        static public float DeltaTime
+        {
+            get { return GetManager().Frame.DeltaTime; }
+        }
+
+        /// <summary>
+        /// Raw delta time.
+        /// </summary>
+        static public float UnscaledDeltaTime
+        {
+            get { return GetManager().Frame.UnscaledDeltaTime; }
+        }
+
+        #endregion
+
         #region Special Commands
 
         /// <summary>
@@ -47,7 +74,7 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitFrames(int inFrames)
         {
-            while (inFrames-- > 0)
+            while (--inFrames > 0)
                 yield return null;
         }
 
@@ -116,7 +143,7 @@ namespace BeauRoutine
 
         #endregion
 
-        #region Combine
+        #region Combine/Race
 
         /// <summary>
         /// Returns an IEnumerator that runs the given routines concurrently
@@ -207,99 +234,7 @@ namespace BeauRoutine
         /// </summary>
         static private IEnumerator CreateCombine(IEnumerator[] inEnumerators, bool inbRace)
         {
-            return new CombineIterator(inEnumerators, inbRace);
-        }
-
-        private sealed class CombineIterator : IRoutineEnumerator
-        {
-            private IEnumerator[] m_Enumerators;
-            private List<Fiber> m_Fibers;
-            private bool m_Race;
-
-            public CombineIterator(IEnumerator[] inEnumerators, bool inbRace)
-            {
-                m_Enumerators = inEnumerators;
-                m_Race = inbRace;
-                m_Fibers = new List<Fiber>(inEnumerators.Length);
-            }
-
-            public void Dispose()
-            {
-                if (m_Enumerators != null)
-                {
-                    for(int i = 0; i < m_Enumerators.Length; ++i)
-                    {
-                        ((IDisposable)m_Enumerators[i]).Dispose();
-                        m_Enumerators[i] = null;
-                    }
-                    m_Enumerators = null;
-                }
-
-                for(int i = 0; i < m_Fibers.Count; ++i)
-                {
-                    m_Fibers[i].Stop();
-                    m_Fibers[i].Run();
-                }
-
-                m_Fibers.Clear();
-            }
-
-            public object Current
-            {
-                get { return null; }
-            }
-
-            public bool MoveNext()
-            {
-                if (m_Fibers.Count > 0)
-                {
-                    for(int i = 0; i < m_Fibers.Count; ++i)
-                    {
-                        Fiber myFiber = m_Fibers[i];
-                        if (!myFiber.Run())
-                        {
-                            m_Fibers.RemoveAt(i--);
-                            if (m_Race)
-                                return false;
-                        }
-                    }
-                }
-
-                return m_Fibers.Count > 0;
-            }
-
-            public void Reset()
-            {
-                throw new NotImplementedException();
-            }
-
-            public bool OnRoutineStart()
-            {
-                for (int i = 0; i < m_Enumerators.Length; ++i)
-                {
-                    if (m_Enumerators[i] != null)
-                        m_Fibers.Add(ChainFiber(m_Enumerators[i]));
-                    m_Enumerators[i] = null;
-                }
-
-                m_Enumerators = null;
-                return m_Fibers.Count > 0;
-            }
-
-            public override string ToString()
-            {
-                return m_Race ? "Routine::Race()" : "Routine::Combine()";
-            }
-
-#if UNITY_EDITOR
-            public Editor.RoutineStats[] GetStats()
-            {
-                Editor.RoutineStats[] stats = new Editor.RoutineStats[m_Fibers.Count];
-                for (int i = 0; i < stats.Length; ++i)
-                    stats[i] = m_Fibers[i].GetStats();
-                return stats;
-            }
-#endif
+            return new ParallelFibers(GetManager(), inEnumerators, inbRace);
         }
 
         #endregion

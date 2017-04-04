@@ -8,6 +8,7 @@
  *          Helps prevent memory leaks and dangling references.
 */
 
+using BeauRoutine.Internal;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -19,22 +20,14 @@ namespace BeauRoutine
     /// </summary>
     public partial struct Routine : IEquatable<Routine>, IDisposable
     {
-        private const uint INDEX_MASK       = 0x00FFFFFF;
-        private const uint COUNTER_MASK     = 0xFF000000;
-
-        private const byte COUNTER_SHIFT = 24;
-        private const byte COUNTER_MAX = 0xFF;
-
         private uint m_Value;
 
+        /// <summary>
+        /// Generates the Routine handle with the given ID.
+        /// </summary>
         private Routine(uint inValue)
         {
             m_Value = inValue;
-        }
-
-        private Routine(uint inIndex, uint inCounter)
-        {
-            m_Value = (inIndex & INDEX_MASK) | ((inCounter << COUNTER_SHIFT) & COUNTER_MASK);
         }
 
         /// <summary>
@@ -54,7 +47,7 @@ namespace BeauRoutine
         /// </summary>
         public IEnumerator Wait()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 return fiber.Wait();
             return null;
@@ -65,7 +58,7 @@ namespace BeauRoutine
         /// </summary>
         public bool Exists()
         {
-            return m_Value > 0 && Find(this) != null;
+            return m_Value > 0 && GetManager().Fibers[this] != null;
         }
 
         #endregion
@@ -77,7 +70,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Pause()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.Pause();
             return this;
@@ -88,7 +81,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Resume()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.Resume();
             return this;
@@ -99,7 +92,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Stop()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.Stop();
             m_Value = 0;
@@ -111,7 +104,7 @@ namespace BeauRoutine
         /// </summary>
         public float GetTimeScale()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             return fiber == null ? 1.0f : fiber.TimeScale;
         }
 
@@ -120,7 +113,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetTimeScale(float inValue)
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.TimeScale = inValue;
             return this;
@@ -132,7 +125,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine DisableObjectTimeScale()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.IgnoreObjectTimeScale();
             return this;
@@ -144,7 +137,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine EnableObjectTimeScale()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.UseObjectTimeScale();
             return this;
@@ -156,7 +149,7 @@ namespace BeauRoutine
         /// </summary>
         public string GetName()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 return fiber.Name;
             return null;
@@ -168,7 +161,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetName(string inName)
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.Name = inName;
             return this;
@@ -180,7 +173,7 @@ namespace BeauRoutine
         /// </summary>
         public int GetPriority()
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 return fiber.Priority;
             return 0;
@@ -193,7 +186,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetPriority(int inPriority)
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.SetPriority(inPriority);
             return this;
@@ -209,7 +202,7 @@ namespace BeauRoutine
         public Routine Replace(IEnumerator inNewRoutine)
         {
             Stop();
-            m_Value = RunFiber(null, inNewRoutine).m_Value;
+            m_Value = GetManager().RunFiber(null, inNewRoutine).m_Value;
             return this;
         }
 
@@ -219,7 +212,7 @@ namespace BeauRoutine
         public Routine Replace(MonoBehaviour inHost, IEnumerator inNewRoutine)
         {
             Stop();
-            m_Value = RunFiber(inHost, inNewRoutine).m_Value;
+            m_Value = GetManager().RunFiber(inHost, inNewRoutine).m_Value;
             return this;
         }
 
@@ -243,7 +236,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnComplete(Action inCallback)
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.OnComplete(inCallback);
             return this;
@@ -255,7 +248,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnStop(Action inCallback)
         {
-            Fiber fiber = Find(this);
+            Fiber fiber = GetManager().Fibers[this];
             if (fiber != null)
                 fiber.OnStop(inCallback);
             return this;
@@ -290,6 +283,16 @@ namespace BeauRoutine
         static public implicit operator bool(Routine inHandle)
         {
             return inHandle.Exists();
+        }
+
+        static public implicit operator uint(Routine inHandle)
+        {
+            return inHandle.m_Value;
+        }
+
+        static public implicit operator Routine(uint inValue)
+        {
+            return new Routine(inValue);
         }
 
         static public bool operator==(Routine first, Routine second)

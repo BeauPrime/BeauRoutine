@@ -8,9 +8,8 @@
  *          on different axis values.
 */
 
-using System.Collections;
-using UnityEngine;
 using BeauRoutine.Internal;
+using UnityEngine;
 
 namespace BeauRoutine
 {
