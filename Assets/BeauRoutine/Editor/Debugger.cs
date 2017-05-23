@@ -69,7 +69,7 @@ namespace BeauRoutine.Editor
             EditorGUILayout.EndHorizontal();
             HorizontalDivider();
 
-            GlobalStats globalStats = Manager.Instance == null ? default(GlobalStats) : Manager.Instance.GetGlobalStats();
+            GlobalStats globalStats = Manager.Exists() ? Manager.Get().GetGlobalStats() : default(GlobalStats);
 
             switch(m_CurrentPage)
             {
@@ -268,7 +268,7 @@ namespace BeauRoutine.Editor
 
                 GUILayout.FlexibleSpace();
 
-                if (Manager.Instance != null)
+                if (Manager.Exists())
                 {
                     if (Routine.Settings.SnapshotEnabled)
                     {
@@ -291,7 +291,7 @@ namespace BeauRoutine.Editor
 
         private void RenderDetails()
         {
-            var globalStats = Manager.Instance == null ? default(GlobalStats) : Manager.Instance.GetGlobalStats();
+            var globalStats = Manager.Exists() ? Manager.Get().GetGlobalStats() : default(GlobalStats);
             EditorGUILayout.BeginHorizontal();
             {
                 EditorGUILayout.LabelField("RUNNING/", GUILayout.Width(FIELD_NAME_WIDTH));
@@ -299,7 +299,7 @@ namespace BeauRoutine.Editor
             }
             EditorGUILayout.EndHorizontal();
 
-            var stats = Manager.Instance == null ? null : Manager.Instance.GetRoutineStats();
+            var stats = Manager.Exists() ? Manager.Get().GetRoutineStats() : null;
             if (stats == null)
                 return;
 

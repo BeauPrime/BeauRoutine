@@ -31,6 +31,17 @@ namespace BeauRoutine.Internal
 			return (inSpace == Space.Self ? m_Local : m_World);
 		}
 
+        /// <summary>
+        /// Copies the euler angles for the given space into the given vector.
+        /// </summary>
+        public void Get(ref Vector3 ioVector, Space inSpace)
+        {
+            if (inSpace == Space.Self)
+                ioVector.Set(m_Local.x, m_Local.y, m_Local.z);
+            else
+                ioVector.Set(m_World.x, m_World.y, m_World.z);
+        }
+
 		/// <summary>
 		/// Sets the euler angles for the given space.
 		/// </summary>

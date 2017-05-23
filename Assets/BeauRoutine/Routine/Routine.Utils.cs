@@ -25,8 +25,19 @@ namespace BeauRoutine
         /// </summary>
         static public float TimeScale
         {
-            get { return Time.timeScale; }
-            set { Time.timeScale = value; }
+            get
+            {
+                Manager m = GetManager();
+                if (m != null)
+                    return m.TimeScale;
+                return 1.0f;
+            }
+            set
+            {
+                Manager m = GetManager();
+                if (m != null)
+                    m.TimeScale = value;
+            }
         }
 
         /// <summary>
@@ -34,7 +45,13 @@ namespace BeauRoutine
         /// </summary>
         static public float DeltaTime
         {
-            get { return GetManager().Frame.DeltaTime; }
+            get
+            {
+                Manager m = GetManager();
+                if (m != null)
+                    return m.Frame.DeltaTime;
+                return 0.0f;
+            }
         }
 
         /// <summary>
@@ -42,7 +59,13 @@ namespace BeauRoutine
         /// </summary>
         static public float UnscaledDeltaTime
         {
-            get { return GetManager().Frame.UnscaledDeltaTime; }
+            get
+            {
+                Manager m = GetManager();
+                if (m != null)
+                    return m.Frame.UnscaledDeltaTime;
+                return 0.0f;
+            }
         }
 
         #endregion
@@ -141,6 +164,26 @@ namespace BeauRoutine
             }
         }
 
+        /// <summary>
+        /// Returns an IEnumerator that counts down from a specific time.
+        /// </summary>
+        static public IEnumerator Timer(float inSeconds, Action<float> inOnUpdate)
+        {
+            while(true)
+            {
+                inSeconds -= Routine.DeltaTime;
+                if (inSeconds < 0)
+                    inSeconds = 0;
+
+                if (inOnUpdate != null)
+                    inOnUpdate(inSeconds);
+                if (inSeconds > 0)
+                    yield return null;
+                else
+                    break;
+            }
+        }
+
         #endregion
 
         #region Combine/Race
@@ -234,7 +277,10 @@ namespace BeauRoutine
         /// </summary>
         static private IEnumerator CreateCombine(IEnumerator[] inEnumerators, bool inbRace)
         {
-            return new ParallelFibers(GetManager(), inEnumerators, inbRace);
+            Manager m = GetManager();
+            if (m != null)
+                return new ParallelFibers(m, inEnumerators, inbRace);
+            return null;
         }
 
         #endregion

@@ -527,7 +527,7 @@ namespace BeauRoutine.Internal
             public WaitEnumerator(Fiber inFiber)
             {
                 m_Fiber = inFiber;
-                m_Current = m_Fiber.m_Handle;
+                m_Current = (uint)m_Fiber.m_Handle;
             }
 
             public void Dispose()
@@ -542,7 +542,7 @@ namespace BeauRoutine.Internal
 
             public bool MoveNext()
             {
-                return m_Current > 0 && m_Fiber.m_Handle == m_Current;
+                return m_Current > 0 && (uint)m_Fiber.m_Handle == m_Current;
             }
 
             public void Reset()

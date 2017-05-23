@@ -39,9 +39,9 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Resets delta time.
         /// </summary>
-        public void ResetTime()
+        public void ResetTime(float inGlobalTimescale)
         {
-            DeltaTime = UnscaledDeltaTime = Time.deltaTime;
+            DeltaTime = UnscaledDeltaTime = Time.deltaTime * inGlobalTimescale;
         }
 
         /// <summary>

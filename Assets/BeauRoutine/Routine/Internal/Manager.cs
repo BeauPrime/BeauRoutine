@@ -16,12 +16,66 @@ namespace BeauRoutine.Internal
 {
     public sealed class Manager
     {
-        // HACK: Needed at the moment for Editor access
-        static private Manager s_Instance;
-        static public Manager Instance
+        #region Singleton
+
+        static private Manager s_Instance = new Manager();
+        static private bool s_AppQuitting = false;
+
+        /// <summary>
+        /// Ensures the Manager exists and is initialized.
+        /// </summary>
+        static public void Create()
         {
-            get { return s_Instance; }
+            if (s_Instance == null)
+                s_Instance = new Manager();
+            s_Instance.Initialize();
         }
+
+        /// <summary>
+        /// Shuts down the Manager and nulls out the reference.
+        /// </summary>
+        static public void Destroy()
+        {
+            if (s_Instance != null)
+            {
+                if (!s_Instance.IsUpdating)
+                {
+                    s_Instance.Shutdown();
+                    s_Instance = null;
+                    return;
+                }
+
+                s_Instance.QueueShutdown();
+            }
+        }
+        
+        /// <summary>
+        /// Returns the Manager singleton.
+        /// </summary>
+        static public Manager Get()
+        {
+            if (s_Instance == null && !s_AppQuitting)
+                throw new InvalidOperationException("BeauRoutine has been shutdown. Please call Initialize() before anything else.");
+            return s_Instance;
+        }
+
+        /// <summary>
+        /// Returns if the Manager singleton exists.
+        /// </summary>
+        static public bool Exists()
+        {
+            return s_Instance != null;
+        }
+
+        /// <summary>
+        /// Returns if the Manager was shut down due to application shutting down.
+        /// </summary>
+        static public bool IsShuttingDown()
+        {
+            return s_AppQuitting;
+        }
+
+        #endregion
 
         // Current state
         private bool m_Initialized = false;
@@ -52,12 +106,22 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Unity host object.
         /// </summary>
-        public UnityHost Host;
+        public RoutineUnityHost Host;
 
         /// <summary>
         /// If updates should be run or not.
         /// </summary>
         public bool Paused = false;
+
+        /// <summary>
+        /// From settings: If updates should be run or not.
+        /// </summary>
+        public bool SystemPaused = false;
+
+        /// <summary>
+        /// Global time scale.
+        /// </summary>
+        public float TimeScale = 1;
 
         /// <summary>
         /// Settings for the current frame.
@@ -94,12 +158,16 @@ namespace BeauRoutine.Internal
 
             m_UpdateTimer = new Stopwatch();
 
-            Frame.ResetTime();
+            Frame.ResetTime(TimeScale);
 
             m_QueuedGroupTimescale = new float[Routine.MAX_GROUPS];
             Frame.GroupTimeScale = new float[Routine.MAX_GROUPS];
             for (int i = 0; i < Routine.MAX_GROUPS; ++i)
                 m_QueuedGroupTimescale[i] = Frame.GroupTimeScale[i] = 1.0f;
+
+#if UNITY_EDITOR
+            DebugMode = true;
+#endif
         }
 
         /// <summary>
@@ -110,10 +178,14 @@ namespace BeauRoutine.Internal
             if (m_Initialized)
                 return;
 
+#if DEVELOPMENT
+            DebugMode = true;
+#else
             DebugMode = UnityEngine.Debug.isDebugBuild;
+#endif
 
             GameObject hostGO = new GameObject("Routine::Manager");
-            Host = hostGO.AddComponent<UnityHost>();
+            Host = hostGO.AddComponent<RoutineUnityHost>();
             Host.Initialize(this);
             hostGO.hideFlags = HideFlags.HideAndDontSave;
             GameObject.DontDestroyOnLoad(hostGO);
@@ -129,7 +201,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void Update()
         {
-            Frame.ResetTime();
+            Frame.ResetTime(TimeScale);
             Frame.PauseMask = m_QueuedPauseMask;
             if (m_GroupTimescaleDirty)
             {
@@ -150,7 +222,7 @@ namespace BeauRoutine.Internal
                         m_NeedsSnapshot = false;
                     }
 
-                    if (!Paused && Fibers.TotalActive > 0)
+                    if (!Paused && !SystemPaused && Fibers.TotalActive > 0)
                     {
                         Fibers.RunActive();
                         Frame.ResetTimeScale();
@@ -187,12 +259,12 @@ namespace BeauRoutine.Internal
             if (m_Destroying)
             {
                 m_Destroying = false;
-                Routine.Shutdown();
+                Destroy();
             }
         }
 
         /// <summary>
-        /// Stops all routines and shuts down the 
+        /// Stops all routines and shuts down the manager.
         /// </summary>
         public void Shutdown()
         {
@@ -210,8 +282,8 @@ namespace BeauRoutine.Internal
 
             Log("Shutdown()");
 
-            s_Instance = null;
             m_Initialized = false;
+            s_Instance = null;
         }
 
         /// <summary>
@@ -220,6 +292,14 @@ namespace BeauRoutine.Internal
         public void QueueShutdown()
         {
             m_Destroying = true;
+        }
+
+        /// <summary>
+        /// Called when the application is quitting.
+        /// </summary>
+        public void OnApplicationQuit()
+        {
+            s_AppQuitting = true;
         }
 
         #endregion

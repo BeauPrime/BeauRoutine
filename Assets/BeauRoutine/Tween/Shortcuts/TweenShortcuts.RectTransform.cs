@@ -80,8 +80,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector2 target = m_Target.anchoredPosition;
-                Vector2 delta = target - m_Start;
+                Vector2 delta = m_Target.anchoredPosition;
+                VectorUtil.Subtract(ref delta, m_Start);
                 Vector2 final = new Vector3(
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent);
@@ -377,8 +377,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector2 target = m_Target.sizeDelta;
-                Vector2 delta = target - m_Start;
+                Vector2 delta = m_Target.sizeDelta;
+                VectorUtil.Subtract(ref delta, m_Start);
                 Vector2 final = new Vector2(
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent);
@@ -512,8 +512,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector2 target = m_Target.pivot;
-                Vector2 delta = target - m_Start;
+                Vector2 delta = m_Target.pivot;
+                VectorUtil.Subtract(ref delta, m_Start);
                 Vector2 final = new Vector2(
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent);

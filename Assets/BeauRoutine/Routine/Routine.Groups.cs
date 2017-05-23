@@ -9,6 +9,7 @@
 */
 
 using System;
+using BeauRoutine.Internal;
 
 namespace BeauRoutine
 {
@@ -24,7 +25,9 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseGroups(int inGroupMask)
         {
-            GetManager().PauseGroups(inGroupMask);
+            Manager m = GetManager();
+            if (m != null)
+                m.PauseGroups(inGroupMask);
         }
 
         /// <summary>
@@ -32,7 +35,9 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeGroups(int inGroupMask)
         {
-            GetManager().ResumeGroups(inGroupMask);
+            Manager m = GetManager();
+            if (m != null)
+                m.ResumeGroups(inGroupMask);
         }
         
         /// <summary>
@@ -40,9 +45,14 @@ namespace BeauRoutine
         /// </summary>
         static public float GetGroupTimeScale(int inGroup)
         {
-            if (inGroup >= MAX_GROUPS)
-                throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
-            return GetManager().GetTimescale(inGroup);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                if (inGroup >= MAX_GROUPS)
+                    throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
+                return m.GetTimescale(inGroup);
+            }
+            return 1.0f;
         }
 
         /// <summary>
@@ -50,9 +60,13 @@ namespace BeauRoutine
         /// </summary>
         static public void SetGroupTimeScale(int inGroup, float inScale)
         {
-            if (inGroup >= MAX_GROUPS)
-                throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
-            GetManager().SetTimescale(inGroup, inScale);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                if (inGroup >= MAX_GROUPS)
+                    throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
+                m.SetTimescale(inGroup, inScale);
+            }
         }
 
         /// <summary>
@@ -60,9 +74,13 @@ namespace BeauRoutine
         /// </summary>
         static public void ResetGroupTimeScale(int inGroup)
         {
-            if (inGroup >= MAX_GROUPS)
-                throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
-            GetManager().SetTimescale(inGroup, 1.0f);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                if (inGroup >= MAX_GROUPS)
+                    throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
+                m.SetTimescale(inGroup, 1.0f);
+            }
         }
     }
 }

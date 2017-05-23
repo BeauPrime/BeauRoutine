@@ -61,9 +61,9 @@ namespace BeauRoutine
         /// </summary>
         static public Vector3 GetPosition(this Transform inTransform, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
         {
-            return Vector3.zero.CopyFrom(
-                inSpace == Space.Self ? inTransform.localPosition : inTransform.position,
-                inAxis);
+            Vector3 vector = Vector3.zero;
+            VectorUtil.CopyFrom(ref vector, inSpace == Space.Self ? inTransform.localPosition : inTransform.position, inAxis);
+            return vector;
         }
 
         /// <summary>
@@ -77,7 +77,10 @@ namespace BeauRoutine
                 if (inAxis == Axis.XYZ)
                     pos = inPosition;
                 else
-                    pos = (inSpace == Space.Self ? inTransform.localPosition : inTransform.position).CopyFrom(inPosition, inAxis);
+                {
+                    pos = (inSpace == Space.Self ? inTransform.localPosition : inTransform.position);
+                    VectorUtil.CopyFrom(ref pos, inPosition, inAxis);
+                }
 
                 if (inSpace == Space.Self)
                     inTransform.localPosition = pos;
@@ -111,7 +114,9 @@ namespace BeauRoutine
         /// </summary>
         static public Vector3 GetScale(this Transform inTransform, Axis inAxis = Axis.XYZ)
         {
-            return Vector3.one.CopyFrom(inTransform.localScale, inAxis);
+            Vector3 scale = new Vector3(1, 1, 1);
+            VectorUtil.CopyFrom(ref scale, inTransform.localScale, inAxis);
+            return scale;
         }
 
         /// <summary>
@@ -125,7 +130,10 @@ namespace BeauRoutine
                 if (inAxis == Axis.XYZ)
                     scale = inScale;
                 else
-                    scale = inTransform.localScale.CopyFrom(inScale, inAxis);
+                {
+                    scale = inTransform.localScale;
+                    VectorUtil.CopyFrom(ref scale, inScale, inAxis);
+                }
 
                 inTransform.localScale = scale;
             }
@@ -164,9 +172,11 @@ namespace BeauRoutine
         /// </summary>
         static public Vector3 GetRotation(this Transform inTransform, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
         {
-            return Vector3.zero.CopyFrom(
+            Vector3 rot = new Vector3(0, 0, 0);
+            VectorUtil.CopyFrom(ref rot,
                 GetRotationInternal(inTransform, inSpace),
                 inAxis);
+            return rot;
         }
 
         /// <summary>
@@ -186,12 +196,14 @@ namespace BeauRoutine
                     EulerStorage record = EulerStorage.GetRecord(inTransform);
                     if (record != null)
                     {
-                        rotation = record.Get(inSpace).CopyFrom(inRotation, inAxis);
+                        rotation = record.Get(inSpace);
+                        VectorUtil.CopyFrom(ref rotation, inRotation, inAxis);
                         record.Set(inSpace, rotation);
                     }
                     else
                     {
-                        rotation = (inSpace == Space.Self ? inTransform.localEulerAngles : inTransform.eulerAngles).CopyFrom(inRotation, inAxis);
+                        rotation = (inSpace == Space.Self ? inTransform.localEulerAngles : inTransform.eulerAngles);
+                        VectorUtil.CopyFrom(ref rotation, inRotation, inAxis);
                     }
                 }
 
@@ -227,7 +239,9 @@ namespace BeauRoutine
         /// </summary>
         static public Vector2 GetAnchorPos(this RectTransform inTransform, Axis inAxis = Axis.XY)
         {
-            return Vector2.zero.CopyFrom(inTransform.anchoredPosition, inAxis);
+            Vector2 pos = new Vector2(0, 0);
+            VectorUtil.CopyFrom(ref pos, inTransform.anchoredPosition, inAxis);
+            return pos;
         }
 
         /// <summary>
@@ -241,7 +255,10 @@ namespace BeauRoutine
                 if (inAxis == Axis.XYZ || inAxis == Axis.XY)
                     pos = inPosition;
                 else
-                    pos = inTransform.anchoredPosition.CopyFrom(inPosition, inAxis);
+                {
+                    pos = inTransform.anchoredPosition;
+                    VectorUtil.CopyFrom(ref pos, inPosition, inAxis);
+                }
 
                 inTransform.anchoredPosition = pos;
             }
@@ -272,7 +289,9 @@ namespace BeauRoutine
         /// </summary>
         static public Vector2 GetSizeDelta(this RectTransform inTransform, Axis inAxis = Axis.XY)
         {
-            return Vector2.zero.CopyFrom(inTransform.sizeDelta, inAxis);
+            Vector2 size = new Vector2(0, 0);
+            VectorUtil.CopyFrom(ref size, inTransform.sizeDelta, inAxis);
+            return size;
         }
 
         /// <summary>
@@ -286,7 +305,10 @@ namespace BeauRoutine
                 if (inAxis == Axis.XYZ || inAxis == Axis.XY)
                     pos = inSize;
                 else
-                    pos = inTransform.sizeDelta.CopyFrom(inSize, inAxis);
+                {
+                    pos = inTransform.sizeDelta;
+                    VectorUtil.CopyFrom(ref pos, inSize, inAxis);
+                }
 
                 inTransform.sizeDelta = pos;
             }
@@ -322,76 +344,6 @@ namespace BeauRoutine
             TransformState state = (inSpace == Space.World ? TransformState.WorldState() : TransformState.LocalState());
             state.Refresh(inTarget, inProperties);
             state.Apply(inTransform, inProperties);
-        }
-
-        #endregion
-
-        #region Vector Operations
-
-        /// <summary>
-        /// Returns the value of the vector for the given axis.
-        /// </summary>
-        static public float GetAxis(this Vector3 inVector, Axis inAxis)
-        {
-            if ((inAxis & Axis.X) != 0)
-                return inVector.x;
-            if ((inAxis & Axis.Y) != 0)
-                return inVector.y;
-            if ((inAxis & Axis.Z) != 0)
-                return inVector.z;
-            return float.NaN;
-        }
-
-        /// <summary>
-        /// Returns the value of the vector for the given axis.
-        /// </summary>
-        static public float GetAxis(this Vector2 inVector, Axis inAxis)
-        {
-            if ((inAxis & Axis.X) != 0)
-                return inVector.x;
-            if ((inAxis & Axis.Y) != 0)
-                return inVector.y;
-            return float.NaN;
-        }
-
-        /// <summary>
-        /// Returns the initial vector with the given axis values
-        /// copied from the given source.
-        /// </summary>
-        static public Vector3 CopyFrom(this Vector3 inVector, Vector3 inSource, Axis inAxis = Axis.XYZ)
-        {
-            if (inAxis == Axis.XYZ)
-                return inSource;
-            if (inAxis == 0)
-                return inVector;
-
-            if ((inAxis & Axis.X) != 0)
-                inVector.x = inSource.x;
-            if ((inAxis & Axis.Y) != 0)
-                inVector.y = inSource.y;
-            if ((inAxis & Axis.Z) != 0)
-                inVector.z = inSource.z;
-
-            return inVector;
-        }
-
-        /// <summary>
-        /// Returns the initial vector with the given axis values
-        /// copied from the given source.
-        /// </summary>
-        static public Vector2 CopyFrom(this Vector2 inVector, Vector2 inSource, Axis inAxis = Axis.XY)
-        {
-            if (inAxis == Axis.XY || inAxis == Axis.XYZ)
-                return inSource;
-            if (inAxis == 0)
-                return inVector;
-
-            if ((inAxis & Axis.X) != 0)
-                inVector.x = inSource.x;
-            if ((inAxis & Axis.Y) != 0)
-                inVector.y = inSource.y;
-
-            return inVector;
         }
 
         #endregion

@@ -47,9 +47,13 @@ namespace BeauRoutine
         /// </summary>
         public IEnumerator Wait()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                return fiber.Wait();
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    return fiber.Wait();
+            }
             return null;
         }
 
@@ -58,7 +62,12 @@ namespace BeauRoutine
         /// </summary>
         public bool Exists()
         {
-            return m_Value > 0 && GetManager().Fibers[this] != null;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                return m_Value > 0 && m.Fibers[this] != null;
+            }
+            return false;
         }
 
         #endregion
@@ -70,9 +79,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine Pause()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.Pause();
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Pause();
+            }
             return this;
         }
 
@@ -81,9 +94,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine Resume()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.Resume();
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Resume();
+            }
             return this;
         }
 
@@ -92,10 +109,14 @@ namespace BeauRoutine
         /// </summary>
         public Routine Stop()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.Stop();
-            m_Value = 0;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Stop();
+                m_Value = 0;
+            }
             return this;
         }
 
@@ -104,8 +125,13 @@ namespace BeauRoutine
         /// </summary>
         public float GetTimeScale()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            return fiber == null ? 1.0f : fiber.TimeScale;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                return fiber == null ? 1.0f : fiber.TimeScale;
+            }
+            return 1.0f;
         }
 
         /// <summary>
@@ -113,9 +139,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetTimeScale(float inValue)
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.TimeScale = inValue;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.TimeScale = inValue;
+            }
             return this;
         }
 
@@ -125,9 +155,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine DisableObjectTimeScale()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.IgnoreObjectTimeScale();
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.IgnoreObjectTimeScale();
+            }
             return this;
         }
 
@@ -137,9 +171,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine EnableObjectTimeScale()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.UseObjectTimeScale();
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.UseObjectTimeScale();
+            }
             return this;
         }
 
@@ -149,9 +187,13 @@ namespace BeauRoutine
         /// </summary>
         public string GetName()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                return fiber.Name;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    return fiber.Name;
+            }
             return null;
         }
 
@@ -161,9 +203,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetName(string inName)
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.Name = inName;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Name = inName;
+            }
             return this;
         }
 
@@ -173,9 +219,13 @@ namespace BeauRoutine
         /// </summary>
         public int GetPriority()
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                return fiber.Priority;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    return fiber.Priority;
+            }
             return 0;
         }
 
@@ -186,9 +236,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetPriority(int inPriority)
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.SetPriority(inPriority);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.SetPriority(inPriority);
+            }
             return this;
         }
 
@@ -201,8 +255,12 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(IEnumerator inNewRoutine)
         {
-            Stop();
-            m_Value = GetManager().RunFiber(null, inNewRoutine).m_Value;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Stop();
+                m_Value = m.RunFiber(null, inNewRoutine).m_Value;
+            }
             return this;
         }
 
@@ -211,8 +269,12 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(MonoBehaviour inHost, IEnumerator inNewRoutine)
         {
-            Stop();
-            m_Value = GetManager().RunFiber(inHost, inNewRoutine).m_Value;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Stop();
+                m_Value = m.RunFiber(inHost, inNewRoutine).m_Value;
+            }
             return this;
         }
 
@@ -221,8 +283,12 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(Routine inRoutine)
         {
-            Stop();
-            m_Value = inRoutine.m_Value;
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Stop();
+                m_Value = inRoutine.m_Value;
+            }
             return this;
         }
 
@@ -236,9 +302,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnComplete(Action inCallback)
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.OnComplete(inCallback);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.OnComplete(inCallback);
+            }
             return this;
         }
 
@@ -248,9 +318,13 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnStop(Action inCallback)
         {
-            Fiber fiber = GetManager().Fibers[this];
-            if (fiber != null)
-                fiber.OnStop(inCallback);
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.OnStop(inCallback);
+            }
             return this;
         }
 
@@ -285,12 +359,12 @@ namespace BeauRoutine
             return inHandle.Exists();
         }
 
-        static public implicit operator uint(Routine inHandle)
+        static public explicit operator uint(Routine inHandle)
         {
             return inHandle.m_Value;
         }
 
-        static public implicit operator Routine(uint inValue)
+        static public explicit operator Routine(uint inValue)
         {
             return new Routine(inValue);
         }

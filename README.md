@@ -483,9 +483,9 @@ Routine.ResetGroupTimeScale( (int)ObjectGroup.Gameplay ); // Resetting resets to
 
 // While a single group is referenced by index, the PauseGroups and ResumeGroups
 // functions take in a bitmask of all affected groups.
-// You'll need to transform the group index into a bitmask by using Routine.GetGroupMask.
-int groupMask = Routine.GetGroupMask( (int)ObjectGroup.Gameplay );
-groupMask |= Routine.GetGroupMask( (int)ObjectGroup.UI );
+// You'll need to transform the group index into a bitmask.
+int groupMask = 2 << (int)ObjectGroup.Gameplay;
+groupMask |= 2 << (int)ObjectGroup.UI;
 
 // You can pause and resume multiple groups at a time.
 Routine.PauseGroups( groupMask );
@@ -596,10 +596,10 @@ BeauRoutine contains a few extension methods for generating coroutines.
 
 | Type | Function | Description |
 | ---- | -------- | ----------- |
-| AudioSource | ``WaitToFinish`` | Waits until the AudioSource is no longer playing. |
+| AudioSource | ``WaitToComplete`` | Waits until the AudioSource is no longer playing. |
 | Thread | ``WaitToComplete`` | Waits until the thread is no longer alive. |
 | Animator | ``WaitToCompleteAnimation`` | Waits until the current animation stops playing or loops. |
-| | ``WaitToFinishState`` | Waits until the Animator is playing and exits the given state. |
+| | ``WaitToCompleteState`` | Waits until the Animator is playing and exits the given state. |
 | | ``WaitForState`` | Waits until the Animator is playing the given state. |
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
 

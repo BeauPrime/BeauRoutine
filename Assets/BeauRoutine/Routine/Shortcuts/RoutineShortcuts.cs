@@ -43,7 +43,7 @@ namespace BeauRoutine
         /// <summary>
         /// Waits for the animator to play and exit the given state.
         /// </summary>
-        static public IEnumerator WaitToFinishState(this Animator inAnimator, string inStateName, int inLayer = 0)
+        static public IEnumerator WaitToCompleteState(this Animator inAnimator, string inStateName, int inLayer = 0)
         {
             yield return WaitForState(inAnimator, inStateName, inLayer);
             yield return WaitForNotState(inAnimator, inStateName, inLayer);
@@ -85,7 +85,7 @@ namespace BeauRoutine
         /// Waits for the AudioSource to stop playing.
         /// Make sure it's not looping.
         /// </summary>
-        static public IEnumerator WaitToFinish(this AudioSource inAudioSource)
+        static public IEnumerator WaitToComplete(this AudioSource inAudioSource)
         {
             while (inAudioSource.isPlaying)
                 yield return null;

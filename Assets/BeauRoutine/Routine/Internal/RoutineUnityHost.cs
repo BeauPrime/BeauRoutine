@@ -12,7 +12,7 @@ using UnityEngine;
 namespace BeauRoutine.Internal
 {
     [AddComponentMenu("")]
-    public sealed class UnityHost : MonoBehaviour
+    public sealed class RoutineUnityHost : MonoBehaviour
     {
         private Manager m_Manager;
 
@@ -30,6 +30,7 @@ namespace BeauRoutine.Internal
         {
             if (m_Manager != null)
             {
+                m_Manager.OnApplicationQuit();
                 m_Manager = null;
                 Routine.Shutdown();
             }

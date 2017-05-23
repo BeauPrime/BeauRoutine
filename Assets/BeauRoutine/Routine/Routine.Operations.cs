@@ -18,14 +18,9 @@ namespace BeauRoutine
 {
     public partial struct Routine
     {
-        // Start with a manager.
-        static private Manager s_Manager = new Manager();
-
         static private Manager GetManager()
         {
-            if (s_Manager == null)
-                throw new InvalidOperationException("BeauRoutine has been shutdown. Please call Initialize() before anything else.");
-            return s_Manager;
+            return Manager.Get();
         }
 
         #region Start
@@ -35,7 +30,10 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Start(IEnumerator inCoroutine)
         {
-            return GetManager().RunFiber(null, inCoroutine);
+            Manager m = GetManager();
+            if (m != null)
+                return m.RunFiber(null, inCoroutine);
+            return Routine.Null;
         }
 
         /// <summary>
@@ -43,7 +41,10 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Start(MonoBehaviour inHost, IEnumerator inCoroutine)
         {
-            return GetManager().RunFiber(inHost, inCoroutine);
+            Manager m = GetManager();
+            if (m != null)
+                return m.RunFiber(inHost, inCoroutine);
+            return Routine.Null;
         }
 
         #endregion
@@ -55,7 +56,9 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll()
         {
-            GetManager().Fibers.RunQueryAll(new NullQuery(), new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NullQuery(), new StopOperation());
         }
 
         /// <summary>
@@ -63,7 +66,9 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(MonoBehaviour inHost)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new StopOperation());
         }
 
         /// <summary>
@@ -71,7 +76,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Stop(MonoBehaviour inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new StopOperation());
         }
 
         /// <summary>
@@ -79,7 +86,9 @@ namespace BeauRoutine
         /// </summary>
         static public void StopAll(GameObject inHost)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new StopOperation());
         }
 
         /// <summary>
@@ -87,7 +96,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Stop(GameObject inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new StopOperation());
         }
 
         /// <summary>
@@ -95,7 +106,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Stop(string inName)
         {
-            GetManager().Fibers.RunQueryAll(new NameQuery() { Name = inName }, new StopOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new StopOperation());
         }
 
         #endregion
@@ -107,7 +120,9 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll()
         {
-            GetManager().Paused = true;
+            Manager m = GetManager();
+            if (m != null)
+                m.Paused = true;
         }
 
         /// <summary>
@@ -115,7 +130,9 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(MonoBehaviour inHost)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new PauseOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new PauseOperation());
         }
 
         /// <summary>
@@ -123,7 +140,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Pause(MonoBehaviour inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new PauseOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new PauseOperation());
         }
 
         /// <summary>
@@ -131,7 +150,9 @@ namespace BeauRoutine
         /// </summary>
         static public void PauseAll(GameObject inHost)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new PauseOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new PauseOperation());
         }
 
         /// <summary>
@@ -139,7 +160,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Pause(GameObject inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new PauseOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new PauseOperation());
         }
 
         /// <summary>
@@ -147,7 +170,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Pause(string inName)
         {
-            GetManager().Fibers.RunQueryAll(new NameQuery() { Name = inName }, new PauseOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new PauseOperation());
         }
 
         #endregion
@@ -159,7 +184,9 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll()
         {
-            GetManager().Paused = false;
+            Manager m = GetManager();
+            if (m != null)
+                m.Paused = false;
         }
 
         /// <summary>
@@ -167,7 +194,9 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(MonoBehaviour inHost)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new ResumeOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new ResumeOperation());
         }
 
         /// <summary>
@@ -175,7 +204,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Resume(MonoBehaviour inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new ResumeOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new ResumeOperation());
         }
 
         /// <summary>
@@ -183,7 +214,9 @@ namespace BeauRoutine
         /// </summary>
         static public void ResumeAll(GameObject inHost)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new ResumeOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new ResumeOperation());
         }
 
         /// <summary>
@@ -191,7 +224,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Resume(GameObject inHost, string inName)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new ResumeOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new ResumeOperation());
         }
 
         /// <summary>
@@ -199,7 +234,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Resume(string inName)
         {
-            GetManager().Fibers.RunQueryAll(new NameQuery() { Name = inName }, new ResumeOperation());
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new ResumeOperation());
         }
 
         #endregion
@@ -211,7 +248,9 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(MonoBehaviour inHost, ref ICollection<Routine> ioRoutines)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new NullOperation(), ref ioRoutines);
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourQuery() { Host = inHost }, new NullOperation(), ref ioRoutines);
         }
 
         /// <summary>
@@ -219,7 +258,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Find(MonoBehaviour inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
-            GetManager().Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new NullOperation(), ref ioRoutines);
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new NullOperation(), ref ioRoutines);
         }
 
         /// <summary>
@@ -227,7 +268,10 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(MonoBehaviour inHost, string inName)
         {
-            return GetManager().Fibers.RunQueryFirst(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new NullOperation());
+            Manager m = GetManager();
+            if (m != null)
+                return m.Fibers.RunQueryFirst(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new NullOperation());
+            return Routine.Null;
         }
 
         /// <summary>
@@ -235,7 +279,9 @@ namespace BeauRoutine
         /// </summary>
         static public void FindAll(GameObject inHost, ref ICollection<Routine> ioRoutines)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new NullOperation(), ref ioRoutines);
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectQuery() { Host = inHost }, new NullOperation(), ref ioRoutines);
         }
 
         /// <summary>
@@ -243,7 +289,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Find(GameObject inHost, string inName, ref ICollection<Routine> ioRoutines)
         {
-            GetManager().Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new NullOperation(), ref ioRoutines);
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GameObjectNameQuery() { Host = inHost, Name = inName }, new NullOperation(), ref ioRoutines);
         }
 
         /// <summary>
@@ -251,7 +299,10 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(GameObject inHost, string inName)
         {
-            return GetManager().Fibers.RunQueryFirst(new GameObjectNameQuery() { Host = inHost, Name = inName }, new NullOperation());
+            Manager m = GetManager();
+            if (m != null)
+                return m.Fibers.RunQueryFirst(new GameObjectNameQuery() { Host = inHost, Name = inName }, new NullOperation());
+            return Routine.Null;
         }
 
         /// <summary>
@@ -259,7 +310,9 @@ namespace BeauRoutine
         /// </summary>
         static public void Find(string inName, ref ICollection<Routine> ioRoutines)
         {
-            GetManager().Fibers.RunQueryAll(new NameQuery() { Name = inName }, new NullOperation(), ref ioRoutines);
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new NullOperation(), ref ioRoutines);
         }
 
         /// <summary>
@@ -267,7 +320,10 @@ namespace BeauRoutine
         /// </summary>
         static public Routine Find(string inName)
         {
-            return GetManager().Fibers.RunQueryFirst(new NameQuery() { Name = inName }, new NullOperation());
+            Manager m = GetManager();
+            if (m != null)
+                return m.Fibers.RunQueryFirst(new NameQuery() { Name = inName }, new NullOperation());
+            return Routine.Null;
         }
 
         #endregion
@@ -280,9 +336,7 @@ namespace BeauRoutine
         /// </summary>
         static public void Initialize()
         {
-            if (s_Manager == null)
-                s_Manager = new Manager();
-            s_Manager.Initialize();
+            Manager.Create();
         }
 
         /// <summary>
@@ -292,17 +346,7 @@ namespace BeauRoutine
         /// </summary>
         static public void Shutdown()
         {
-            if (s_Manager != null)
-            {
-                if (!s_Manager.IsUpdating)
-                {
-                    s_Manager.Shutdown();
-                    s_Manager = null;
-                    return;
-                }
-
-                s_Manager.QueueShutdown();
-            }
+            Manager.Destroy();
         }
 
         #endregion
@@ -320,7 +364,9 @@ namespace BeauRoutine
             /// </summary>
             static public void SetCapacity(int inCapacity)
             {
-                GetManager().Fibers.SetCapacity(inCapacity);
+                Manager m = GetManager();
+                if (m != null)
+                    m.Fibers.SetCapacity(inCapacity);
             }
 
             /// <summary>
@@ -329,8 +375,19 @@ namespace BeauRoutine
             /// </summary>
             static public bool DebugMode
             {
-                get { return GetManager().DebugMode; }
-                set { GetManager().DebugMode = value; }
+                get
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        return m.DebugMode;
+                    return false;
+                }
+                set
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        m.DebugMode = value;
+                }
             }
 
             /// <summary>
@@ -340,8 +397,39 @@ namespace BeauRoutine
             /// </summary>
             static public bool SnapshotEnabled
             {
-                get { return GetManager().SnapshotEnabled; }
-                set { GetManager().SnapshotEnabled = value; }
+                get
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        return m.SnapshotEnabled;
+                    return false;
+                }
+                set
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        m.SnapshotEnabled = value;
+                }
+            }
+
+            /// <summary>
+            /// Pauses/resumes Routine updates.
+            /// </summary>
+            static public bool Paused
+            {
+                get
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        return m.SystemPaused;
+                    return false;
+                }
+                set
+                {
+                    Manager m = GetManager();
+                    if (m != null)
+                        m.SystemPaused = value;
+                }
             }
         }
 

@@ -88,8 +88,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 target = (m_Space == Space.World ? m_Target.position : m_Target.localPosition);
-                Vector3 delta = target - m_Start;
+                Vector3 delta = (m_Space == Space.World ? m_Target.position : m_Target.localPosition);
+                VectorUtil.Subtract(ref delta, m_Start);
                 Vector3 final = new Vector3(
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent,
@@ -157,7 +157,9 @@ namespace BeauRoutine
         /// </summary>
         static public Tween MoveToWithSpeed(this Transform inTransform, Vector3 inTarget, float inSpeed, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
         {
-            float distance = (inTarget - (inSpace == Space.World ? inTransform.position : inTransform.localPosition)).magnitude;
+            Vector3 diff = new Vector3(0, 0, 0);
+            VectorUtil.CopyFrom(ref diff, inTarget - inTransform.GetPosition(Axis.XYZ, inSpace), inAxis);
+            float distance = diff.magnitude;
             return Tween.Create(new TweenData_Transform_PositionFixed(inTransform, inTarget, inSpace, inAxis), distance / inSpeed);
         }
 
@@ -229,8 +231,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 target = m_Target.localScale;
-                Vector3 delta = target - m_Start;
+                Vector3 delta = m_Target.localScale;
+                VectorUtil.Subtract(ref delta, m_Start);
                 Vector3 final = new Vector3(
                     m_Start.x + delta.x * inPercent,
                     m_Start.y + delta.y * inPercent,
@@ -461,8 +463,10 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 tweened = m_Start + m_Delta * inPercent;
-                Vector3 final = m_Record.Get(m_Space).CopyFrom(tweened, m_Axis);
+                Vector3 tweened = m_Start;
+                VectorUtil.Add(ref tweened, m_Delta, inPercent);
+                Vector3 final = m_Record.Get(m_Space);
+                VectorUtil.CopyFrom(ref final, tweened, m_Axis);
                 WrapEuler(ref final);
 
                 m_Transform.SetRotation(final, Axis.XYZ, m_Space);
@@ -550,7 +554,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 vector = (m_Target - m_Transform.position).CopyFrom(Vector3.zero, m_Axis);
+                Vector3 vector = (m_Target - m_Transform.position);
+                VectorUtil.CopyFrom(ref vector, Vector3.zero, m_Axis);
                 Quaternion target = UnityEngine.Quaternion.LookRotation(vector);
                 m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
             }
@@ -585,7 +590,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 vector = (m_Target.position - m_Transform.position).CopyFrom(Vector3.zero, m_Axis);
+                Vector3 vector = (m_Target.position - m_Transform.position);
+                VectorUtil.CopyFrom(ref vector, Vector3.zero, m_Axis);
                 Quaternion target = UnityEngine.Quaternion.LookRotation(vector);
                 m_Transform.rotation = UnityEngine.Quaternion.SlerpUnclamped(m_Start, target, inPercent);
             }
