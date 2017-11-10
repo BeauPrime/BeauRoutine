@@ -571,6 +571,9 @@ namespace BeauRoutine
 
         public override string ToString()
         {
+            if (m_TweenData == null)
+                return string.Format("Tween: [Null]");
+
             if (m_Mode == LoopMode.Yoyo)
                 return string.Format("Tween: [{0}, {1:0.00}%, Yoyo]", m_TweenData.ToString(), m_CurrentPercent * 100);
             if (m_Mode == LoopMode.Loop)

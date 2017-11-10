@@ -1,13 +1,9 @@
 # BeauRoutine
 
 ## About
-BeauRoutine is a coroutine framework for Unity3D. Intended as an
-alternative to Unity's existing coroutine implementation, BeauRoutines
-are a fast, powerful, and flexible way of sequencing your logic.
+BeauRoutine is a coroutine framework for Unity3D. Intended as an alternative to Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic.
 
-BeauRoutine also includes a powerful coroutine-driven tweening system.
-Fast programmatic animations can be written and configured quickly
-for rapid prototyping as well as visual polish.
+BeauRoutine also includes a powerful coroutine-driven tweening system. Fast programmatic animations can be written and configured quickly for rapid prototyping as well as visual polish.
 
 ## Basic Usage
 
@@ -24,14 +20,11 @@ Routine.Stop( "MyCoroutine" );
 ```
 
 ### Hosting Routines
-Much like Unity's default Coroutines will only execute while their host object is alive, a BeauRoutine can be given
-a host to bind its lifetime to that of the host. To bind a host to a BeauRoutine, call
+Much like Unity's default Coroutines will only execute while their host object is alive, a BeauRoutine can be given a host to bind its lifetime to that of the host. To bind a host to a BeauRoutine, call
 ```csharp
 Routine.Start( this, MyCoroutine() );
 ```
-This will bind the given object as a host. As long as the host is alive, the BeauRoutine will be able to execute.
-If the host is deactivated, the BeauRoutine will pause until the host is again active.  Once the host is destroyed,
-any BeauRoutines it hosted will be halted.
+This will bind the given object as a host. As long as the host is alive, the BeauRoutine will be able to execute. If the host is deactivated, the BeauRoutine will pause until the host is again active.  Once the host is destroyed, any BeauRoutines it hosted will be halted.
 
 To stop a hosted BeauRoutine, call
 ```csharp
@@ -45,30 +38,30 @@ BeauRoutines allow for more flexibility when writing your coroutine logic.
 public IEnumerator MyCustomBeauRoutine()
 {
 	DoAThing();
-    
-    // All four of these statements will wait
-    // one second before resuming execution.
+	
+	// All four of these statements will wait
+	// one second before resuming execution.
 	yield return 1;
 	yield return 1.0f;
-    yield return Routine.WaitSeconds(1.0f);
-    yield return new WaitForSeconds(1.0f);
-    
-    // You can still yield YieldInstructions,
-    // WWW objects, and CustomYieldInstructions.
-    yield return new WWW(...);
-    yield return new WaitForSeconds(2.0f);
-    
-    // You can also yield commands that will
-    // modify the state of the currently executing
-    // routine.
-    yield return Routine.Command.Pause;
-    yield return Routine.Command.Stop;
-    
-    // You can yield into other coroutines.
-    // This will execute the other coroutine
-    // and return execution here once it has
-    // concluded.
-    yield return MyOtherBeauRoutine();
+	yield return Routine.WaitSeconds(1.0f);
+	yield return new WaitForSeconds(1.0f);
+	
+	// You can still yield YieldInstructions,
+	// WWW objects, and CustomYieldInstructions.
+	yield return new WWW(...);
+	yield return new WaitForSeconds(2.0f);
+	
+	// You can also yield commands that will
+	// modify the state of the currently executing
+	// routine.
+	yield return Routine.Command.Pause;
+	yield return Routine.Command.Stop;
+	
+	// You can yield into other coroutines.
+	// This will execute the other coroutine
+	// and return execution here once it has
+	// concluded.
+	yield return MyOtherBeauRoutine();
 }
 
 public IEnumerator MyOtherBeauRoutine()
@@ -78,9 +71,7 @@ public IEnumerator MyOtherBeauRoutine()
 ```
 
 ### Handles
-Similar to Unity's ``Coroutine`` object, the ``Routine`` object returned after calling many BeauRoutine functions,
-including ``Routine.Start``, is a handle reference to a BeauRoutine.  You can use that to modify
-the BeauRoutine as long as it's running.  It's also a safe reference - if the BeauRoutine it's pointing at expires, you can still call functions on the handle without fear of either exceptions or unintentionally modifying other active BeauRoutines.
+Similar to Unity's ``Coroutine`` object, the ``Routine`` object returned after calling many BeauRoutine functions, including ``Routine.Start``, is a handle reference to a BeauRoutine.  You can use that to modify the BeauRoutine as long as it's running. It's also a safe reference - if the BeauRoutine it's pointing at expires, you can still call functions on the handle without fear of either exceptions or unintentionally modifying other active BeauRoutines.
 
 ```csharp
 // Initialize the Routine object to point at nothing.
@@ -176,14 +167,14 @@ Routine.Stop ("aDifferentName" ); // stops explicitlyNamed
 public IEnumerator MyCombineRoutine()
 {
 	// This will execute Operation1 and Operation2 concurrently.
-    // Both debug messages will be logged.
+	// Both debug messages will be logged.
 	yield return Routine.Combine( Operation1(), Operation2() );
 }
 
 public IEnumerator Operation1()
 {
 	yield return 1.0f;
-    Debug.Log("Operation 1 has concluded.");
+	Debug.Log("Operation 1 has concluded.");
 }
 public IEnumerator Operation2()
 {
@@ -199,14 +190,14 @@ public IEnumerator Operation2()
 ```csharp
 public IEnumerator MyCombineRoutine()
 {
-    // This will only log the Operation1 debug message.
-    yield return Routine.Race( Operation1(), Operation2() );
+	// This will only log the Operation1 debug message.
+	yield return Routine.Race( Operation1(), Operation2() );
 }
 
 public IEnumerator Operation1()
 {
 	yield return 1.0f;
-    Debug.Log("Operation 1 has concluded.");
+	Debug.Log("Operation 1 has concluded.");
 }
 public IEnumerator Operation2()
 {
@@ -224,9 +215,9 @@ public void Awake()
 	// This will run FirstBeauRoutine, wait 5 seconds, then call Destroy(gameObject).
 	Routine.Start(this,
 		Sequence.Create(FirstBeauRoutine())
-    	.Wait(5.0f)
-        .Then(() => { Destroy(gameObject); })
-        );
+		.Wait(5.0f)
+		.Then(() => { Destroy(gameObject); })
+		);
 }
 
 public IEnumerator FirstBeauRoutine()
@@ -252,8 +243,7 @@ Routine.Start( this, Tween.Float(...) );
 ```
 
 ### Modifying a Tween
-After creating a Tween, you can then enhance it with curves, loops, and wave functions.
-before starting it.
+After creating a Tween, you can then enhance it with curves, loops, and wave functions before starting it.
 
 ```csharp
 // Create the tween.
@@ -373,9 +363,9 @@ IEnumerator IncrementByTime()
 {
 	float myFloat = 0.0f;
 	while( true )
-    {
-    	myFloat += Routine.DeltaTime;
-        yield return null;
+	{
+		myFloat += Routine.DeltaTime;
+		yield return null;
 	}
 }
 ```
@@ -390,11 +380,11 @@ Routine doubleSpeed = Routine.Start( this, MyCoroutine() ).SetTimeScale(2);
 
 IEnumerator MyCoroutine()
 {   
-    // Any waiting you perform is always specified in unscaled time.
-    // In normalSpeed, this will take 1 real second.
-    // In halfSpeed, this will take 2 real seconds.
-    // In doubleSpeed, this will take 0.5 real seconds.
-    yield return 1.0f;
+	// Any waiting you perform like this is specified in unscaled time.
+	// In normalSpeed, this will take 1 real second.
+	// In halfSpeed, this will take 2 real seconds.
+	// In doubleSpeed, this will take 0.5 real seconds.
+	yield return 1.0f;
 }
 ```
 
@@ -405,6 +395,8 @@ In total, there are four time scale values that can apply to a BeauRoutine.
 * Time scale for a BeauRoutine
 * Per-object time scales (see RoutineIdentity)
 * Per-group time scales (see Groups)
+
+You can calculate the total time scale that will be applied to BeauRoutines on a given object by calling ``Routine.CalculateTimeScale``. This is the accumulation of ``Routine.TimeScale``, the per-object time scale, and the per-group time scale.
 
 ### Routine Identity
 
@@ -443,14 +435,14 @@ Routine.Start (this, ResetTimeScale( 2.0f ) ).DisableObjectTimeScale();
 IEnumerator MyCoroutine()
 {
 	...
-    // This will run at 0.25 speed.
+	// This will run at 0.25 speed.
 }
 
 IEnumerator ResetTimeScale(float delay)
 {
 	// This will run at normal speed.
 	yield return delay;
-    RoutineIdentity.Require( this ).TimeScale = 1.0f;
+	RoutineIdentity.Require( this ).TimeScale = 1.0f;
 }
 ```
 
@@ -466,8 +458,8 @@ Routines can be organized into one of 32 groups that can be paused, resumed, or 
 public enum ObjectGroup
 {
 	Default = 0,
-    Gameplay = 1,
-    UI = 2
+	Gameplay = 1,
+	UI = 2
 }
 
 // Assign a group to this RoutineIdentity
@@ -494,6 +486,42 @@ Routine.ResumeGroups( groupMask );
 
 It's important to note that a BeauRoutine can only belong to a single group.  This is to prevent any unwanted timescaling behavior.
 
+### Precise Timing
+
+Normally, yielding into a nested coroutine will wait until the next frame to begin executing the nested coroutine. BeauRoutine provides a way of immediately entering and executing a nested coroutine by wrapping your coroutine in a ``Routine.Immediately`` call. This is useful if you need to time your coroutines in a very precise manner.
+
+```csharp
+IEnumerator RootCoroutine()
+{
+	Debug.Log("This is the RootCoroutine log");
+	yield return Routine.Immediately(NestedCoroutine());
+}
+
+IEnumerator NestedCoroutine()
+{
+	Debug.Log("This will log on the same frame as the RootCoroutine log");
+	...
+}
+```
+
+There is a similar frame delay when exiting a nested coroutine. This can be avoided by yielding ``Routine.Command.BreakAndResume`` instead of letting your coroutine exit normally. This will immediately exit the coroutine and resume execution on the coroutine that yielded into it.
+
+```csharp
+IEnumerator RootCoroutine()
+{
+	yield return NestedCoroutine();
+	Debug.Log("This will log on the same frame as the NestedCoroutine log");
+}
+
+IEnumerator NestedCoroutine()
+{
+	Debug.Log("This is the NestedCoroutine log");
+	yield return Routine.Command.BreakAndResume;
+}
+```
+
+Be careful when using these features. Immediate execution offers more precise timing but runs the risk of executing too much in a single frame if overused.  
+
 ### Custom Tweens
 
 Tweens in BeauRoutine are highly extensible through the ``ITweenData`` interface. Tweens perform the timing, easing, and looping logic; an ITweenData object applies the animation.  To use one of your own ITweenData-derived objects, you can use the ``Tween.Create`` function with your object as an argument.
@@ -503,45 +531,114 @@ Tweens in BeauRoutine are highly extensible through the ``ITweenData`` interface
 public class SomeObjectTweenData : ITweenData
 {
 	private SomeObject m_Object;
-    
-    private float m_Start;
-    private float m_End;
-    
-    public SomeObjectTweenData( SomeObject inObject, float inEnd )
-    {
-    	m_Object = inObject;
-        
-        m_Start = inObject.MyValue;
-        m_End = inEnd;
-    }
+	
+	private float m_Start;
+	private float m_End;
+	
+	public SomeObjectTweenData( SomeObject inObject, float inEnd )
+	{
+		m_Object = inObject;
+		
+		m_Start = inObject.MyValue;
+		m_End = inEnd;
+	}
 
 	public void OnTweenStart()
-    {
-    	...
-        // Any custom logic when a tween starts can go here
-    }
-    
-    public void ApplyTween(float inPercent)
-    {
-    	m_Object.MyValue = Mathf.Lerp( m_Start, m_End, inPercent );
-    }
-    
-    public void OnTweenEnd()
-    {
-    	..
-        // Any custom logic when a tween ends or is killed can go here
-    }
+	{
+		...
+		// Any custom logic when a tween starts can go here
+	}
+	
+	public void ApplyTween(float inPercent)
+	{
+		m_Object.MyValue = Mathf.Lerp( m_Start, m_End, inPercent );
+	}
+	
+	public void OnTweenEnd()
+	{
+		..
+		// Any custom logic when a tween ends or is killed can go here
+	}
 }
 
 public class SomeObject
 {
 	public float MyValue = 0;
+	
+	public Tween MyValueTo( float inValue, float inTime )
+	{
+		SomeObjectTweenData tweenData = new SomeObjectTween( this, inValue );
+		return Tween.Create( iTweenData, inTime );
+	}
+}
+```
+
+### Futures
+
+BeauRoutine includes a basic implementation of Futures. Futures provide a way to asynchronously return values from functions and coroutines, without requiring the use of a callback.
+
+A ``Future`` object  represents a value that will be returned by a function or coroutine at some point in the future. A Future must be completed with the ``Complete`` call before its value can be obtained. Alternately, a Future can ``Fail`` with an optional error token. A Future can only be completed or failed once. Once either operation has been performed, future calls to those functions will throw an exception.
+
+Futures are handy when dealing with asynchronous services - making calls to a REST server, for example.
+
+```csharp
+// This will asynchronously calculate the hash of a string
+Future<int> CalculateHashAsync( string str )
+{
+	// To create a new future, call Future.Create<T>()
+	Future<int> future = Future.Create<int>();
     
-    public Tween MyValueTo( float inValue, float inTime )
+    // Start a routine that will eventually complete the promise
+    Routine.Start( CalculateHashAsyncImpl( future, str ) );
+    
+    // This future represents the eventual result of CalculateHashAsyncImpl
+    return future;
+}
+
+// We need access to the Future in order to complete it
+// We can pass it in as an argument to accomplish this
+IEnumerator CalculateHashAsyncImpl( Future<int> future, string str )
+{
+	// Some artificial delay to make this asynchronous
+	yield return 0.5f;
+    
+    if (str == null)
     {
-    	SomeObjectTweenData tweenData = new SomeObjectTween( this, inValue );
-        return Tween.Create( iTweenData, inTime );
+    	future.Fail();
     }
+    else
+    {
+    	int hash = str.GetHashCode();
+        future.Complete(hash);
+    }
+}
+
+IEnumerator DoSomething()
+{
+	var future = CalculateHashAsync( "someArbitraryString" );
+    
+    // You can yield a Future to wait for it to
+    // either complete or fail
+    yield return future;
+    
+    if ( future.IsComplete() )
+    {
+    	// Implicitly cast a future to its return type
+        // If the future is not complete, this will throw an exception.
+    	int hash = future;
+        Debug.Log( hash );
+    }
+    else if ( future.IsFailed() )
+    {
+    	Debug.Log("error occurred");
+    }
+    
+    // You can provide OnComplete and OnFail callbacks
+    // These will get called at the end of the frame when
+    // the Future completes or fails.
+    var future2 = CalculateHashAsync( null )
+    	.OnComplete( (i) => { Debug.Log(i); } )
+        .OnFail( () => { Debug.Log("error occurred"); } );
 }
 ```
 
@@ -554,6 +651,94 @@ The ``STATS`` page displays the number of BeauRoutines currently running, the ma
 The ``OPTIONS`` page displays the current time scale, as well as options for resetting it, doubling it, or halving it. It also contains a button enabling or disabling the snapshot feature on the STATS page.
 
 The ``DETAILS`` page displays all the currently running BeauRoutines in a list.  From here, you can pause, resume, or stop any of them, as well as rename them or set their time scale.  Any Combine or Race routines are presented in a hierarchical format.
+
+## Tips and Tricks
+
+#### Stopping by ``Routine`` handles
+Stop BeauRoutines by maintaining a ``Routine`` handle. Stopping by string name is a comparatively much more expensive process.
+
+#### Limit a BeauRoutine's lifetime with a ``using`` statement
+Execute a BeauRoutine in the background while executing a block in your coroutine with a ``using`` statement. This is useful if you want an operation to execute only for as long as a block in the coroutine is executing.
+```csharp
+IEnumerator DoImportantWork(string[] importantData)
+{
+	using( Routine.Start( this, PlayAnAnnoyingSoundLoop() )
+	{
+ 		// As long as DoImportantWork is executing within this block,
+ 		// PlayAnAnnoyingSoundLoop will execute.
+		
+		for(int i = 0; i < importantData.Length; ++i)
+		{
+			Debug.Log("Doing some important work with: " + importantData[i]);
+			yield return 1;
+	  	}
+	}
+
+	using( Routine.Start( this, PlayAnAnnoyingSoundOnce() )
+	{
+		// Within this block, PlayAnAnnoyingSoundOnce will execute
+		// We exit this block before PlayAnnoyingSoundOnce has
+		// a chance to log its message, however.
+
+		Debug.Log("Doing important work with no data");
+		yield return 1;
+	}
+}
+
+IEnumerator PlayAnAnnoyingSoundLoop()
+{
+	while(true)
+	{
+		Debug.Log("Playing an annoying sound");
+		yield return 0.2f + Random.value * 0.25f;
+	}
+}
+
+IEnumerator PlayAnAnnoyingSoundOnce()
+{
+	yield return 2;
+	Debug.Log("Playing an annoying sound");
+}
+```
+
+#### Using ``Routine`` handles as slots
+Maintain ``Routine`` handles as "slots" for executing coroutines. This can be helpful for ensuring you only have one instance of a particular type of operation executing at a time. It can also help keep track of executing BeauRoutines, allowing you to selectively clean up any operations instead of stopping all BeauRoutines on a given object.
+
+This is particularly necessary if you have operations that execute on shared data. Two Tweens fading the same SpriteRenderer will interfere with one another, so ensuring you only have one Tween executing on that property at a time will help prevent unwanted behavior.
+```csharp
+// This class will move and fade the given object on command.
+// It can also perform an important operation on a string.
+public class MyAnimatingObject : MonoBehaviour
+{
+	// These Routine objects effectively act as slots.
+	// If you don't want duplicates of an operation running simultaneously,
+	// you can use these handles to stop old operations and start new ones
+	private Routine fadeAnimation;
+	private Routine moveAnimation;
+	private Routine importantRoutine;
+	
+	public void FadeTo(float alpha, float duration, Curve curve = Curve.Linear)
+	{
+		// Replace is safe to call, even if the Routine isn't currently referencing an active BeauRoutine
+		fadeAnimation.Replace( this, GetComponent<SpriteRenderer>().FadeTo( alpha, duration ).Ease( curve ) );
+	}
+	
+	public void MoveTo(Vector3 position, float duration, Curve curve = Curve.Linear)
+	{
+		moveAnimation.Replace( this, transform.MoveTo( position, duration ).Ease( curve ) );
+	}
+	
+	public void DoSomethingImportant(string data)
+	{
+		importantRoutine.Replace( this, DoSomethingImportantRoutine( data ) );
+	}
+	
+	private IEnumerator DoSomethingImportantRoutine(string data)
+	{
+		...
+	}
+}
+```
 
 ## Reference
 
@@ -589,6 +774,7 @@ The ``DETAILS`` page displays all the currently running BeauRoutines in a list. 
 | ``Routine.PerSecond`` | Calls a function the given number of times per second. |
 | ``Routine.Combine`` | Runs multiple coroutines concurrently, and completes all. |
 | ``Routine.Race`` | Runs multiple coroutines concurrently, and stops when one expires. |
+| ``Routine.Immediately `` | Executes the given coroutine immediately after yielding into it. |
 
 ### Routine Extensions
 
@@ -597,11 +783,13 @@ BeauRoutine contains a few extension methods for generating coroutines.
 | Type | Function | Description |
 | ---- | -------- | ----------- |
 | AudioSource | ``WaitToComplete`` | Waits until the AudioSource is no longer playing. |
+| ParticleSystem | ``WaitToComplete `` | Waits until the ParticleSystem is no longer emitting and no longer has any live particles |
 | Thread | ``WaitToComplete`` | Waits until the thread is no longer alive. |
 | Animator | ``WaitToCompleteAnimation`` | Waits until the current animation stops playing or loops. |
 | | ``WaitToCompleteState`` | Waits until the Animator is playing and exits the given state. |
 | | ``WaitForState`` | Waits until the Animator is playing the given state. |
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
+| UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked. |
 
 ### Tween Shortcuts
 
@@ -610,6 +798,8 @@ Generic tween shortcuts currently exist for the following types:
 | Type | Function |
 | ---- | -------- |
 | Float | ``Tween.Float`` |
+| | ``Tween.ZeroToOne`` |
+| | ``Tween.OneToZero`` |
 | Integer | ``Tween.Int`` |
 | Vector2 | ``Tween.Vector`` |
 | Vector3 | ``Tween.Vector`` |
@@ -618,6 +808,8 @@ Generic tween shortcuts currently exist for the following types:
 | RectOffset | ``Tween.RectOffset`` |
 | Quaternion | ``Tween.Quaternion`` |
 | Color | ``Tween.Color`` |
+| AnimationCurve | ``Tween.FloatCurve`` |
+| Gradient | ``Tween.Gradient`` |
 
 Tween extension methods currently exist for the following types:
 

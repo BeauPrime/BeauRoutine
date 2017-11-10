@@ -3,9 +3,8 @@
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
- * File:    TransformUtil.cs
- * Purpose: Extension methods for dealing with Transforms
- *          on different axis values.
+ * File:    VectorUtil.cs
+ * Purpose: Extension methods for dealing with Vectors.
 */
 
 using BeauRoutine.Internal;

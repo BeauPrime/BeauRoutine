@@ -39,6 +39,21 @@ namespace BeauRoutine
             if (m != null)
                 m.ResumeGroups(inGroupMask);
         }
+
+        /// <summary>
+        /// Returns the pause state of the given group.
+        /// </summary>
+        static public bool GetGroupPaused(int inGroup)
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                if (inGroup >= MAX_GROUPS)
+                    throw new ArgumentException(string.Format("Invalid group index {0} - only {1} are allowed", inGroup, MAX_GROUPS));
+                return m.GetPaused(inGroup);
+            }
+            return false;
+        }
         
         /// <summary>
         /// Gets the time scale for the given group.

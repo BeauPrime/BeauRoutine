@@ -16,37 +16,38 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Runs fibers in parallel.
     /// </summary>
-    public sealed class ParallelFibers : IRoutineEnumerator
+    public sealed class ParallelFibers : IEnumerator, IDisposable
     {
         private Manager m_Manager;
-        private IEnumerator[] m_Enumerators;
+        private List<IEnumerator> m_Enumerators;
         private List<Fiber> m_Fibers;
         private bool m_Race;
 
-        public ParallelFibers(Manager inManager, IEnumerator[] inEnumerators, bool inbRace)
+        public ParallelFibers(Manager inManager, List<IEnumerator> inEnumerators, bool inbRace)
         {
             m_Manager = inManager;
             m_Enumerators = inEnumerators;
             m_Race = inbRace;
-            m_Fibers = new List<Fiber>(inEnumerators.Length);
+            m_Fibers = new List<Fiber>(m_Enumerators.Count);
         }
 
         public void Dispose()
         {
             if (m_Enumerators != null)
             {
-                for (int i = 0; i < m_Enumerators.Length; ++i)
+                for (int i = 0; i < m_Enumerators.Count; ++i)
                 {
-                    ((IDisposable)m_Enumerators[i]).Dispose();
-                    m_Enumerators[i] = null;
+                    if (m_Enumerators[i] != null)
+                        ((IDisposable)m_Enumerators[i]).Dispose();
                 }
+                m_Enumerators.Clear();
                 m_Enumerators = null;
             }
 
             for (int i = 0; i < m_Fibers.Count; ++i)
                 m_Fibers[i].Dispose();
-
             m_Fibers.Clear();
+            m_Fibers = null;
         }
 
         public object Current
@@ -56,6 +57,20 @@ namespace BeauRoutine.Internal
 
         public bool MoveNext()
         {
+            if (m_Enumerators != null)
+            {
+                for (int i = 0; i < m_Enumerators.Count; ++i)
+                {
+                    if (m_Enumerators[i] != null)
+                        m_Fibers.Add(m_Manager.ChainFiber(m_Enumerators[i]));
+                }
+
+                m_Enumerators.Clear();
+                m_Enumerators = null;
+                if (m_Fibers.Count == 0)
+                    return false;
+            }
+
             if (m_Fibers.Count > 0)
             {
                 for (int i = 0; i < m_Fibers.Count; ++i)
@@ -76,19 +91,6 @@ namespace BeauRoutine.Internal
         public void Reset()
         {
             throw new NotImplementedException();
-        }
-
-        public bool OnRoutineStart()
-        {
-            for (int i = 0; i < m_Enumerators.Length; ++i)
-            {
-                if (m_Enumerators[i] != null)
-                    m_Fibers.Add(m_Manager.ChainFiber(m_Enumerators[i]));
-                m_Enumerators[i] = null;
-            }
-
-            m_Enumerators = null;
-            return m_Fibers.Count > 0;
         }
 
         public override string ToString()

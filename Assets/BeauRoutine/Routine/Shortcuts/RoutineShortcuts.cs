@@ -8,9 +8,17 @@
  *          from a set of Unity objects.
 */
 
+#if UNITY_WEBGL
+#define DISABLE_THREADING
+#endif
+
+using System;
 using System.Collections;
+#if !DISABLE_THREADING
 using System.Threading;
+#endif
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace BeauRoutine
 {
@@ -45,8 +53,8 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitToCompleteState(this Animator inAnimator, string inStateName, int inLayer = 0)
         {
-            yield return WaitForState(inAnimator, inStateName, inLayer);
-            yield return WaitForNotState(inAnimator, inStateName, inLayer);
+            yield return Routine.Immediately(WaitForState(inAnimator, inStateName, inLayer));
+            yield return Routine.Immediately(WaitForNotState(inAnimator, inStateName, inLayer));
         }
 
         /// <summary>
@@ -93,8 +101,346 @@ namespace BeauRoutine
 
         #endregion
 
+        #region ParticleSystem
+
+        /// <summary>
+        /// Waits for the ParticleSystem to stop emitting and for its particles to die.
+        /// </summary>
+        static public IEnumerator WaitToComplete(this ParticleSystem inParticleSystem)
+        {
+            while(!inParticleSystem.isStopped || inParticleSystem.isEmitting || inParticleSystem.particleCount > 0)
+                yield return null;
+        }
+
+        #endregion
+
+        #region Unity Events
+
+        #region Zero Args
+
+        /// <summary>
+        /// Waits for the UnityEvent to be invoked.
+        /// </summary>
+        static public IEnumerator WaitForInvoke(this UnityEvent inEvent)
+        {
+            return new WaitForUnityEventListener(inEvent);
+        }
+
+        // Implements the event listener
+        private sealed class WaitForUnityEventListener : IEnumerator, IDisposable
+        {
+            private UnityEvent m_Event;
+            private int m_Phase = 0; // 0 uninitialized 1 waiting 2 done
+
+            public WaitForUnityEventListener(UnityEvent inEvent)
+            {
+                m_Event = inEvent;
+                m_Phase = 0;
+            }
+
+            public object Current { get { return null; } }
+
+            public void Dispose()
+            {
+                if (m_Phase > 0)
+                    m_Event.RemoveListener(OnInvoke);
+
+                m_Phase = 0;
+                m_Event = null;
+            }
+
+            public bool MoveNext()
+            {
+                switch(m_Phase)
+                {
+                    case 0:
+                        m_Phase = 1;
+                        m_Event.AddListener(OnInvoke);
+                        return true;
+
+                    case 2:
+                        return false;
+
+                    case 1:
+                    default:
+                        return true;
+                }
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            private void OnInvoke()
+            {
+                m_Phase = 2;
+            }
+        }
+
+        #endregion
+
+        #region One Arg
+
+        /// <summary>
+        /// Waits for the UnityEvent to be invoked.
+        /// </summary>
+        static public IEnumerator WaitForInvoke<T0>(this UnityEvent<T0> inEvent)
+        {
+            return new WaitForUnityEventListener<T0>(inEvent);
+        }
+
+        // Implements the event listener
+        private sealed class WaitForUnityEventListener<T0> : IEnumerator, IDisposable
+        {
+            private UnityEvent<T0> m_Event;
+            private int m_Phase = 0; // 0 uninitialized 1 waiting 2 done
+
+            public WaitForUnityEventListener(UnityEvent<T0> inEvent)
+            {
+                m_Event = inEvent;
+                m_Phase = 0;
+            }
+
+            public object Current { get { return null; } }
+
+            public void Dispose()
+            {
+                if (m_Phase > 0)
+                    m_Event.RemoveListener(OnInvoke);
+
+                m_Phase = 0;
+                m_Event = null;
+            }
+
+            public bool MoveNext()
+            {
+                switch(m_Phase)
+                {
+                    case 0:
+                        m_Phase = 1;
+                        m_Event.AddListener(OnInvoke);
+                        return true;
+
+                    case 2:
+                        return false;
+
+                    case 1:
+                    default:
+                        return true;
+                }
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            private void OnInvoke(T0 inArg0)
+            {
+                m_Phase = 2;
+            }
+        }
+
+        #endregion
+
+        #region Two Args
+
+        /// <summary>
+        /// Waits for the UnityEvent to be invoked.
+        /// </summary>
+        static public IEnumerator WaitForInvoke<T0, T1>(this UnityEvent<T0, T1> inEvent)
+        {
+            return new WaitForUnityEventListener<T0, T1>(inEvent);
+        }
+
+        // Implements the event listener
+        private sealed class WaitForUnityEventListener<T0, T1> : IEnumerator, IDisposable
+        {
+            private UnityEvent<T0, T1> m_Event;
+            private int m_Phase = 0; // 0 uninitialized 1 waiting 2 done
+
+            public WaitForUnityEventListener(UnityEvent<T0, T1> inEvent)
+            {
+                m_Event = inEvent;
+                m_Phase = 0;
+            }
+
+            public object Current { get { return null; } }
+
+            public void Dispose()
+            {
+                if (m_Phase > 0)
+                    m_Event.RemoveListener(OnInvoke);
+
+                m_Phase = 0;
+                m_Event = null;
+            }
+
+            public bool MoveNext()
+            {
+                switch(m_Phase)
+                {
+                    case 0:
+                        m_Phase = 1;
+                        m_Event.AddListener(OnInvoke);
+                        return true;
+
+                    case 2:
+                        return false;
+
+                    case 1:
+                    default:
+                        return true;
+                }
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            private void OnInvoke(T0 inArg0, T1 inArg1)
+            {
+                m_Phase = 2;
+            }
+        }
+
+        #endregion
+
+        #region Three Args
+
+        /// <summary>
+        /// Waits for the UnityEvent to be invoked.
+        /// </summary>
+        static public IEnumerator WaitForInvoke<T0, T1, T2>(this UnityEvent<T0, T1, T2> inEvent)
+        {
+            return new WaitForUnityEventListener<T0, T1, T2>(inEvent);
+        }
+
+        // Implements the event listener
+        private sealed class WaitForUnityEventListener<T0, T1, T2> : IEnumerator, IDisposable
+        {
+            private UnityEvent<T0, T1, T2> m_Event;
+            private int m_Phase = 0; // 0 uninitialized 1 waiting 2 done
+
+            public WaitForUnityEventListener(UnityEvent<T0, T1, T2> inEvent)
+            {
+                m_Event = inEvent;
+                m_Phase = 0;
+            }
+
+            public object Current { get { return null; } }
+
+            public void Dispose()
+            {
+                if (m_Phase > 0)
+                    m_Event.RemoveListener(OnInvoke);
+
+                m_Phase = 0;
+                m_Event = null;
+            }
+
+            public bool MoveNext()
+            {
+                switch(m_Phase)
+                {
+                    case 0:
+                        m_Phase = 1;
+                        m_Event.AddListener(OnInvoke);
+                        return true;
+
+                    case 2:
+                        return false;
+
+                    case 1:
+                    default:
+                        return true;
+                }
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            private void OnInvoke(T0 inArg0, T1 inArg1, T2 inArg2)
+            {
+                m_Phase = 2;
+            }
+        }
+
+        #endregion
+
+        #region Four Args
+
+        /// <summary>
+        /// Waits for the UnityEvent to be invoked.
+        /// </summary>
+        static public IEnumerator WaitForInvoke<T0, T1, T2, T3>(this UnityEvent<T0, T1, T2, T3> inEvent)
+        {
+            return new WaitForUnityEventListener<T0, T1, T2, T3>(inEvent);
+        }
+
+        // Implements the event listener
+        private sealed class WaitForUnityEventListener<T0, T1, T2, T3> : IEnumerator, IDisposable
+        {
+            private UnityEvent<T0, T1, T2, T3> m_Event;
+            private int m_Phase = 0; // 0 uninitialized 1 waiting 2 done
+
+            public WaitForUnityEventListener(UnityEvent<T0, T1, T2, T3> inEvent)
+            {
+                m_Event = inEvent;
+                m_Phase = 0;
+            }
+
+            public object Current { get { return null; } }
+
+            public void Dispose()
+            {
+                if (m_Phase > 0)
+                    m_Event.RemoveListener(OnInvoke);
+
+                m_Phase = 0;
+                m_Event = null;
+            }
+
+            public bool MoveNext()
+            {
+                switch(m_Phase)
+                {
+                    case 0:
+                        m_Phase = 1;
+                        m_Event.AddListener(OnInvoke);
+                        return true;
+
+                    case 2:
+                        return false;
+
+                    case 1:
+                    default:
+                        return true;
+                }
+            }
+
+            public void Reset()
+            {
+                throw new NotImplementedException();
+            }
+
+            private void OnInvoke(T0 inArg0, T1 inArg1, T2 inArg2, T3 inArg3)
+            {
+                m_Phase = 2;
+            }
+        }
+
+        #endregion
+
+        #endregion
+
         #region Threading
 
+#if !DISABLE_THREADING
         /// <summary>
         /// Waits for the given thread to finish running.
         /// </summary>
@@ -103,6 +449,7 @@ namespace BeauRoutine
             while (inThread.IsAlive)
                 yield return null;
         }
+#endif
 
         #endregion
     }

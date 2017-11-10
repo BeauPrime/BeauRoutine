@@ -13,7 +13,7 @@ public class Example0_MeasureStartupTime : MonoBehaviour
     {
         yield return null;
 
-#if !UNITY_5_5
+#if !UNITY_5_5_OR_NEWER
         UnityEngine.Profiling.Profiler.maxNumberOfSamplesPerFrame = 8000000;
 #endif
 

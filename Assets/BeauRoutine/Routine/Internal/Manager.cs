@@ -428,6 +428,14 @@ namespace BeauRoutine.Internal
         }
 
         /// <summary>
+        /// Returns the pause state of the given group.
+        /// </summary>
+        public bool GetPaused(int inGroup)
+        {
+            return (m_QueuedPauseMask & (1 << inGroup)) != 0;
+        }
+
+        /// <summary>
         /// Returns the given group's timescale for the next frame.
         /// </summary>
         public float GetTimescale(int inGroup)

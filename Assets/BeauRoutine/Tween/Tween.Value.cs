@@ -108,6 +108,28 @@ namespace BeauRoutine
             }
         }
 
+        private class TweenData_Value_FloatCurve : ITweenData
+        {
+            private AnimationCurve m_Curve;
+            private float m_CurveDuration;
+            protected Action<float> m_Setter;
+
+            public TweenData_Value_FloatCurve(AnimationCurve inCurve, Action<float> inSetter)
+            {
+                m_Curve = inCurve;
+                m_Setter = inSetter;
+                m_CurveDuration = inCurve.length > 0 ? inCurve.keys[inCurve.length - 1].time : 0;
+            }
+
+            public void OnTweenStart() { }
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Setter(m_Curve.Evaluate(inPercent * m_CurveDuration));
+            }
+        }
+
         /// <summary>
         /// Tweens from one float to another over time.
         /// </summary>
@@ -122,6 +144,22 @@ namespace BeauRoutine
         static public Tween Float(float inStart, float inEnd, Action<float> inSetter, TweenSettings inSettings)
         {
             return Tween.Create(new TweenData_Value_Float(inStart, inEnd, inSetter), inSettings);
+        }
+
+        /// <summary>
+        /// Tweens over the given curve over time.
+        /// </summary>
+        static public Tween FloatCurve(AnimationCurve inCurve, Action<float> inSetter, float inTime)
+        {
+            return Tween.Create(new TweenData_Value_FloatCurve(inCurve, inSetter), inTime);
+        }
+
+        /// <summary>
+        /// Tweens over the given curve over time.
+        /// </summary>
+        static public Tween FloatCurve(AnimationCurve inCurve, Action<float> inSetter, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Value_FloatCurve(inCurve, inSetter), inSettings);
         }
 
         /// <summary>

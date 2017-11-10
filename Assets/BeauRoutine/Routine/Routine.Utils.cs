@@ -68,6 +68,45 @@ namespace BeauRoutine
             }
         }
 
+        /// <summary>
+        /// Calculates the time scale for the given object.
+        /// </summary>
+        static public float CalculateTimeScale(GameObject inObject)
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                RoutineIdentity identity = RoutineIdentity.Find(inObject);
+                if (identity != null)
+                    return m.GetTimescale(identity.Group) * m.TimeScale * identity.TimeScale;
+                return m.TimeScale;
+            }
+            return 1.0f;
+        }
+
+        /// <summary>
+        /// Calculates the time scale for the given object.
+        /// </summary>
+        static public float CalculateTimeScale(RoutineIdentity inIdentity)
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                if (inIdentity != null)
+                    return m.GetTimescale(inIdentity.Group) * m.TimeScale * inIdentity.TimeScale;
+                return m.TimeScale;
+            }
+            return 1.0f;
+        }
+
+        /// <summary>
+        /// Calculates the time scale for the given object.
+        /// </summary>
+        static public float CalculateTimeScale(MonoBehaviour inBehaviour)
+        {
+            return CalculateTimeScale(inBehaviour.gameObject);
+        }
+
         #endregion
 
         #region Special Commands
@@ -85,7 +124,33 @@ namespace BeauRoutine
             /// <summary>
             /// Stops the current routine.
             /// </summary>
-            Stop
+            Stop,
+
+            /// <summary>
+            /// Exits the current enumerator and executes
+            /// its caller immediately
+            /// </summary>
+            BreakAndResume,
+        }
+
+        /// <summary>
+        /// Executes the enclosed coroutine immediately when yielded.
+        /// </summary>
+        static public IEnumerator Immediately(IEnumerator inEnumerator)
+        {
+            RoutineDecorator decorator;
+            if (inEnumerator is RoutineDecorator)
+            {
+                decorator = (RoutineDecorator)inEnumerator;
+            }
+            else
+            {
+                decorator = new RoutineDecorator();
+                decorator.Enumerator = inEnumerator;
+            }
+
+            decorator.Flags |= RoutineDecoratorFlag.Immediate;
+            return decorator;
         }
 
         #endregion
@@ -200,13 +265,22 @@ namespace BeauRoutine
                 return inRoutines[0];
 
             int nonNullCount = 0;
+            int firstNonNull = -1;
             for(int i = 0; i < inRoutines.Length; ++i)
             {
                 if (inRoutines[i] != null)
+                {
                     ++nonNullCount;
+                    if (nonNullCount == 1)
+                        firstNonNull = i;
+                }
             }
 
-            return nonNullCount > 0 ? CreateCombine(inRoutines, false) : null;
+            if (nonNullCount == 0)
+                return null;
+            if (nonNullCount == 1)
+                return inRoutines[firstNonNull];
+            return CreateParallel(new List<IEnumerator>(inRoutines), false);
         }
 
         /// <summary>
@@ -221,13 +295,22 @@ namespace BeauRoutine
                 return inRoutines[0];
 
             int nonNullCount = 0;
+            int firstNonNull = -1;
             for (int i = 0; i < inRoutines.Count; ++i)
             {
                 if (inRoutines[i] != null)
+                {
                     ++nonNullCount;
+                    if (nonNullCount == 1)
+                        firstNonNull = i;
+                }
             }
 
-            return nonNullCount > 0 ? CreateCombine(inRoutines.ToArray(), false) : null;
+            if (nonNullCount == 0)
+                return null;
+            if (nonNullCount == 1)
+                return inRoutines[firstNonNull];
+            return CreateParallel(new List<IEnumerator>(inRoutines), false);
         }
 
         /// <summary>
@@ -242,13 +325,22 @@ namespace BeauRoutine
                 return inRoutines[0];
 
             int nonNullCount = 0;
+            int firstNonNull = -1;
             for (int i = 0; i < inRoutines.Length; ++i)
             {
                 if (inRoutines[i] != null)
+                {
                     ++nonNullCount;
+                    if (nonNullCount == 1)
+                        firstNonNull = i;
+                }
             }
 
-            return nonNullCount > 0 ? CreateCombine(inRoutines, true) : null;
+            if (nonNullCount == 0)
+                return null;
+            if (nonNullCount == 1)
+                return inRoutines[firstNonNull];
+            return CreateParallel(new List<IEnumerator>(inRoutines), true);
         }
 
         /// <summary>
@@ -263,19 +355,28 @@ namespace BeauRoutine
                 return inRoutines[0];
 
             int nonNullCount = 0;
+            int firstNonNull = -1;
             for (int i = 0; i < inRoutines.Count; ++i)
             {
                 if (inRoutines[i] != null)
+                {
                     ++nonNullCount;
+                    if (nonNullCount == 1)
+                        firstNonNull = i;
+                }
             }
 
-            return nonNullCount > 0 ? CreateCombine(inRoutines.ToArray(), true) : null;
+            if (nonNullCount == 0)
+                return null;
+            if (nonNullCount == 1)
+                return inRoutines[firstNonNull];
+            return CreateParallel(new List<IEnumerator>(inRoutines), true);
         }
 
         /// <summary>
         /// Runs all the given IEnumerators
         /// </summary>
-        static private IEnumerator CreateCombine(IEnumerator[] inEnumerators, bool inbRace)
+        static private IEnumerator CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
         {
             Manager m = GetManager();
             if (m != null)

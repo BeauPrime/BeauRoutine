@@ -110,7 +110,7 @@ namespace BeauRoutine
         public Routine Stop()
         {
             Manager m = GetManager();
-            if (m != null)
+            if (m != null && m_Value != 0)
             {
                 Fiber fiber = m.Fibers[this];
                 if (fiber != null)
@@ -121,7 +121,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Gets the time scaling on the routine.
+        /// Returns the time scaling on the routine.
         /// </summary>
         public float GetTimeScale()
         {
@@ -135,7 +135,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Gets the time scaling on the routine.
+        /// Sets the time scaling on the routine.
         /// </summary>
         public Routine SetTimeScale(float inValue)
         {

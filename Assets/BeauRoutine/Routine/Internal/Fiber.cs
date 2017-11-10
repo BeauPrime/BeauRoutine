@@ -17,11 +17,13 @@ namespace BeauRoutine.Internal
 {
     public sealed class Fiber
     {
-        private static readonly IntPtr TYPEHANDLE_INT = typeof(int).TypeHandle.Value;
-        private static readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
-        private static readonly IntPtr TYPEHANDLE_ROUTINE = typeof(Routine).TypeHandle.Value;
-        private static readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
-        private static readonly IntPtr TYPEHANDLE_COMMAND = typeof(Routine.Command).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_INT = typeof(int).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_DOUBLE = typeof(double).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_ROUTINE = typeof(Routine).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_COMMAND = typeof(Routine.Command).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
 
         private bool m_Paused;
         private bool m_Disposing;
@@ -42,7 +44,6 @@ namespace BeauRoutine.Internal
         private float m_WaitTime = 0.0f;
         private Coroutine m_UnityWait = null;
 
-        private int m_GroupMask;
         private string m_Name;
 
         // HACK: Public variable instead of private here.
@@ -99,8 +100,6 @@ namespace BeauRoutine.Internal
             m_Name = null;
             Priority = 0;
 
-            m_GroupMask = ReferenceEquals(m_HostIdentity, null) ? 0 : 1 << m_HostIdentity.Group;
-
             // Chained routines are always hosted on the manager
             if (inChained)
                 m_Chained = m_HostedByManager = true;
@@ -115,16 +114,6 @@ namespace BeauRoutine.Internal
 
             m_RootFunction = inStart;
             m_Stack[m_StackPosition = 0] = inStart;
-
-            IRoutineEnumerator callback = inStart as IRoutineEnumerator;
-            if (callback != null)
-            {
-                if (!callback.OnRoutineStart())
-                {
-                    ClearStack();
-                    Stop();
-                }
-            }
 
             return m_Handle;
         }
@@ -155,7 +144,6 @@ namespace BeauRoutine.Internal
             m_Chained = m_Disposing = m_HasIdentity = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager = false;
 
             m_WaitTime = 0;
-            m_GroupMask = 0;
             m_Name = null;
             Priority = 0;
 
@@ -309,118 +297,172 @@ namespace BeauRoutine.Internal
                     return true;
             }
 
-            IEnumerator current = m_Stack[m_StackPosition];
-            bool bMovedNext = current.MoveNext();
+            bool bExecuteStack = true;
 
-            // Don't check for the object being destroyed.
-            // Destroy won't go into effect until after
-            // all the Fibers are done processing anyways.
-            if (m_Disposing)
+            while (bExecuteStack)
             {
-                Dispose();
-                return false;
-            }
+                bExecuteStack = false;
+                
+                IEnumerator current = m_Stack[m_StackPosition];
+                bool bMovedNext = current.MoveNext();
 
-            if (bMovedNext)
-            {
-                object result = current.Current;
-                if (result == null)
-                    return true;
-
-                IntPtr resultType = result.GetType().TypeHandle.Value;
-
-                // Check all the easy-to-identify result types
-
-                if (resultType == TYPEHANDLE_INT)
-                {
-                    m_WaitTime = (int)result;
-                    return true;
-                }
-
-                if (resultType == TYPEHANDLE_FLOAT)
-                {
-                    m_WaitTime = (float)result;
-                    return true;
-                }
-
-                if (resultType == TYPEHANDLE_ROUTINE)
-                {
-                    IEnumerator waitSequence = ((Routine)result).Wait();
-                    if (waitSequence != null)
-                    {
-                        if (m_StackPosition == m_StackSize - 1)
-                            Array.Resize(ref m_Stack, m_StackSize *= 2);
-                        m_Stack[++m_StackPosition] = waitSequence;
-                    }
-                    return true;
-                }
-
-                if (resultType == TYPEHANDLE_WWW)
-                {
-                    m_UnityWait = Manager.Host.StartCoroutine(UnityWait((WWW)result));
-                    return true;
-                }
-
-                if (resultType == TYPEHANDLE_COMMAND)
-                {
-                    Routine.Command c = (Routine.Command)result;
-                    switch (c)
-                    {
-                        case Routine.Command.Pause:
-                            Pause();
-                            return true;
-                        case Routine.Command.Stop:
-                            Stop();
-                            Dispose();
-                            return false;
-                    }
-                    return true;
-                }
-
-                // Check for the subclassable types
-
-                CustomYieldInstruction customInstruction = result as CustomYieldInstruction;
-                if (customInstruction != null)
-                {
-                    m_UnityWait = Manager.Host.StartCoroutine(UnityWait(customInstruction));
-                    return true;
-                }
-
-                YieldInstruction instruction = result as YieldInstruction;
-                if (instruction != null)
-                {
-                    m_UnityWait = Manager.Host.StartCoroutine(UnityWait(instruction));
-                    return true;
-                }
-
-                IEnumerator enumerator = result as IEnumerator;
-                if (enumerator != null)
-                {
-                    // Check if we need to resize the stack
-                    if (m_StackPosition == m_StackSize - 1)
-                        Array.Resize(ref m_Stack, m_StackSize *= 2);
-                    m_Stack[++m_StackPosition] = enumerator;
-
-                    IRoutineEnumerator callback = enumerator as IRoutineEnumerator;
-                    if (callback != null)
-                    {
-                        bool bContinue = callback.OnRoutineStart();
-                        if (!bContinue)
-                            Dispose();
-                        return bContinue;
-                    }
-
-                    return true;
-                }
-            }
-            else
-            {
-                m_Stack[m_StackPosition--] = null;
-                ((IDisposable)current).Dispose();
-                if (m_StackPosition < 0)
+                // Don't check for the object being destroyed.
+                // Destroy won't go into effect until after
+                // all the Fibers are done processing anyways.
+                if (m_Disposing)
                 {
                     Dispose();
                     return false;
+                }
+
+                if (bMovedNext)
+                {
+                    object result = current.Current;
+                    if (result == null)
+                        return true;
+
+                    IntPtr resultType = result.GetType().TypeHandle.Value;
+
+                    // Check all the easy-to-identify result types
+
+                    if (resultType == TYPEHANDLE_INT)
+                    {
+                        m_WaitTime = (int)result;
+                        return true;
+                    }
+
+                    if (resultType == TYPEHANDLE_FLOAT)
+                    {
+                        m_WaitTime = (float)result;
+                        return true;
+                    }
+
+                    if (resultType == TYPEHANDLE_DOUBLE)
+                    {
+                        m_WaitTime = (float)(double)result;
+                        return true;
+                    }
+
+                    if (resultType == TYPEHANDLE_ROUTINE)
+                    {
+                        IEnumerator waitSequence = ((Routine)result).Wait();
+                        if (waitSequence != null)
+                        {
+                            if (m_StackPosition == m_StackSize - 1)
+                                Array.Resize(ref m_Stack, m_StackSize *= 2);
+                            m_Stack[++m_StackPosition] = waitSequence;
+                        }
+                        return true;
+                    }
+
+                    if (resultType == TYPEHANDLE_WWW)
+                    {
+                        m_UnityWait = Manager.Host.StartCoroutine(UnityWait((WWW)result));
+                        return true;
+                    }
+
+                    if (resultType == TYPEHANDLE_COMMAND)
+                    {
+                        Routine.Command c = (Routine.Command)result;
+                        switch (c)
+                        {
+                            case Routine.Command.Pause:
+                                Pause();
+                                return true;
+                            case Routine.Command.Stop:
+                                Stop();
+                                Dispose();
+                                return false;
+                            case Routine.Command.BreakAndResume:
+                                m_Stack[m_StackPosition--] = null;
+                                ((IDisposable)current).Dispose();
+                                if (m_StackPosition < 0)
+                                {
+                                    Dispose();
+                                    return false;
+                                }
+                                bExecuteStack = true;
+                                break;
+                        }
+
+                        if (!bExecuteStack)
+                            return true;
+
+                        continue;
+                    }
+
+                    if (resultType == TYPEHANDLE_DECORATOR)
+                    {
+                        RoutineDecorator decorator = (RoutineDecorator)result;
+                        IEnumerator decoratedEnumerator = decorator.Enumerator;
+                        bExecuteStack = (decorator.Flags & RoutineDecoratorFlag.Immediate) != 0;
+
+                        if (decoratedEnumerator != null)
+                        {
+                            // Check if we need to resize the stack
+                            if (m_StackPosition == m_StackSize - 1)
+                                Array.Resize(ref m_Stack, m_StackSize *= 2);
+                            m_Stack[++m_StackPosition] = decoratedEnumerator;
+                        }
+
+                        if (!bExecuteStack)
+                            return true;
+
+                        continue;
+                    }
+
+                    // Check for the subclassable types
+
+                    CustomYieldInstruction customInstruction = result as CustomYieldInstruction;
+                    if (customInstruction != null)
+                    {
+                        m_UnityWait = Manager.Host.StartCoroutine(UnityWait(customInstruction));
+                        return true;
+                    }
+
+                    YieldInstruction instruction = result as YieldInstruction;
+                    if (instruction != null)
+                    {
+                        m_UnityWait = Manager.Host.StartCoroutine(UnityWait(instruction));
+                        return true;
+                    }
+
+                    IFuture future = result as IFuture;
+                    if (future != null)
+                    {
+                        if (!future.IsDone())
+                        {
+                            IEnumerator waitSequence = future.Wait();
+                            if (waitSequence != null)
+                            {
+                                if (m_StackPosition == m_StackSize - 1)
+                                    Array.Resize(ref m_Stack, m_StackSize *= 2);
+                                m_Stack[++m_StackPosition] = waitSequence;
+                            }
+                        }
+                        return true;
+                    }
+
+                    IEnumerator enumerator = result as IEnumerator;
+                    if (enumerator != null)
+                    {
+                        // Check if we need to resize the stack
+                        if (m_StackPosition == m_StackSize - 1)
+                            Array.Resize(ref m_Stack, m_StackSize *= 2);
+                        m_Stack[++m_StackPosition] = enumerator;
+
+                        return true;
+                    }
+                }
+                else
+                {
+                    m_Stack[m_StackPosition--] = null;
+                    ((IDisposable)current).Dispose();
+                    if (m_StackPosition < 0)
+                    {
+                        Dispose();
+                        return false;
+                    }
                 }
             }
 
@@ -496,9 +538,11 @@ namespace BeauRoutine.Internal
         // Returns if the Fiber has been paused.
         private bool IsPaused()
         {
-            return m_Paused
-                || (Manager.Frame.PauseMask & m_GroupMask) != 0
-                || (!m_HostedByManager && !m_Host.isActiveAndEnabled);
+            if (m_Paused)
+                return true;
+            if (m_HostedByManager)
+                return false;
+            return (m_HasIdentity && (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0) || !m_Host.isActiveAndEnabled;
         }
 
         // Returns if this fiber is running.
@@ -533,6 +577,7 @@ namespace BeauRoutine.Internal
             public void Dispose()
             {
                 m_Current = 0;
+                m_Fiber = null;
             }
 
             public object Current
