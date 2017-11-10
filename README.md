@@ -654,7 +654,7 @@ The ``DETAILS`` page displays all the currently running BeauRoutines in a list. 
 
 ## Tips and Tricks
 
-#### Stopping by ``Routine`` handles
+#### Stop BeauRoutines with ``Routine`` handles
 Stop BeauRoutines by maintaining a ``Routine`` handle. Stopping by string name is a comparatively much more expensive process.
 
 #### Limit a BeauRoutine's lifetime with a ``using`` statement
@@ -701,7 +701,7 @@ IEnumerator PlayAnAnnoyingSoundOnce()
 }
 ```
 
-#### Using ``Routine`` handles as slots
+#### Use ``Routine`` handles as slots
 Maintain ``Routine`` handles as "slots" for executing coroutines. This can be helpful for ensuring you only have one instance of a particular type of operation executing at a time. It can also help keep track of executing BeauRoutines, allowing you to selectively clean up any operations instead of stopping all BeauRoutines on a given object.
 
 This is particularly necessary if you have operations that execute on shared data. Two Tweens fading the same SpriteRenderer will interfere with one another, so ensuring you only have one Tween executing on that property at a time will help prevent unwanted behavior.
