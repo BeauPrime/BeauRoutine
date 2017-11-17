@@ -16,25 +16,26 @@ namespace BeauRoutine
     /// <summary>
     /// Interface for a Future value.
     /// </summary>
-    public interface IFuture
+    public interface IFuture : IDisposable
     {
         bool IsDone();
         bool IsComplete();
         bool IsFailed();
+        bool IsCancelled();
         IEnumerator Wait();
     }
 
     /// <summary>
     /// Static methods for creating Futures.
     /// </summary>
-    static public class Future
+    static public partial class Future
     {
         /// <summary>
         /// Creates a Future.
         /// </summary>
         static public Future<T> Create<T>()
         {
-            return new Future<T>(null);
+            return new Future<T>();
         }
 
         /// <summary>
@@ -68,7 +69,7 @@ namespace BeauRoutine
     /// </summary>
     public class Future<T> : IFuture
     {
-        private enum State { Uninitialized, Completed, Failed }
+        private enum State { Uninitialized, Completed, Failed, Cancelled }
 
         private State m_State;
 
@@ -79,7 +80,15 @@ namespace BeauRoutine
         private Action m_CallbackFail;
         private Action<object> m_CallbackFailWithArgs;
 
-        public Future(Action<T> inCompleteCallback = null)
+        public Future()
+        {
+            m_State = State.Uninitialized;
+            m_Value = default(T);
+            m_CallbackComplete = null;
+            m_CallbackFail = null;
+        }
+
+        public Future(Action<T> inCompleteCallback)
         {
             m_State = State.Uninitialized;
             m_Value = default(T);
@@ -87,7 +96,7 @@ namespace BeauRoutine
             m_CallbackFail = null;
         }
 
-        public Future(Action<T> inCompleteCallback, Action inFailureCallback = null)
+        public Future(Action<T> inCompleteCallback, Action inFailureCallback)
         {
             m_State = State.Uninitialized;
             m_Value = default(T);
@@ -95,12 +104,22 @@ namespace BeauRoutine
             m_CallbackFail = inFailureCallback;
         }
 
-        public Future(Action<T> inCompleteCallback, Action<object> inFailureCallback = null)
+        public Future(Action<T> inCompleteCallback, Action<object> inFailureCallback)
         {
             m_State = State.Uninitialized;
             m_Value = default(T);
             m_CallbackComplete = inCompleteCallback;
             m_CallbackFailWithArgs = inFailureCallback;
+        }
+
+        public void Dispose()
+        {
+            m_State = State.Cancelled;
+            m_Value = default(T);
+            m_CallbackComplete = null;
+            m_FailObject = null;
+            m_CallbackFail = null;
+            m_CallbackFailWithArgs = null;
         }
 
         /// <summary>
@@ -141,6 +160,9 @@ namespace BeauRoutine
         /// </summary>
         public void Complete(T inValue)
         {
+            if (m_State == State.Cancelled)
+                return;
+
             if (m_State != State.Uninitialized)
                 throw new InvalidOperationException("Cannot set value of Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Completed;
@@ -217,6 +239,9 @@ namespace BeauRoutine
         /// </summary>
         public void Fail(object inArgument)
         {
+            if (m_State == State.Cancelled)
+                return;
+            
             if (m_State != State.Uninitialized)
                 throw new InvalidOperationException("Cannot fail Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Failed;
@@ -270,6 +295,26 @@ namespace BeauRoutine
 
             return this;
         }
+
+        #endregion
+
+        #region Cancellation
+
+        /// <summary>
+        /// Returns if the Future has been cancelled.
+        /// </summary>
+        public bool IsCancelled() { return m_State == State.Cancelled; }
+
+        /// <summary>
+        /// Cancels the Future. It will no longer receive Complete or Fail calls.
+        /// </summary>
+        public void Cancel()
+        {
+            if (m_State == State.Uninitialized)
+            {
+                m_State = State.Cancelled;
+            }
+        } 
 
         #endregion
 

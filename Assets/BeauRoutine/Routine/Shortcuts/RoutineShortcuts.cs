@@ -9,7 +9,11 @@
 */
 
 #if UNITY_WEBGL
-#define DISABLE_THREADING
+    #define DISABLE_THREADING
+#endif
+
+#if UNITY_5_5_OR_NEWER
+    #define SUPPORTS_PARTICLESYSTEM_ISEMITTING
 #endif
 
 using System;
@@ -108,8 +112,13 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitToComplete(this ParticleSystem inParticleSystem)
         {
+            #if SUPPORTS_PARTICLESYSTEM_ISEMITTING
             while(!inParticleSystem.isStopped || inParticleSystem.isEmitting || inParticleSystem.particleCount > 0)
                 yield return null;
+            #else
+            while(!inParticleSystem.isStopped || inParticleSystem.particleCount > 0)
+                yield return null;
+            #endif
         }
 
         #endregion

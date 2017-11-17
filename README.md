@@ -7,6 +7,15 @@ BeauRoutine also includes a powerful coroutine-driven tweening system. Fast prog
 
 ## Basic Usage
 
+### Installing BeauRoutine
+
+**Note:** BeauRoutine requires Unity version 5.2 or newer.
+
+1. Download the package from the repository: [BeauRoutine.unitypackage](https://github.com/FilamentGames/BeauRoutine/raw/master/BeauRoutine.unitypackage)
+2. Unpack into your project.
+
+BeauRoutine uses the ``BeauRoutine`` namespace. You'll need to add the statement ``using BeauRoutine;`` to the top of any scripts using it.
+
 ### Running a Routine
 To run a BeauRoutine, call
 ```csharp
@@ -62,16 +71,24 @@ public IEnumerator MyCustomBeauRoutine()
 	// and return execution here once it has
 	// concluded.
 	yield return MyOtherBeauRoutine();
+	
+	// You can wait for a given function to evaluate to true.
+	yield return Routine.WaitCondition(CanProceed);
 }
 
 public IEnumerator MyOtherBeauRoutine()
 {
 	...
 }
+
+public bool CanProceed()
+{
+	...
+}
 ```
 
 ### Handles
-Similar to Unity's ``Coroutine`` object, the ``Routine`` object returned after calling many BeauRoutine functions, including ``Routine.Start``, is a handle reference to a BeauRoutine.  You can use that to modify the BeauRoutine as long as it's running. It's also a safe reference - if the BeauRoutine it's pointing at expires, you can still call functions on the handle without fear of either exceptions or unintentionally modifying other active BeauRoutines.
+Similar to Unity's ``Coroutine`` object, the ``Routine`` object returned after calling many BeauRoutine functions, including ``Routine.Start``, is a handle reference to a BeauRoutine.  You can use that to modify the BeauRoutine as long as it's running. It's also a safe reference - if the BeauRoutine it points at expires, you can still call functions on the handle without fear of either exceptions or unintentionally modifying other active BeauRoutines.
 
 ```csharp
 // Initialize the Routine object to point at nothing.
@@ -655,9 +672,11 @@ The ``DETAILS`` page displays all the currently running BeauRoutines in a list. 
 ## Tips and Tricks
 
 #### Stop BeauRoutines with ``Routine`` handles
+
 Stop BeauRoutines by maintaining a ``Routine`` handle. Stopping by string name is a comparatively much more expensive process.
 
 #### Limit a BeauRoutine's lifetime with a ``using`` statement
+
 Execute a BeauRoutine in the background while executing a block in your coroutine with a ``using`` statement. This is useful if you want an operation to execute only for as long as a block in the coroutine is executing.
 ```csharp
 IEnumerator DoImportantWork(string[] importantData)
@@ -702,6 +721,7 @@ IEnumerator PlayAnAnnoyingSoundOnce()
 ```
 
 #### Use ``Routine`` handles as slots
+
 Maintain ``Routine`` handles as "slots" for executing coroutines. This can be helpful for ensuring you only have one instance of a particular type of operation executing at a time. It can also help keep track of executing BeauRoutines, allowing you to selectively clean up any operations instead of stopping all BeauRoutines on a given object.
 
 This is particularly necessary if you have operations that execute on shared data. Two Tweens fading the same SpriteRenderer will interfere with one another, so ensuring you only have one Tween executing on that property at a time will help prevent unwanted behavior.
@@ -791,6 +811,21 @@ BeauRoutine contains a few extension methods for generating coroutines.
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
 | UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked. |
 
+### Future Utilities
+
+BeauRoutine contains methods for creating Futures for simple tasks.
+
+| Function | Future Type | Description |
+| -------- | ----------- | ----------- |
+| **Download from URL** | |
+| ``Future.Download.WWW`` | WWW | Downloads and completes with a WWW. |
+| ``Future.Download.Text`` | String | Downloads and completes with text from a WWW. |
+| ``Future.Download.Bytes`` | Byte[] | Downloads and completes with a byte array from a WWW. |
+| ``Future.Download.Texture`` | Texture2D |  Downloads and completes with a texture from a WWW. |
+| ``Future.Download.AudioClip`` | AudioClip | Downloads and completes with an audio clip from a WWW. |
+| **Loading Resources** | |
+| ``Future.Resources.LoadAsync`` | Object | Wrapper for Unity's ``Resources.LoadAsync``. Loads an asset from the  Resources folder asynchronously. |
+
 ### Tween Shortcuts
 
 Generic tween shortcuts currently exist for the following types:
@@ -814,7 +849,7 @@ Generic tween shortcuts currently exist for the following types:
 Tween extension methods currently exist for the following types:
 
 | Type | Property | Function |
-| ---- | ------ | ---------- |
+| ---- | -------- | -------- |
 | Transform | Position | ``MoveTo``, ``MoveToWithSpeed`` |
 | | Scale | ``ScaleTo`` |
 | | Rotation | ``RotateTo``, ``LookAt`` |

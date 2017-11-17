@@ -35,11 +35,21 @@ public class Example6_Script : MonoBehaviour
     [SerializeField]
     private Text m_URLBoxOutput = null;
 
+    [SerializeField]
+    private InputField m_URLImageBoxInput = null;
+
+    [SerializeField]
+    private Button m_URLImageBoxButton = null;
+
+    [SerializeField]
+    private RawImage m_URLImageBoxOutput = null;
+
     private void Start()
     {
         m_ReverseBoxButton.onClick.AddListener(OnClickReverseButton);
         m_ColorBoxButton.onClick.AddListener(OnClickColorButton);
         m_URLBoxButton.onClick.AddListener(OnClickURLButton);
+        m_URLImageBoxButton.onClick.AddListener(OnClickURLImageButton);
     }
 
     private void OnClickReverseButton()
@@ -82,6 +92,28 @@ public class Example6_Script : MonoBehaviour
             {
                 m_URLBoxOutput.text = o.ToString();
                 m_URLBoxInput.textComponent.color = Color.red;
+            });
+
+        Routine.Start(WaitForFutureToComplete(future));
+    }
+
+    private void OnClickURLImageButton()
+    {
+        var future = m_Service.ParseURLTexture(m_URLImageBoxInput.text)
+            .OnComplete((texture) =>
+            {
+                Texture oldTexture = m_URLImageBoxOutput.texture;
+                m_URLImageBoxOutput.texture = texture;
+                Destroy(oldTexture);
+
+                m_URLImageBoxOutput.transform.SetScale((float)texture.width / texture.height, Axis.X);
+
+                m_URLImageBoxInput.textComponent.color = Color.black;
+            })
+            .OnFail((o) =>
+            {
+                Debug.Log("Image download failed: " + o.ToString());
+                m_URLImageBoxInput.textComponent.color = Color.red;
             });
 
         Routine.Start(WaitForFutureToComplete(future));

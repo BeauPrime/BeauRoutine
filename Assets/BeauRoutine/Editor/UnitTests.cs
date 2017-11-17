@@ -7,6 +7,8 @@
  * Purpose: Any unit tests go here.
 */
 
+#if UNITY_5_3 || UNITY_5_3_OR_NEWER
+
 using NUnit.Framework;
 using System;
 
@@ -28,3 +30,5 @@ namespace BeauRoutine.Editor
 		}
 	}
 }
+
+#endif

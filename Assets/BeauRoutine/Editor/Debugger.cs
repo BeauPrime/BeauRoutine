@@ -8,6 +8,10 @@
  *          Routines in editor.
 */
 
+#if UNITY_5_3 || UNITY_5_3_OR_NEWER
+    #define SUPPORTS_DELAYEDFIELDS
+#endif
+
 using System;
 using UnityEditor;
 using UnityEngine;
@@ -252,7 +256,11 @@ namespace BeauRoutine.Editor
             {
                 GUILayout.BeginVertical();
                 {
+                    #if SUPPORTS_DELAYEDFIELDS
                     Routine.TimeScale = Mathf.Clamp(EditorGUILayout.DelayedFloatField("Time Scale", Routine.TimeScale), 0, 100);
+                    #else
+                    Routine.TimeScale = Mathf.Clamp(EditorGUILayout.FloatField("Time Scale", Routine.TimeScale), 0, 100);
+                    #endif
                     GUILayout.BeginHorizontal();
                     if (GUILayout.Button("Reset", GUILayout.Width(80)))
                         Routine.TimeScale = 1.0f;
@@ -369,7 +377,11 @@ namespace BeauRoutine.Editor
                     EditorGUILayout.LabelField("TIMESCALE/", GUILayout.Width(FIELD_NAME_WIDTH));
                     if (!inbCanAdjust)
                         GUI.enabled = false;
+                    #if SUPPORTS_DELAYEDFIELDS
                     float timeScale = EditorGUILayout.DelayedFloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
+                    #else
+                    float timeScale = EditorGUILayout.FloatField(inStats.TimeScale, GUILayout.ExpandWidth(true));
+                    #endif
                     if (timeScale < 0)
                         timeScale = 0;
                     if (timeScale != inStats.TimeScale)
@@ -387,7 +399,11 @@ namespace BeauRoutine.Editor
                     EditorGUILayout.LabelField("PRIORITY/", GUILayout.Width(FIELD_NAME_WIDTH));
                     if (!inbCanAdjust)
                         GUI.enabled = false;
+                    #if SUPPORTS_DELAYEDFIELDS
                     int priority = EditorGUILayout.DelayedIntField(inStats.Priority, GUILayout.ExpandWidth(true));
+                    #else
+                    int priority = EditorGUILayout.IntField(inStats.Priority, GUILayout.ExpandWidth(true));
+                    #endif
                     if (priority != inStats.Priority)
                         inStats.Handle.SetPriority(priority);
                     GUI.enabled = true;

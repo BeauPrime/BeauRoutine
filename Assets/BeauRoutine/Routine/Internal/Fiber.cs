@@ -7,6 +7,11 @@
  * Purpose: Substrate on which Routines are executed.
 */
 
+// CustomYieldInstructions were not introduced until 5.3
+#if UNITY_5_3 || UNITY_5_3_OR_NEWER
+    #define SUPPORTS_CUSTOMYIELDINSTRUCTION
+#endif
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -413,12 +418,16 @@ namespace BeauRoutine.Internal
 
                     // Check for the subclassable types
 
+                    #if SUPPORTS_CUSTOMYIELDINSTRUCTION
+
                     CustomYieldInstruction customInstruction = result as CustomYieldInstruction;
                     if (customInstruction != null)
                     {
                         m_UnityWait = Manager.Host.StartCoroutine(UnityWait(customInstruction));
                         return true;
                     }
+
+                    #endif
 
                     YieldInstruction instruction = result as YieldInstruction;
                     if (instruction != null)
@@ -632,12 +641,16 @@ namespace BeauRoutine.Internal
             m_UnityWait = null;
         }
 
-        // Waits for the YieldInstruction to finish.
+        #if SUPPORTS_CUSTOMYIELDINSTRUCTION
+
+        // Waits for the CustomYieldInstruction to finish.
         private IEnumerator UnityWait(CustomYieldInstruction inYieldInstruction)
         {
             yield return inYieldInstruction;
             m_UnityWait = null;
         }
+
+        #endif
 
         // Waits for the WWW to finish loading
         private IEnumerator UnityWait(WWW inWWW)

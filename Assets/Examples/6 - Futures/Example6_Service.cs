@@ -60,31 +60,12 @@ public class Example6_Service : MonoBehaviour
 
     public Future<string> ParseURL(string inURL)
     {
-        var future = Future.Create<string>();
-        Routine.Start(this, ParseURLRoutine(future, inURL));
-        return future;
+        // Future shortcuts exist in Future.Download
+        return Future.Download.Text(inURL);
     }
 
-    private IEnumerator ParseURLRoutine(Future<string> inFuture, string inURL)
+    public Future<Texture2D> ParseURLTexture(string inURL)
     {
-        WWW www = null;
-        try
-        {
-            www = new WWW(inURL);
-        }
-        catch(Exception e)
-        {
-            inFuture.Fail(e);
-            yield break;
-        }
-
-        using (www)
-        {
-            yield return www;
-            if (!string.IsNullOrEmpty(www.error))
-                inFuture.Fail(www.error);
-            else
-                inFuture.Complete(www.text);
-        }
+        return Future.Download.Texture(inURL);
     }
 }
