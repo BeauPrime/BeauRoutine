@@ -3,8 +3,8 @@
  * Author:  Alex Beauchesne
  * Date:    8 Oct 2017
  * 
- * File:    FutureShortcuts.cs
- * Purpose: Shortcut methods for creating and dealing with Futures.
+ * File:    Future.Download.cs
+ * Purpose: Shortcut methods for downloading to a Future.
 */
 
 using System;
@@ -308,34 +308,6 @@ namespace BeauRoutine
             }
 
             #endregion
-        }
-
-        /// <summary>
-        /// Asynchronous resource loading methods. These will create Routines to load resources
-        /// asynchronously and return a Future for the result.
-        /// </summary>
-        static public class Resources
-        {
-            /// <summary>
-            /// Loads an asset from the Resources folder asynchronously
-            /// and returns a Future for the loaded asset.
-            /// </summary>
-            static public Future<T> LoadAsync<T>(string inPath, MonoBehaviour inRoutineHost = null) where T : UnityEngine.Object
-            {
-                var future = Future.Create<T>();
-                Routine.Start(inRoutineHost, DownloadResource<T>(future, inPath));
-                return future;
-            }
-
-            static private IEnumerator DownloadResource<T>(Future<T> inFuture, string inPath) where T : UnityEngine.Object
-            {
-                var resourceRequest = UnityEngine.Resources.LoadAsync<T>(inPath);
-                yield return resourceRequest;
-                if (resourceRequest.asset == null)
-                    inFuture.Fail("No resource found");
-                else
-                    inFuture.Complete((T)resourceRequest.asset);
-            }
         }
     }
 }
