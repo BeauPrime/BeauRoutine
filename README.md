@@ -786,8 +786,6 @@ public class MyAnimatingObject : MonoBehaviour
 }
 ```
 
-#### Use ``Future``s to manage downloads
-
 ## Reference
 
 ### Routine Utilities
