@@ -5,6 +5,14 @@ BeauRoutine is a coroutine framework for Unity3D. Intended as an alternative to 
 
 BeauRoutine also includes a powerful coroutine-driven tweening system. Fast programmatic animations can be written and configured quickly for rapid prototyping as well as visual polish.
 
+### Table of Contents
+1. [Basic Usage](#basic-usage)
+2. [Tweens](#tweens)
+3. [Advanced Features](#advanced-features)
+4. [Tips and Tricks](#tips-and-tricks)
+5. [Reference](#reference)
+----------------
+
 ## Basic Usage
 
 ### Installing BeauRoutine
@@ -17,6 +25,7 @@ BeauRoutine also includes a powerful coroutine-driven tweening system. Fast prog
 BeauRoutine uses the ``BeauRoutine`` namespace. You'll need to add the statement ``using BeauRoutine;`` to the top of any scripts using it.
 
 ### Running a Routine
+
 To run a BeauRoutine, call
 ```csharp
 Routine.Start( MyCoroutine() );
@@ -28,7 +37,10 @@ To stop a BeauRoutine, call
 Routine.Stop( "MyCoroutine" );
 ```
 
+**Note:** This method of stopping a BeauRoutine is maintained to make upgrading from Unity's existing coroutines to BeauRoutine as smooth as possible. It is highly recommended you read the [Handles](#handles) section.
+
 ### Hosting Routines
+
 Much like Unity's default Coroutines will only execute while their host object is alive, a BeauRoutine can be given a host to bind its lifetime to that of the host. To bind a host to a BeauRoutine, call
 ```csharp
 Routine.Start( this, MyCoroutine() );
@@ -39,6 +51,8 @@ To stop a hosted BeauRoutine, call
 ```csharp
 Routine.Stop( this, "MyCoroutine" );
 ```
+
+**Note:** Unity's built-in coroutines _will not pause_ while their host is inactive. By default, BeauRoutines _will pause_ in the same circumstances. If you are depending on the default Unity behavior, it is highly recommended you read the [Handles](#handles) section to understand how to enable it.
 
 ### Expanded Coroutine Syntax
 BeauRoutines allow for more flexibility when writing your coroutine logic.
@@ -88,6 +102,7 @@ public bool CanProceed()
 ```
 
 ### Handles
+
 Similar to Unity's ``Coroutine`` object, the ``Routine`` object returned after calling many BeauRoutine functions, including ``Routine.Start``, is a handle reference to a BeauRoutine.  You can use that to modify the BeauRoutine as long as it's running. It's also a safe reference - if the BeauRoutine it points at expires, you can still call functions on the handle without fear of either exceptions or unintentionally modifying other active BeauRoutines.
 
 ```csharp
@@ -133,6 +148,16 @@ yield return myRoutine.Wait();
 // Yielding a Routine directly will have the same effect
 // as Routine.Wait
 yield return myRoutine;
+
+// You can direct a BeauRoutine to ignore the active state of its host object.
+// By calling ExecuteWhileDisabled, your BeauRoutine will continue to execute while
+// the host object is disabled.
+// This is the default behavior of Unity's built-in coroutines.
+// Call this if you depend on that behavior.
+myRoutine.ExecuteWhileDisabled();
+
+// You can also restore the default BeauRoutine pausing behavior.
+myRoutine.ExecuteWhileEnabled();
 ```
 
 Routine objects can also be used to start BeauRoutines.
@@ -606,7 +631,12 @@ Future<int> CalculateHashAsync( string str )
 	Future<int> future = Future.Create<int>();
     
     // Start a routine that will eventually complete the promise
-    Routine.Start( CalculateHashAsyncImpl( future, str ) );
+    Routine routine = Routine.Start( CalculateHashAsyncImpl( future, str ) );
+    
+    // Link the Routine to the Future to ensure the Routine will stop
+    // if the Future is cancelled.
+    // A linked Routine will also cancel the Future if it ends prematurely.
+    future.LinkTo( routine );
     
     // This future represents the eventual result of CalculateHashAsyncImpl
     return future;
@@ -670,10 +700,6 @@ The ``OPTIONS`` page displays the current time scale, as well as options for res
 The ``DETAILS`` page displays all the currently running BeauRoutines in a list.  From here, you can pause, resume, or stop any of them, as well as rename them or set their time scale.  Any Combine or Race routines are presented in a hierarchical format.
 
 ## Tips and Tricks
-
-#### Stop BeauRoutines with ``Routine`` handles
-
-Stop BeauRoutines by maintaining a ``Routine`` handle. Stopping by string name is a comparatively much more expensive process.
 
 #### Limit a BeauRoutine's lifetime with a ``using`` statement
 
@@ -760,6 +786,8 @@ public class MyAnimatingObject : MonoBehaviour
 }
 ```
 
+#### Use ``Future``s to manage downloads
+
 ## Reference
 
 ### Routine Utilities
@@ -824,7 +852,7 @@ BeauRoutine contains methods for creating Futures for simple tasks.
 | ``Future.Download.Texture`` | Texture2D |  Downloads and completes with a texture from a WWW. |
 | ``Future.Download.AudioClip`` | AudioClip | Downloads and completes with an audio clip from a WWW. |
 | **Loading Resources** | |
-| ``Future.Resources.LoadAsync`` | Object | Wrapper for Unity's ``Resources.LoadAsync``. Loads an asset from the  Resources folder asynchronously. |
+| ``Future.Resources.LoadAsync<T>`` | T (Object) | Wrapper for Unity's ``Resources.LoadAsync``. Loads an asset from the  Resources folder asynchronously. |
 
 ### Tween Shortcuts
 

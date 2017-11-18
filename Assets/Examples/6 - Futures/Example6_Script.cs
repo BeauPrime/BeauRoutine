@@ -8,6 +8,8 @@ public class Example6_Script : MonoBehaviour
     [SerializeField]
     private Example6_Service m_Service = null;
 
+    [Header("Reverse Strings")]
+
     [SerializeField]
     private InputField m_ReverseBoxInput = null;
 
@@ -16,6 +18,8 @@ public class Example6_Script : MonoBehaviour
 
     [SerializeField]
     private Text m_ReverseBoxOutput = null;
+
+    [Header("Parse Color")]
 
     [SerializeField]
     private InputField m_ColorBoxInput = null;
@@ -26,6 +30,8 @@ public class Example6_Script : MonoBehaviour
     [SerializeField]
     private Image m_ColorBoxOutput = null;
 
+    [Header("Download Text")]
+
     [SerializeField]
     private InputField m_URLBoxInput = null;
 
@@ -34,6 +40,8 @@ public class Example6_Script : MonoBehaviour
 
     [SerializeField]
     private Text m_URLBoxOutput = null;
+
+    [Header("Download Texture")]
 
     [SerializeField]
     private InputField m_URLImageBoxInput = null;
@@ -44,12 +52,24 @@ public class Example6_Script : MonoBehaviour
     [SerializeField]
     private RawImage m_URLImageBoxOutput = null;
 
+    [Header("Download Audio")]
+
+    [SerializeField]
+    private InputField m_URLAudioBoxInput = null;
+
+    [SerializeField]
+    private Button m_URLAudioBoxButton = null;
+
+    [SerializeField]
+    private AudioSource m_URLAudioBoxOutput = null;
+
     private void Start()
     {
         m_ReverseBoxButton.onClick.AddListener(OnClickReverseButton);
         m_ColorBoxButton.onClick.AddListener(OnClickColorButton);
         m_URLBoxButton.onClick.AddListener(OnClickURLButton);
         m_URLImageBoxButton.onClick.AddListener(OnClickURLImageButton);
+        m_URLAudioBoxButton.onClick.AddListener(OnClickURLAudioButton);
     }
 
     private void OnClickReverseButton()
@@ -114,6 +134,33 @@ public class Example6_Script : MonoBehaviour
             {
                 Debug.Log("Image download failed: " + o.ToString());
                 m_URLImageBoxInput.textComponent.color = Color.red;
+            });
+
+        Routine.Start(WaitForFutureToComplete(future));
+    }
+
+    private void OnClickURLAudioButton()
+    {
+        var future = Future.Download.AudioClip(m_URLAudioBoxInput.text, false)
+            .OnComplete((clip) =>
+            {
+                m_URLAudioBoxOutput.Stop();
+
+                AudioClip oldClip = m_URLAudioBoxOutput.clip;
+                m_URLAudioBoxOutput.clip = clip;
+                Destroy(oldClip);
+
+                m_URLAudioBoxOutput.loop = true;
+                m_URLAudioBoxOutput.Play();
+
+                m_URLAudioBoxInput.textComponent.color = Color.black;
+            })
+            .OnFail((o) =>
+            {
+                m_URLAudioBoxOutput.Stop();
+
+                Debug.Log("Audio download failed: " + o.ToString());
+                m_URLAudioBoxInput.textComponent.color = Color.red;
             });
 
         Routine.Start(WaitForFutureToComplete(future));

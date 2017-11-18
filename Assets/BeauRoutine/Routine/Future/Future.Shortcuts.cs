@@ -7,7 +7,6 @@
  * Purpose: Shortcut methods for creating Futures for specific tasks.
 */
 
-using System;
 using System.Collections;
 using UnityEngine;
 
@@ -31,7 +30,9 @@ namespace BeauRoutine
             static public Future<T> LoadAsync<T>(string inPath, MonoBehaviour inRoutineHost = null) where T : UnityEngine.Object
             {
                 var future = Future.Create<T>();
-                Routine.Start(inRoutineHost, DownloadResource<T>(future, inPath));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadResource<T>(future, inPath))
+                    );
                 return future;
             }
 
@@ -40,7 +41,7 @@ namespace BeauRoutine
                 var resourceRequest = UnityEngine.Resources.LoadAsync<T>(inPath);
                 yield return resourceRequest;
                 if (resourceRequest.asset == null)
-                    inFuture.Fail("No resource found");
+                    inFuture.Fail(Future.FailureType.Unknown, "No resource found");
                 else
                     inFuture.Complete((T)resourceRequest.asset);
             }

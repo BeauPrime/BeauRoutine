@@ -32,7 +32,9 @@ namespace BeauRoutine
             static public Future<WWW> WWW(WWW inWWW, MonoBehaviour inRoutineHost = null)
             {
                 var future = Future.Create<WWW>();
-                Routine.Start(inRoutineHost, DownloadWWW(future, inWWW));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadWWW(future, inWWW))
+                    );
                 return future;
             }
 
@@ -45,11 +47,13 @@ namespace BeauRoutine
                 try
                 {
                     WWW www = new WWW(inURL);
-                    Routine.Start(inRoutineHost, DownloadWWW(future, www));
+                    future.LinkTo(
+                        Routine.Start(inRoutineHost, DownloadWWW(future, www))
+                        );
                 }
                 catch(Exception e)
                 {
-                    future.Fail(e);
+                    future.Fail(Future.FailureType.Exception, e);
                 }
                 return future;
             }
@@ -65,8 +69,11 @@ namespace BeauRoutine
                     }
                     else
                     {
-                        inFuture.Fail(inWWW.error);
+                        inFuture.Fail(Future.FailureType.Unknown, inWWW.error);
                     }
+
+                    // wait two frames to ensure the Future's callbacks have been invoked
+                    yield return null;
                     yield return null;
                 }
             }
@@ -81,7 +88,9 @@ namespace BeauRoutine
             static public Future<string> Text(WWW inWWW, MonoBehaviour inRoutineHost = null)
             {
                 var future = Future.Create<string>();
-                Routine.Start(inRoutineHost, DownloadStringRoutine(future, inWWW));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadStringRoutine(future, inWWW))
+                    );
                 return future;
             }
 
@@ -94,32 +103,47 @@ namespace BeauRoutine
                 try
                 {
                     WWW www = new WWW(inURL);
-                    Routine.Start(inRoutineHost, DownloadStringRoutine(future, www));
+                    future.LinkTo(
+                        Routine.Start(inRoutineHost, DownloadStringRoutine(future, www))
+                        );
                 }
                 catch(Exception e)
                 {
-                    future.Fail(e);
+                    future.Fail(Future.FailureType.Exception, e);
                 }
                 return future;
             }
 
             static private IEnumerator DownloadStringRoutine(Future<string> inFuture, WWW inWWW)
             {
-                yield return inWWW;
-                if (string.IsNullOrEmpty(inWWW.error))
+                using (inWWW)
                 {
-                    try
+                    yield return inWWW;
+                    if (string.IsNullOrEmpty(inWWW.error))
                     {
-                        inFuture.Complete(inWWW.text);
+                        try
+                        {
+                            bool bValidMIMEType;
+                            if (TryValidateMIMEType(inWWW, "text/", out bValidMIMEType))
+                            {
+                                if (!bValidMIMEType)
+                                {
+                                    inFuture.Fail(Future.FailureType.Unknown, "Invalid MIME type");
+                                    yield break;
+                                }
+                            }
+
+                            inFuture.Complete(inWWW.text);
+                        }
+                        catch (Exception e)
+                        {
+                            inFuture.Fail(Future.FailureType.Exception, e);
+                        }
                     }
-                    catch(Exception e)
+                    else
                     {
-                        inFuture.Fail(e);
+                        inFuture.Fail(Future.FailureType.Unknown, inWWW.error);
                     }
-                }
-                else
-                {
-                    inFuture.Fail(inWWW.error);
                 }
             }
 
@@ -133,7 +157,9 @@ namespace BeauRoutine
             static public Future<byte[]> Bytes(WWW inWWW, MonoBehaviour inRoutineHost = null)
             {
                 var future = Future.Create<byte[]>();
-                Routine.Start(inRoutineHost, DownloadBytesRoutine(future, inWWW));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadBytesRoutine(future, inWWW))
+                    );
                 return future;
             }
 
@@ -146,11 +172,13 @@ namespace BeauRoutine
                 try
                 {
                     WWW www = new WWW(inURL);
-                    Routine.Start(inRoutineHost, DownloadBytesRoutine(future, www));
+                    future.LinkTo(
+                        Routine.Start(inRoutineHost, DownloadBytesRoutine(future, www))
+                    );
                 }
                 catch(Exception e)
                 {
-                    future.Fail(e);
+                    future.Fail(Future.FailureType.Exception, e);
                 }
                 return future;
             }
@@ -168,12 +196,12 @@ namespace BeauRoutine
                         }
                         catch(Exception e)
                         {
-                            inFuture.Fail(e);
+                            inFuture.Fail(Future.FailureType.Exception, e);
                         }
                     }
                     else
                     {
-                        inFuture.Fail(inWWW.error);
+                        inFuture.Fail(Future.FailureType.Unknown, inWWW.error);
                     }
                     yield return null;
                 }
@@ -189,7 +217,9 @@ namespace BeauRoutine
             static public Future<Texture2D> Texture(WWW inWWW, bool inbDownloadAsNonReadable = false, MonoBehaviour inRoutineHost = null)
             {
                 var future = Future.Create<Texture2D>();
-                Routine.Start(inRoutineHost, DownloadTextureRoutine(future, inWWW, inbDownloadAsNonReadable));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadTextureRoutine(future, inWWW, inbDownloadAsNonReadable))
+                    );
                 return future;
             }
 
@@ -202,11 +232,13 @@ namespace BeauRoutine
                 try
                 {
                     WWW www = new WWW(inURL);
-                    Routine.Start(inRoutineHost, DownloadTextureRoutine(future, www, inbDownloadAsNonReadable));
+                    future.LinkTo(
+                        Routine.Start(inRoutineHost, DownloadTextureRoutine(future, www, inbDownloadAsNonReadable))
+                        );
                 }
                 catch(Exception e)
                 {
-                    future.Fail(e);
+                    future.Fail(Future.FailureType.Exception, e);
                 }
                 return future;
             }
@@ -220,22 +252,35 @@ namespace BeauRoutine
                     {
                         try
                         {
+                            bool bValidMIMEType;
+                            if (TryValidateMIMEType(inWWW, "image/", out bValidMIMEType))
+                            {
+                                if (!bValidMIMEType)
+                                {
+                                    inFuture.Fail(Future.FailureType.Unknown, "Invalid MIME type");
+                                    yield break;
+                                }
+                            }
+
                             Texture2D texture = inbNonReadable ? inWWW.textureNonReadable : inWWW.texture;
                             if (texture == null)
-                                inFuture.Fail("Texture was null");
+                                inFuture.Fail(Future.FailureType.Unknown, "Texture is null");
                             else if (!TextureIsValid(texture))
-                                inFuture.Fail("Texture was invalid.");
+                                inFuture.Fail(Future.FailureType.Unknown, "Not a valid texture");
                             else
+                            {
+                                texture.name = UnityEngine.WWW.UnEscapeURL(inWWW.url);
                                 inFuture.Complete(texture);
+                            }
                         }
                         catch(Exception e)
                         {
-                            inFuture.Fail(e);
+                            inFuture.Fail(Future.FailureType.Exception, e);
                         }
                     }
                     else
                     {
-                        inFuture.Fail(inWWW.error);
+                        inFuture.Fail(Future.FailureType.Unknown, inWWW.error);
                     }
                     yield return null;
                 }
@@ -244,6 +289,9 @@ namespace BeauRoutine
             static private bool TextureIsValid(Texture2D inTexture)
             {
                 // TODO(Alex): Replace this with something better?
+                // The default texture returned by Unity is 8x8,
+                // but if we try downloading an 8x8 texture (no matter how unlikely),
+                // this will fail
                 return inTexture.width != 8 || inTexture.height != 8;
             }
 
@@ -257,7 +305,9 @@ namespace BeauRoutine
             static public Future<AudioClip> AudioClip(WWW inWWW, bool inbCompressed = false, MonoBehaviour inRoutineHost = null)
             {
                 var future = Future.Create<AudioClip>();
-                Routine.Start(inRoutineHost, DownloadAudioClipRoutine(future, inWWW, inbCompressed));
+                future.LinkTo(
+                    Routine.Start(inRoutineHost, DownloadAudioClipRoutine(future, inWWW, inbCompressed))
+                    );
                 return future;
             }
 
@@ -270,11 +320,13 @@ namespace BeauRoutine
                 try
                 {
                     WWW www = new WWW(inURL);
-                    Routine.Start(inRoutineHost, DownloadAudioClipRoutine(future, www, inbCompressed));
+                    future.LinkTo(
+                        Routine.Start(inRoutineHost, DownloadAudioClipRoutine(future, www, inbCompressed))
+                        );
                 }
                 catch(Exception e)
                 {
-                    future.Fail(e);
+                    future.Fail(Future.FailureType.Exception, e);
                 }
                 return future;
             }
@@ -288,26 +340,63 @@ namespace BeauRoutine
                     {
                         try
                         {
+                            bool bValidMIMEType;
+                            if (TryValidateMIMEType(inWWW, "audio/", out bValidMIMEType))
+                            {
+                                if (!bValidMIMEType)
+                                {
+                                    inFuture.Fail(Future.FailureType.Unknown, "Invalid MIME type");
+                                    yield break;
+                                }
+                            }
+
                             AudioClip audioClip = inbCompressed ? inWWW.GetAudioClipCompressed() : inWWW.GetAudioClip();
                             if (audioClip == null)
-                                inFuture.Fail("Clip is null");
+                                inFuture.Fail(Future.FailureType.Unknown, "Clip is null");
                             else
+                            {
+                                audioClip.name = UnityEngine.WWW.UnEscapeURL(inWWW.url);
                                 inFuture.Complete(audioClip);
+                            }
                         }
                         catch(Exception e)
                         {
-                            inFuture.Fail(e);
+                            inFuture.Fail(Future.FailureType.Exception, e);
                         }
                     }
                     else
                     {
-                        inFuture.Fail(inWWW.error);
+                        inFuture.Fail(Future.FailureType.Unknown, inWWW.error);
                     }
                     yield return null;
                 }
             }
 
             #endregion
+
+            // Returns whether it could validate the MIME type of the returned content.
+            static private bool TryValidateMIMEType(WWW inWWW, string inMIMEType, out bool outbValidated)
+            {
+                outbValidated = true;
+                
+                try
+                {
+                    string contentType = string.Empty;
+                    bool bFoundContentType = inWWW.responseHeaders != null && inWWW.responseHeaders.TryGetValue("Content-Type", out contentType);
+                    if (bFoundContentType)
+                    {
+                        if (!contentType.StartsWith(inMIMEType))
+                        {
+                            outbValidated = false;
+                        }
+
+                        return true;
+                    }
+                }
+                catch (Exception) { }
+
+                return false;
+            }
         }
     }
 }

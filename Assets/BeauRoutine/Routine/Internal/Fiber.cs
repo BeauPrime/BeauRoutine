@@ -34,6 +34,7 @@ namespace BeauRoutine.Internal
         private bool m_Disposing;
         private bool m_Chained;
         private bool m_IgnoreObjectTimescale;
+        private bool m_IgnoreObjectActive;
         private bool m_HostedByManager;
         private bool m_HasIdentity;
 
@@ -146,7 +147,9 @@ namespace BeauRoutine.Internal
             m_Host = null;
             m_HostIdentity = null;
 
-            m_Chained = m_Disposing = m_HasIdentity = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager = false;
+            m_Chained = m_Disposing = m_HasIdentity
+            = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager
+            = m_IgnoreObjectActive = false;
 
             m_WaitTime = 0;
             m_Name = null;
@@ -253,6 +256,22 @@ namespace BeauRoutine.Internal
         public void IgnoreObjectTimeScale()
         {
             m_IgnoreObjectTimescale = true;
+        }
+
+        /// <summary>
+        /// Uses object's active state.
+        /// </summary>
+        public void UseObjectActive()
+        {
+            m_IgnoreObjectActive = false;
+        }
+
+        /// <summary>
+        /// Ignores object's active state.
+        /// </summary>
+        public void IgnoreObjectActive()
+        {
+            m_IgnoreObjectActive = true;
         }
 
         /// <summary>
@@ -551,7 +570,7 @@ namespace BeauRoutine.Internal
                 return true;
             if (m_HostedByManager)
                 return false;
-            return (m_HasIdentity && (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0) || !m_Host.isActiveAndEnabled;
+            return (m_HasIdentity && (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0) || (!m_IgnoreObjectActive && !m_Host.isActiveAndEnabled);
         }
 
         // Returns if this fiber is running.

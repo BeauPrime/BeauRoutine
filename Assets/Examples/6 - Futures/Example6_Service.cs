@@ -1,7 +1,6 @@
 ﻿using UnityEngine;
 using BeauRoutine;
 using System.Collections;
-using System;
 
 // This class is a service that performs operations and returns values asynchronously.
 // This kind of pattern can be useful if you have a service that multiple objects
@@ -13,7 +12,13 @@ public class Example6_Service : MonoBehaviour
     public Future<string> ReverseString(string inString)
     {
         var future = Future.Create<string>();
-        Routine.Start(this, ReverseStringRoutine(future, inString));
+
+        var routine = Routine.Start(this, ReverseStringRoutine(future, inString)).ExecuteWhileDisabled();
+        
+        // By linking the Routine to the Future, we can ensure the Future will fail
+        // if the linked Routine stops unexpectedly.
+        // We can also make sure the linked Routine will stop if the Future is cancelled.
+        future.LinkTo(routine);
         return future;
     }
 
@@ -37,7 +42,9 @@ public class Example6_Service : MonoBehaviour
     public Future<Color> ParseColor(string inString)
     {
         var future = Future.Create<Color>();
-        Routine.Start(this, ParseColorRoutine(future, inString));
+        future.LinkTo(
+            Routine.Start(this, ParseColorRoutine(future, inString)).ExecuteWhileDisabled()
+            );
         return future;
     }
 

@@ -182,6 +182,37 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// The Routine will execute even while the object is disabled.
+        /// </summary>
+        public Routine ExecuteWhileDisabled()
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.IgnoreObjectActive();
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// The Routine will execute only while the object is enabled.
+        /// This is default behavior.
+        /// </summary>
+        public Routine ExecuteWhileEnabled()
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.UseObjectActive();
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Returns the optional name
         /// for this routine.
         /// </summary>

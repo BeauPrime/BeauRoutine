@@ -31,6 +31,39 @@ namespace BeauRoutine
     static public partial class Future
     {
         /// <summary>
+        /// Failure state for a future.
+        /// </summary>
+        public struct Failure
+        {
+            /// <summary>
+            /// How a future has failed.
+            /// </summary>
+            public FailureType Type;
+
+            /// <summary>
+            /// Failure details.
+            /// </summary>
+            public object Object;
+
+            public override string ToString()
+            {
+                return string.Format("[Failure {0} ({1})]", Type, Object);
+            }
+        }
+
+        /// <summary>
+        /// Common error codes for Fail calls.
+        /// </summary>
+        public enum FailureType
+        {
+            Unknown,
+
+            Exception,
+            RoutineStopped,
+            NullReference
+        }
+
+        /// <summary>
         /// Creates a Future.
         /// </summary>
         static public Future<T> Create<T>()
@@ -57,7 +90,7 @@ namespace BeauRoutine
         /// <summary>
         /// Creates a Future with a completion callback and failure callback.
         /// </summary>
-        static public Future<T> Create<T>(Action<T> inCompleteCallback, Action<object> inFailureCallback)
+        static public Future<T> Create<T>(Action<T> inCompleteCallback, Action<Failure> inFailureCallback)
         {
             return new Future<T>(inCompleteCallback, inFailureCallback);
         }
@@ -76,9 +109,11 @@ namespace BeauRoutine
         private T m_Value;
         private Action<T> m_CallbackComplete;
 
-        private object m_FailObject;
+        private Future.Failure m_Failure;
         private Action m_CallbackFail;
-        private Action<object> m_CallbackFailWithArgs;
+        private Action<Future.Failure> m_CallbackFailWithArgs;
+
+        private Routine m_Prophet;
 
         public Future()
         {
@@ -104,7 +139,7 @@ namespace BeauRoutine
             m_CallbackFail = inFailureCallback;
         }
 
-        public Future(Action<T> inCompleteCallback, Action<object> inFailureCallback)
+        public Future(Action<T> inCompleteCallback, Action<Future.Failure> inFailureCallback)
         {
             m_State = State.Uninitialized;
             m_Value = default(T);
@@ -114,10 +149,12 @@ namespace BeauRoutine
 
         public void Dispose()
         {
-            m_State = State.Cancelled;
+            Cancel();
+
             m_Value = default(T);
             m_CallbackComplete = null;
-            m_FailObject = null;
+            m_Failure.Object = null;
+            m_Failure.Type = Future.FailureType.Unknown;
             m_CallbackFail = null;
             m_CallbackFailWithArgs = null;
         }
@@ -208,19 +245,19 @@ namespace BeauRoutine
         /// Returns the failure object, or throws an exception
         /// if the Future has not failed.
         /// </summary>
-        public object GetFailure()
+        public Future.Failure GetFailure()
         {
             if (m_State != State.Failed)
                 throw new InvalidOperationException("Cannot get error of Future<" + typeof(T).Name + "> before it has failed!");
-            return m_FailObject;
+            return m_Failure;
         }
 
         /// <summary>
         /// Attempts to return the failure object.
         /// </summary>
-        public bool TryGetFailure(out object outError)
+        public bool TryGetFailure(out Future.Failure outFailure)
         {
-            outError = m_FailObject;
+            outFailure = m_Failure;
             return m_State == State.Failed;
         }
 
@@ -230,14 +267,23 @@ namespace BeauRoutine
         /// </summary>
         public void Fail()
         {
-            Fail(null);
+            Fail(Future.FailureType.Unknown, null);
         }
 
         /// <summary>
         /// Fails the Future, or throws an exception
         /// if the Future has already been set or failed.
         /// </summary>
-        public void Fail(object inArgument)
+        public void Fail(Future.FailureType inType)
+        {
+            Fail(inType, null);
+        }
+
+        /// <summary>
+        /// Fails the Future, or throws an exception
+        /// if the Future has already been set or failed.
+        /// </summary>
+        public void Fail(Future.FailureType inType, object inArg)
         {
             if (m_State == State.Cancelled)
                 return;
@@ -245,7 +291,8 @@ namespace BeauRoutine
             if (m_State != State.Uninitialized)
                 throw new InvalidOperationException("Cannot fail Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Failed;
-            m_FailObject = inArgument;
+            m_Failure.Type = inType;
+            m_Failure.Object = inArg;
 
             if (m_CallbackFail != null)
             {
@@ -255,7 +302,7 @@ namespace BeauRoutine
 
             if (m_CallbackFailWithArgs != null)
             {
-                Routine.StartCall(m_CallbackFailWithArgs, m_FailObject);
+                Routine.StartCall(InvokeFailure, m_CallbackFailWithArgs);
                 m_CallbackFailWithArgs = null;
             }
 
@@ -283,13 +330,13 @@ namespace BeauRoutine
         /// Adds a callback for when the Future fails.
         /// Will call immediately if the Future has already failed.
         /// </summary>
-        public Future<T> OnFail(Action<object> inCallback)
+        public Future<T> OnFail(Action<Future.Failure> inCallback)
         {
             if (inCallback == null)
                 return this;
 
             if (m_State == State.Failed)
-                inCallback(m_FailObject);
+                inCallback(m_Failure);
             else if (m_State == State.Uninitialized)
                 m_CallbackFailWithArgs += inCallback;
 
@@ -313,10 +360,26 @@ namespace BeauRoutine
             if (m_State == State.Uninitialized)
             {
                 m_State = State.Cancelled;
+                m_Prophet.Stop();
             }
-        } 
+        }
 
         #endregion
+
+        /// <summary>
+        /// Links a Routine to the Future.
+        /// If the Routine stops, the Future will fail.
+        /// If the Future is cancelled, the Routine will Stop.
+        /// </summary>
+        public Future<T> LinkTo(Routine inRoutine)
+        {
+            if (!m_Prophet && m_State == State.Uninitialized)
+            {
+                m_Prophet = inRoutine;
+                m_Prophet.OnStop(OnProphetStopped);
+            }
+            return this;
+        }
 
         /// <summary>
         /// Waits for the Future to be completed or failed.
@@ -332,6 +395,16 @@ namespace BeauRoutine
         {
             while(m_State == State.Uninitialized)
                 yield return null;
+        }
+
+        private void OnProphetStopped()
+        {
+            Fail(Future.FailureType.RoutineStopped);
+        }
+
+        private void InvokeFailure(Action<Future.Failure> inFailure)
+        {
+            inFailure(m_Failure);
         }
 
         static public implicit operator T(Future<T> inValue)
