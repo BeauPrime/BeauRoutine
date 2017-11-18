@@ -350,7 +350,7 @@ namespace BeauRoutine
                                 }
                             }
 
-                            AudioClip audioClip = inbCompressed ? inWWW.GetAudioClipCompressed() : inWWW.GetAudioClip();
+                            AudioClip audioClip = inbCompressed ? inWWW.GetAudioClipCompressed(false) : inWWW.GetAudioClip(false);
                             if (audioClip == null)
                                 inFuture.Fail(Future.FailureType.Unknown, "Clip is null");
                             else
