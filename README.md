@@ -434,9 +434,9 @@ Time scale also applies to any Tweens you're currently running.
 
 In total, there are four time scale values that can apply to a BeauRoutine.
 * ``Routine.TimeScale`` (alias for ``Time.timeScale``)
-* Time scale for a BeauRoutine
-* Per-object time scales (see RoutineIdentity)
-* Per-group time scales (see Groups)
+* Per-group time scales (see [Groups](#groups))
+* Per-object time scales (see [Routine Identity](#routine-identity))
+* Time scale for an individual BeauRoutine
 
 You can calculate the total time scale that will be applied to BeauRoutines on a given object by calling ``Routine.CalculateTimeScale``. This is the accumulation of ``Routine.TimeScale``, the per-object time scale, and the per-group time scale.
 
@@ -517,9 +517,7 @@ Routine.ResetGroupTimeScale( (int)ObjectGroup.Gameplay ); // Resetting resets to
 
 // While a single group is referenced by index, the PauseGroups and ResumeGroups
 // functions take in a bitmask of all affected groups.
-// You'll need to transform the group index into a bitmask.
-int groupMask = 2 << (int)ObjectGroup.Gameplay;
-groupMask |= 2 << (int)ObjectGroup.UI;
+int groupMask = Routine.GetGroupMask( (int)ObjectGroup.Gameplay, (int)ObjectGroup.UI );
 
 // You can pause and resume multiple groups at a time.
 Routine.PauseGroups( groupMask );
@@ -821,6 +819,14 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.Combine`` | Runs multiple coroutines concurrently, and completes all. |
 | ``Routine.Race`` | Runs multiple coroutines concurrently, and stops when one expires. |
 | ``Routine.Immediately `` | Executes the given coroutine immediately after yielding into it. |
+| **Groups** | |
+| ``Routine.PauseGroups`` | Pauses all BeauRoutines in the given groups |
+| ``Routine.ResumeGroups`` | Resumes all BeauRoutines in the given groups |
+| ``Routine.GetGroupPaused`` | Returns if the given group is paused |
+| ``Routine.GetGroupTimeScale`` | Returns the time scale for the given group |
+| ``Routine.SetGroupTimeScale`` | Sets the time scale for the given group |
+| ``Routine.ResetGroupTimeScale`` | Resets the time scale for the given group |
+| ``Routine.GetGroupMask`` | Returns the bitmask for the given groups |
 
 ### Routine Extensions
 

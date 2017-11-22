@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
- * Date:    8 Oct 2017
+ * Date:    16 Oct 2017
  * 
  * File:    Future.Shortcuts.cs
  * Purpose: Shortcut methods for creating Futures for specific tasks.
@@ -12,9 +12,6 @@ using UnityEngine;
 
 namespace BeauRoutine
 {
-    /// <summary>
-    /// Static methods for dealing with Futures.
-    /// </summary>
     static public partial class Future
     {
         /// <summary>

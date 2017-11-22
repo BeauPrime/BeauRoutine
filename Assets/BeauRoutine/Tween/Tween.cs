@@ -60,6 +60,7 @@ namespace BeauRoutine
         private bool m_Instant;
 
         // Events
+        private Action m_OnStart;
         private Action<float> m_OnUpdate;
         private Action m_OnComplete;
 
@@ -231,6 +232,15 @@ namespace BeauRoutine
         #region Events
 
         /// <summary>
+        /// Registers a function to be called on start.
+        /// </summary>
+        public Tween OnStart(Action inStartFunction)
+        {
+            m_OnStart += inStartFunction;
+            return this;
+        }
+
+        /// <summary>
         /// Registers a function to be called every update.
         /// </summary>
         public Tween OnUpdate(Action<float> inUpdateFunction)
@@ -293,6 +303,9 @@ namespace BeauRoutine
             m_CurrentPercent = 0;
             m_State = State.Run;
             m_TweenData.OnTweenStart();
+
+            if (m_OnStart != null)
+                m_OnStart();
         }
 
         // Called when the tween ends.
@@ -389,7 +402,7 @@ namespace BeauRoutine
             float curvedPercent = Evaluate(basePercent);
             m_TweenData.ApplyTween(curvedPercent);
             if (m_OnUpdate != null)
-                m_OnUpdate(basePercent);
+                m_OnUpdate(curvedPercent);
             if (!bAlive)
                 End();
             return bAlive;
@@ -554,6 +567,7 @@ namespace BeauRoutine
             m_Curve = Curve.Linear;
             m_WaveFunc = default(Wave);
             m_NumLoops = 0;
+            m_OnStart = null;
             m_OnUpdate = null;
             m_OnComplete = null;
 

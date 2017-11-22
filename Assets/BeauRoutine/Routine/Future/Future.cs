@@ -94,6 +94,46 @@ namespace BeauRoutine
         {
             return new Future<T>(inCompleteCallback, inFailureCallback);
         }
+
+        /// <summary>
+        /// Creates an already-completed Future. 
+        /// </summary>
+        static public Future<T> Completed<T>(T inValue)
+        {
+            Future<T> future = new Future<T>();
+            future.Complete(inValue);
+            return future;
+        }
+
+        /// <summary>
+        /// Creates an already-failed Future. 
+        /// </summary>
+        static public Future<T> Failed<T>()
+        {
+            Future<T> future = new Future<T>();
+            future.Fail();
+            return future;
+        }
+
+        /// <summary>
+        /// Creates an already-failed Future. 
+        /// </summary>
+        static public Future<T> Failed<T>(FailureType inType)
+        {
+            Future<T> future = new Future<T>();
+            future.Fail(inType);
+            return future;
+        }
+
+        /// <summary>
+        /// Creates an already-failed Future. 
+        /// </summary>
+        static public Future<T> Failed<T>(FailureType inType, object inArg)
+        {
+            Future<T> future = new Future<T>();
+            future.Fail(inType, inArg);
+            return future;
+        }
     }
 
     /// <summary>
@@ -147,6 +187,10 @@ namespace BeauRoutine
             m_CallbackFailWithArgs = inFailureCallback;
         }
 
+        /// <summary>
+        /// Cancels the Future if not already completed or failed,
+        /// and cleans up references.
+        /// </summary>
         public void Dispose()
         {
             Cancel();

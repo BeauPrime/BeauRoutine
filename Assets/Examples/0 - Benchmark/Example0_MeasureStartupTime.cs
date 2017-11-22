@@ -6,7 +6,7 @@ using System.Diagnostics;
 
 public class Example0_MeasureStartupTime : MonoBehaviour
 {
-    private readonly int[] ROUTINE_COUNTS = new int[] { 2000, 5000, 16000, 64000 };
+    private readonly int[] ROUTINE_COUNTS = new int[] { 2000, 5000, 10000, 16000, 64000 };
     private readonly int SAMPLE_COUNT = 4;
 
     private IEnumerator Start()

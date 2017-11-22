@@ -53,7 +53,7 @@ namespace BeauRoutine.Internal
         private string m_Name;
 
         // HACK: Public variable instead of private here.
-        // Unity's compiler won't inline accessors,
+        // Unity's compiler won't always inline accessors,
         // so this saves a tiny bit of time when sorting
         public int Priority = 0;
 
@@ -110,7 +110,7 @@ namespace BeauRoutine.Internal
             if (inChained)
                 m_Chained = m_HostedByManager = true;
 
-            if (!inChained && ReferenceEquals(inHost, Manager))
+            if (!inChained && ReferenceEquals(inHost, Manager.Host))
                 m_HostedByManager = true;
 
             if (!ReferenceEquals(m_HostIdentity, null))
@@ -561,6 +561,14 @@ namespace BeauRoutine.Internal
         {
             CheckAutoName();
             return m_Name == inName;
+        }
+
+        /// <summary>
+        /// Returns if the routine has the given group.
+        /// </summary>
+        public bool HasGroups(int inGroupMask)
+        {
+            return m_HasIdentity && ((1 << m_HostIdentity.Group) & inGroupMask) != 0;
         }
 
         // Returns if the Fiber has been paused.

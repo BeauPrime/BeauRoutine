@@ -7,6 +7,10 @@
  * Purpose: Manages BeauRoutine lifecycle.
 */
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#define DEVELOPMENT
+#endif
+
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -48,7 +52,7 @@ namespace BeauRoutine.Internal
                 s_Instance.QueueShutdown();
             }
         }
-        
+
         /// <summary>
         /// Returns the Manager singleton.
         /// </summary>
@@ -165,7 +169,7 @@ namespace BeauRoutine.Internal
             for (int i = 0; i < Routine.MAX_GROUPS; ++i)
                 m_QueuedGroupTimescale[i] = Frame.GroupTimeScale[i] = 1.0f;
 
-#if UNITY_EDITOR
+#if DEVELOPMENT
             DebugMode = true;
 #endif
         }

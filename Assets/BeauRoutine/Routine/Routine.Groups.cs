@@ -97,5 +97,24 @@ namespace BeauRoutine
                 m.SetTimescale(inGroup, 1.0f);
             }
         }
+
+        /// <summary>
+        /// Returns the group mask for the given group.
+        /// </summary>
+        static public int GetGroupMask(int inGroup)
+        {
+            return 1 << inGroup;
+        }
+
+        /// <summary>
+        /// Returns the group mask for the given groups.
+        /// </summary>
+        static public int GetGroupMask(int inGroupA, params int[] inGroups)
+        {
+            int mask = 1 << inGroupA;
+            for (int i = 0; i < inGroups.Length; ++i)
+                mask |= 1 << inGroups[i];
+            return mask;
+        }
     }
 }

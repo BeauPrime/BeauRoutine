@@ -59,6 +59,10 @@ public class Example2_Script : MonoBehaviour
                 inTween.Ease(Curve.Smooth);
         }
 
+        inTween.OnStart(() => { Debug.Log("Tween has started!"); });
+        inTween.OnComplete(() => { Debug.Log("Tween has completed!"); });
+        inTween.OnUpdate((f) => { Debug.Log("Tween is at " + f * 100f + "%"); });
+
         return inTween;
     }
 }

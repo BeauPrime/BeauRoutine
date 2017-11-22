@@ -31,6 +31,16 @@ namespace BeauRoutine.Internal
         }
     }
 
+    public struct GroupQuery : ITableQuery
+    {
+        public int GroupMask;
+
+        public bool Validate(Fiber inFiber)
+        {
+            return inFiber.HasGroups(GroupMask);
+        }
+    }
+
     public struct MonoBehaviourQuery : ITableQuery
     {
         public MonoBehaviour Host;
@@ -52,6 +62,17 @@ namespace BeauRoutine.Internal
         }
     }
 
+    public struct MonoBehaviourGroupQuery : ITableQuery
+    {
+        public MonoBehaviour Host;
+        public int GroupMask;
+
+        public bool Validate(Fiber inFiber)
+        {
+            return inFiber.HasHost(Host) && inFiber.HasGroups(GroupMask);
+        }
+    }
+
     public struct GameObjectQuery : ITableQuery
     {
         public GameObject Host;
@@ -70,6 +91,17 @@ namespace BeauRoutine.Internal
         public bool Validate(Fiber inFiber)
         {
             return inFiber.HasHost(Host) && inFiber.HasName(Name);
+        }
+    }
+
+    public struct GameObjectGroupQuery : ITableQuery
+    {
+        public GameObject Host;
+        public int GroupMask;
+
+        public bool Validate(Fiber inFiber)
+        {
+            return inFiber.HasHost(Host) && inFiber.HasGroups(GroupMask);
         }
     }
 }

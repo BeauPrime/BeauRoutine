@@ -62,6 +62,26 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Stops currently running routines with the given name.
+        /// </summary>
+        static public void Stop(string inName)
+        {
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new StopOperation());
+        }
+
+        /// <summary>
+        /// Stops all currently running routines that match up with the given group mask.
+        /// </summary>
+        static public void Stop(int inGroupMask)
+        {
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new GroupQuery() { GroupMask = inGroupMask }, new StopOperation());
+        }
+
+        /// <summary>
         /// Stops all currently running routines on the given host.
         /// </summary>
         static public void StopAll(MonoBehaviour inHost)
@@ -79,6 +99,16 @@ namespace BeauRoutine
             Manager m = GetManager();
             if (m != null)
                 m.Fibers.RunQueryAll(new MonoBehaviourNameQuery() { Host = inHost, Name = inName }, new StopOperation());
+        }
+
+        /// <summary>
+        /// Stops currently running routines on the given host in the given groups.
+        /// </summary>
+        static public void Stop(MonoBehaviour inHost, int inGroupMask)
+        {
+            Manager m = GetManager();
+            if (m != null)
+                m.Fibers.RunQueryAll(new MonoBehaviourGroupQuery() { Host = inHost, GroupMask = inGroupMask }, new StopOperation());
         }
 
         /// <summary>
@@ -102,13 +132,13 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Stops currently running routines with the given name.
+        /// Stops currently running routines on the given host in the given groups.
         /// </summary>
-        static public void Stop(string inName)
+        static public void Stop(GameObject inHost, int inGroupMask)
         {
             Manager m = GetManager();
             if (m != null)
-                m.Fibers.RunQueryAll(new NameQuery() { Name = inName }, new StopOperation());
+                m.Fibers.RunQueryAll(new GameObjectGroupQuery() { Host = inHost, GroupMask = inGroupMask }, new StopOperation());
         }
 
         #endregion
