@@ -214,6 +214,14 @@ namespace BeauRoutine.Internal
         }
 
         /// <summary>
+        /// Returns if the Fiber is currently paused.
+        /// </summary>
+        public bool GetPaused()
+        {
+            return m_Paused;
+        }
+
+        /// <summary>
         /// Requests the Fiber stop itself.
         /// </summary>
         public void Stop()

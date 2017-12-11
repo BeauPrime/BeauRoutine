@@ -171,6 +171,14 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitSeconds(float inSeconds)
         {
+            return Routine.Immediately(WaitSecondsImpl(inSeconds));
+        }
+
+        // Implements waiting for a given number of seconds
+        // This is more accurate than just yielding those seconds in WaitSeconds,
+        // since otherwise there is a frame delay
+        static private IEnumerator WaitSecondsImpl(float inSeconds)
+        {
             yield return inSeconds;
         }
 
@@ -463,7 +471,7 @@ namespace BeauRoutine
         {
             if (inSeconds > 0)
                 yield return inSeconds;
-            yield return inRoutine;
+            yield return Routine.Immediately(inRoutine);
         }
 
         #endregion
@@ -597,7 +605,7 @@ namespace BeauRoutine
         static private IEnumerator LoopedRoutine(Func<IEnumerator> inRoutine)
         {
             while(true)
-                yield return inRoutine();
+                yield return Routine.Immediately(inRoutine());
         }
 
         #endregion

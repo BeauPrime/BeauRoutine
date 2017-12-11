@@ -19,9 +19,18 @@ namespace BeauRoutine
     public interface IFuture : IDisposable
     {
         bool IsDone();
+        
         bool IsComplete();
+        
         bool IsFailed();
+        void Fail();
+        void Fail(object inArg);
+        void Fail(Future.FailureType inType);
+        void Fail(Future.FailureType inType, object inArg);
+
         bool IsCancelled();
+        void Cancel();
+
         IEnumerator Wait();
     }
 
@@ -312,6 +321,15 @@ namespace BeauRoutine
         public void Fail()
         {
             Fail(Future.FailureType.Unknown, null);
+        }
+
+        /// <summary>
+        /// Fails the Future, or throws an exception
+        /// if the Future has already been set or failed.
+        /// </summary>
+        public void Fail(object inArg)
+        {
+            Fail(Future.FailureType.Unknown, inArg);
         }
 
         /// <summary>

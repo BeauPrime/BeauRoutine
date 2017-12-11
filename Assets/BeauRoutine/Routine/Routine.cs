@@ -105,6 +105,21 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Returns if the routine is paused.
+        /// </summary>
+        public bool GetPaused()
+        {
+            Manager m = GetManager();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    return fiber.GetPaused();
+            }
+            return false;
+        }
+
+        /// <summary>
         /// Stops the routine and clears the pointer.
         /// </summary>
         public Routine Stop()
