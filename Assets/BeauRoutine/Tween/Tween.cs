@@ -21,6 +21,8 @@ namespace BeauRoutine
     /// </summary>
     public sealed partial class Tween : IEnumerator, IDisposable
     {
+        private const int LOOPING_FOREVER = -1;
+
         private enum State : byte
         {
             Begin,
@@ -45,6 +47,12 @@ namespace BeauRoutine
             ForceEndNoWave
         }
 
+        private enum StartMode : byte
+        {
+            Restart,
+            Randomize
+        }
+
         // Tween settings
         private LoopMode m_Mode;
         private Curve m_Curve;
@@ -52,6 +60,8 @@ namespace BeauRoutine
         private AnimationCurve m_AnimCurve;
         private Wave m_WaveFunc;
         private int m_NumLoops;
+        private StartMode m_StartMode;
+        private float m_StartTime;
 
         // Flags
         private bool m_MirrorCurve;
@@ -101,7 +111,7 @@ namespace BeauRoutine
         public Tween Loop()
         {
             m_Mode = LoopMode.Loop;
-            m_NumLoops = 0;
+            m_NumLoops = LOOPING_FOREVER;
             return this;
         }
 
@@ -135,7 +145,7 @@ namespace BeauRoutine
         public Tween YoyoLoop(bool inbMirrored = false)
         {
             m_Mode = LoopMode.YoyoLoop;
-            m_NumLoops = 0;
+            m_NumLoops = LOOPING_FOREVER;
             m_MirrorCurve = inbMirrored;
             return this;
         }
@@ -169,8 +179,6 @@ namespace BeauRoutine
         /// <summary>
         /// Sets the tween to use the given custom easing curve.
         /// </summary>
-        /// <param name="inCurve"></param>
-        /// <returns></returns>
         public Tween Ease(AnimationCurve inCurve)
         {
             m_Curve = Curve.Linear;
@@ -225,6 +233,56 @@ namespace BeauRoutine
         {
             m_FromMode = false;
             return this;
+        }
+
+        /// <summary>
+        /// Randomizes the starting percent of this Tween.
+        /// </summary>
+        public Tween Randomize()
+        {
+            m_StartMode = StartMode.Randomize;
+            return this;
+        }
+
+        /// <summary>
+        /// Starts at the given time, in seconds, in the tween.
+        /// </summary>
+        public Tween StartsAt(float inTime)
+        {
+            m_StartMode = StartMode.Restart;
+            m_StartTime = Mathf.Max(inTime, 0);
+            return this;
+        }
+
+        /// <summary>
+        /// Delays the tween by the given number of seconds.
+        /// </summary>
+        public Tween DelayBy(float inDelay)
+        {
+            m_StartMode = StartMode.Restart;
+            m_StartTime = -Mathf.Max(inDelay, 0);
+            return this;
+        }
+
+        /// <summary>
+        /// Total duration of the tween, in seconds.
+        /// </summary>
+        public float TotalDuration()
+        {
+            float duration = m_PercentIncrement == 0 ? 0 : 1 / m_PercentIncrement;
+
+            switch(m_Mode)
+            {
+                case LoopMode.Loop:
+                    return m_NumLoops == LOOPING_FOREVER ? float.PositiveInfinity : duration * m_NumLoops;
+                case LoopMode.Yoyo:
+                    return duration * 2;
+                case LoopMode.YoyoLoop:
+                    return m_NumLoops == LOOPING_FOREVER ? float.PositiveInfinity : duration * m_NumLoops * 2;
+                case LoopMode.Single:
+                default:
+                    return duration;
+            }
         }
 
         #endregion
@@ -300,7 +358,30 @@ namespace BeauRoutine
         // Called when the tween starts.
         private void Start()
         {
-            m_CurrentPercent = 0;
+            if (m_StartMode == StartMode.Randomize)
+            {
+                m_CurrentPercent = UnityEngine.Random.value;
+                switch(m_Mode)
+                {
+                    case LoopMode.Yoyo:
+                    case LoopMode.YoyoLoop:
+                        m_Reversed = UnityEngine.Random.value < 0.5f;
+                        break;
+
+                    default:
+                        m_Reversed = false;
+                        break;
+                }
+
+                if (m_NumLoops > 0)
+                    m_NumLoops = UnityEngine.Random.Range(1, m_NumLoops + 1);
+            }
+            else
+            {
+                m_CurrentPercent = 0;
+                m_Reversed = false;
+            }
+
             m_State = State.Run;
             m_TweenData.OnTweenStart();
 
@@ -349,7 +430,7 @@ namespace BeauRoutine
 
         private bool OnLoop(int inNumLoops)
         {
-            if (m_NumLoops > 0)
+            if (m_NumLoops >= 0)
             {
                 m_NumLoops -= inNumLoops;
                 return m_NumLoops > 0;
@@ -376,10 +457,10 @@ namespace BeauRoutine
             // we're hitting the lower bound again
             if (!nextReversed)
             {
-                if (m_NumLoops > 0)
+                if (m_NumLoops >= 0)
                 {
                     m_NumLoops -= inNumLoops;
-                    if (m_NumLoops > 0)
+                    if (m_NumLoops >= 0)
                     {
                         m_Reversed = false;
                         return true;
@@ -406,6 +487,15 @@ namespace BeauRoutine
             if (!bAlive)
                 End();
             return bAlive;
+        }
+
+        private void OnInstantComplete()
+        {
+            float curvedPercent = Evaluate(1);
+            m_TweenData.ApplyTween(curvedPercent);
+            if (m_OnUpdate != null)
+                m_OnUpdate(curvedPercent);
+            End();
         }
 
         private float Evaluate(float inPercent)
@@ -469,6 +559,17 @@ namespace BeauRoutine
 
         public bool MoveNext()
         {
+            float deltaTime = Routine.DeltaTime;
+
+            if (m_StartTime < 0)
+            {
+                float increment = Mathf.Min(deltaTime, -m_StartTime);
+                m_StartTime += increment;
+                deltaTime -= increment;
+                if (m_StartTime < 0)
+                    return true;
+            }
+
             if (m_State == State.Begin)
             {
                 Start();
@@ -476,13 +577,19 @@ namespace BeauRoutine
                 if (m_Instant)
                     return OnInstant();
 
-                m_TweenData.ApplyTween(Evaluate(0));
+                if (m_StartTime <= 0)
+                    m_TweenData.ApplyTween(Evaluate(0));
             }
 
             switch (m_State)
             {
                 case State.Run:
-                    float deltaTime = Routine.DeltaTime;
+                    if (m_StartTime > 0)
+                    {
+                        deltaTime = m_StartTime;
+                        m_StartTime = 0;
+                    }
+
                     if (deltaTime <= 0)
                         return true;
 
@@ -575,6 +682,8 @@ namespace BeauRoutine
             m_MirrorCurve = false;
             m_FromMode = false;
             m_Instant = false;
+            m_StartMode = StartMode.Restart;
+            m_StartTime = 0;
 
             m_CurrentPercent = 0;
             m_PercentIncrement = 0;

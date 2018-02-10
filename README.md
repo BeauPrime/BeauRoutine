@@ -316,6 +316,11 @@ tween.Wave( new Wave(Wave.Function.Sin, 2.0f) ); // Same effect as previous line
 // You can also change the duration.
 tween.Duration(2.0f);
 
+// You can delay a tween or make it start from a specific time.
+// Note that these are mutually exclusive operations.
+tween.Delay(2.0f); // Will not start for 2 seconds.
+tween.StartsAt(2.0f); // Will fast forward 2 seconds when starting.
+
 // These can be chained together for a more compressed and fluent syntax.
 Tween tween = Tween.Float(...).Ease(Curve.Smooth).YoyoLoop();
 ```
@@ -526,15 +531,16 @@ Routine.ResumeGroups( groupMask );
 
 It's important to note that a BeauRoutine can only belong to a single group.  This is to prevent any unwanted timescaling behavior.
 
-### Precise Timing
+### Inlined Coroutines
 
-Normally, yielding into a nested coroutine will wait until the next frame to begin executing the nested coroutine. BeauRoutine provides a way of immediately entering and executing a nested coroutine by wrapping your coroutine in a ``Routine.Immediately`` call. This is useful if you need to time your coroutines in a very precise manner.
+Normally, yielding into a nested coroutine will wait until the next frame to begin executing the nested coroutine. BeauRoutine provides a way of immediately entering and executing a nested coroutine by wrapping your coroutine in a ``Routine.Inline`` call. Inlined coroutines, once finished, will also immediately resume execution on the coroutine that yielded it, skipping the one frame delay. This is useful if you need to time your coroutines in a very precise manner.
 
 ```csharp
 IEnumerator RootCoroutine()
 {
 	Debug.Log("This is the RootCoroutine log");
 	yield return Routine.Immediately(NestedCoroutine());
+	Debug.Log("This will log on the same frame as the NestedCoroutine log");
 }
 
 IEnumerator NestedCoroutine()
@@ -544,7 +550,7 @@ IEnumerator NestedCoroutine()
 }
 ```
 
-There is a similar frame delay when exiting a nested coroutine. This can be avoided by yielding ``Routine.Command.BreakAndResume`` instead of letting your coroutine exit normally. This will immediately exit the coroutine and resume execution on the coroutine that yielded into it.
+You can also avoid the one frame delay when exiting a nested coroutine by yielding ``Routine.Command.BreakAndResume`` instead of letting your coroutine exit normally.
 
 ```csharp
 IEnumerator RootCoroutine()
@@ -560,7 +566,7 @@ IEnumerator NestedCoroutine()
 }
 ```
 
-Be careful when using these features. Immediate execution offers more precise timing but runs the risk of executing too much in a single frame if overused.  
+Be careful when using these features. Inlined execution offers more precise timing but runs the risk of executing too much in a single frame if overused.
 
 ### Custom Tweens
 
@@ -818,7 +824,7 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.PerSecond`` | Calls a function the given number of times per second. |
 | ``Routine.Combine`` | Runs multiple coroutines concurrently, and completes all. |
 | ``Routine.Race`` | Runs multiple coroutines concurrently, and stops when one expires. |
-| ``Routine.Immediately `` | Executes the given coroutine immediately after yielding into it. |
+| ``Routine.Inline `` | Executes the given coroutine immediately after yielding into it. |
 | **Groups** | |
 | ``Routine.PauseGroups`` | Pauses all BeauRoutines in the given groups |
 | ``Routine.ResumeGroups`` | Resumes all BeauRoutines in the given groups |
@@ -827,6 +833,39 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.SetGroupTimeScale`` | Sets the time scale for the given group |
 | ``Routine.ResetGroupTimeScale`` | Resets the time scale for the given group |
 | ``Routine.GetGroupMask`` | Returns the bitmask for the given groups |
+
+### Routine Functions
+
+These functions can be called directly on a Routine handle.
+
+| Function | Description |
+| -------- | ----------- |
+| **Pausing** |
+| ``Pause`` | Pauses the BeauRoutine. |
+| ``Resume`` | Resumes the BeauRoutine. |
+| ``GetPaused`` | Returns if the BeauRoutine is paused. |
+| **Stopping** | |
+| ``Stop`` | Stops the BeauRoutine. |
+| ``Replace`` | Stops the BeauRoutine and replaces it with another one. |
+| **Time Scaling** | |
+| ``GetTimeScale`` | Returns the per-BeauRoutine timescale. |
+| ``SetTimeScale`` | Sets per-BeauRoutine timescale. |
+| ``DisableObjectTimeScale`` | Ignores per-object timescale on this BeauRoutine. |
+| ``EnableObjectTimeScale`` | [Default] Uses per-object timescale on this BeauRoutine. |
+| **Execution**| |
+| ``ExecuteWhileDisabled`` | BeauRoutine will continue to execute while its host is disabled. |
+| ``ExecuteWhileEnabled`` | [Default] BeauRoutine will not execute while its host is disabled. |
+| ``GetPriority`` | Returns the execution priority of the BeauRoutine. |
+| ``SetPriority`` | Sets the execution priority of the BeauRoutine. Greater priority BeauRoutines are executed first. |
+| **Name** | |
+| ``GetName`` | Gets the name of the BeauRoutine. If a name has not been set, this will return the name of the coroutine provided when starting the BeauRoutine. |
+| ``SetName`` | Sets the name of the BeauRoutine. |
+| **Events** | |
+| ``OnComplete`` | Registers a function to execute once the BeauRoutine completes naturally. |
+| ``OnStop`` | Registers a function to execute once the BeauRoutine completes prematurely. |
+| **Miscellaneous**| |
+| ``Exists`` | Returns if this BeauRoutine has not been stopped. |
+| ``Wait`` | Returns a coroutine that waits for the given BeauRoutine to end. |
 
 ### Routine Extensions
 
@@ -857,6 +896,9 @@ BeauRoutine contains methods for creating Futures for simple tasks.
 | ``Future.Download.AudioClip`` | AudioClip | Downloads and completes with an audio clip from a WWW. |
 | **Loading Resources** | |
 | ``Future.Resources.LoadAsync<T>`` | T (Object) | Wrapper for Unity's ``Resources.LoadAsync``. Loads an asset from the  Resources folder asynchronously. |
+| **Function Calls** | |
+| ``Future.Call.Func<T>`` | T | Completes with the return value of the given function. |
+| ``Future.Call.Resolve<T>`` | T | Creates and passes a future into the given function for it to complete or fail. |
 
 ### Tween Shortcuts
 
@@ -916,3 +958,72 @@ Tween extension methods currently exist for the following types:
 | **BeauRoutine** | | |
 | Routine | Time Scale | ``TimeScaleTo`` |
 | RoutineIdentity | Time Scale | ``TimeScaleTo`` |
+
+### Tween Modifiers
+
+These functions will modify Tween objects. Do not call once the Tween has started.
+
+| Function | Description |
+| -------- | ----------- |
+| **Modifying Output** | |
+| ``Ease`` | Applies a smoothing function or AnimationCurve to the Tween. |
+| ``Wave`` | Applies a wave function to the Tween. |
+| ``From`` | Start and end values are reversed. Tween runs from end to start. |
+| ``To`` | [Default] Tween runs from start to end. |
+| **Looping** | |
+| ``Loop`` | Tween will loop, with an optional number of loops. |
+| ``Yoyo`` | Tween will reach the end value, then repeat from end to start. |
+| ``YoyoLoop`` | Tween will yoyo and loop, with an optional number of loops. |
+| ``Once`` | [Default] Tween will play once. |
+| **Timing** | |
+| ``Duration`` | Sets the duration, in seconds, of a single Tween (from 0 to 1). |
+| ``Randomize`` | Starts the Tween from a random position in its timeline. |
+| ``StartsAt`` | Starts the Tween from a set position in its timeline. |
+| ``DelayBy`` | Starts the Tween after a certain amount of seconds have elapsed. |
+| **Events** | |
+| ``OnStart`` | Registers a function called when the Tween starts up. |
+| ``OnUpdate`` | Registers a function called every frame while the Tween is running. |
+| ``OnComplete`` | Registers a function called when the Tween ends. |
+| **Cancel Behavior** | |
+| ``RevertOnCancel`` | Tween will revert back to starting value if cancelled mid-execution. |
+| ``ForceOnCancel`` | Tween will skip to its end value if cancelled mid-execution. |
+| ``KeepOnCancel`` | [Default] Tween will keep its current value if cancelled mid-execution. |
+
+### Utilities
+
+#### Classes
+
+| Class | Description |
+| ----- | ----- |
+| ``TransformState`` | Records the state of a transform's properties in the given space. Can also be reapplied to transforms. Useful for resetting a transform to its original state. |
+| ``RectTransformState`` | Records the state of a RectTransform's properties. Can also be reapplied to RectTransforms. Useful for resetting a transform to its original state, particularly before or after an animation. |
+
+#### Functions
+
+| Function | Extension Method? | Description |
+| -------- | ----------------- | ----------- |
+| **TweenUtil** | | |
+| ``TweenUtil.Evaluate`` | ``Curve`` | Evaluates an easing function for a given percentage. |
+| ``TweenUtil.Lerp `` | | Returns an interpolation percentage, corrected for delta time. |
+| ``TweenUtil.LerpDecay`` | | Returns a decay multiplier, corrected for delta time. |
+| **TransformUtil** | | 
+| ``TransformUtil.GetPosition`` | ``Transform`` | Returns the position of a transform in the given space along the given axes. |
+| ``TransformUtil.GetPositionAxis`` | ``Transform`` | Returns the position of transform in the given space for the given single axis. |
+| ``Transformutil.SetPosition`` | ``Transform`` | Sets the position of a transform in the given space along the given axes. |
+| ``TransformUtil.GetScale`` | ``Transform`` | Returns the scale of a transform along the given axes. |
+| ``TransformUtil.GetScaleAxis`` | ``Transform`` | Returns the scale of transform for the given single axis. |
+| ``Transformutil.SetScale`` | ``Transform`` | Sets the scale of a transform along the given axes. |
+| ``TransformUtil.GetRotation`` | ``Transform`` | Returns the euler rotation of a transform in the given space along the given axes. |
+| ``TransformUtil.GetRotationAxis`` | ``Transform`` | Returns the euler rotation of transform in the given space for the given single axis. |
+| ``Transformutil.SetRotation`` | ``Transform`` | Sets the euler rotation of a transform in the given space along the given axes. |
+| ``TransformUtil.GetAnchorPos`` | ``RectTransform`` | Returns the anchored position of a RectTransform along the given axes. |
+| ``TransformUtil.GetAnchorPosAxis`` | ``RectTransform`` | Returns the anchored position of a RectTransform for the given single axis. |
+| ``Transformutil.SetAnchorPos`` | ``RectTransform`` | Sets the anchored position of a RectTransform along the given axes. |
+| ``TransformUtil.GetSizeDelta`` | ``RectTransform`` | Returns the sizeDelta of a RectTransform along the given axes. |
+| ``TransformUtil.GetSizeDeltaAxis`` | ``RectTransform`` | Returns the sizeDelta of a RectTransform for the given single axis. |
+| ``Transformutil.SetSizeDeltaPos`` | ``RectTransform`` | Sets the sizeDelta of a RectTransform along the given axes. |
+| **VectorUtil** | | |
+| ``VectorUtil.GetAxis`` | | Returns the value of a vector along the given axis. |
+| ``VectorUtil.CopyFrom`` | | Copies values from one vector to another for the given axes. |
+| ``VectorUtil.Add`` | | Adds one vector to another, applying an optional coefficient to the added vector. |
+| ``VectorUtil.Subtract`` | | Subtracts one vector from another, applying an optional coefficient to the subtracted vector. |

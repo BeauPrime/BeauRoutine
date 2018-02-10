@@ -50,6 +50,46 @@ namespace BeauRoutine
             return (Axis)axisValue;
         }
 
+        /// <summary>
+        /// Converts the RectTransformProperties to an equivalent
+        /// Axis value for anchored positions.
+        /// </summary>
+        static public Axis ToAnchoredPositionAxis(this RectTransformProperties inProperties)
+        {
+            uint axisValue = (uint)inProperties & 0x07;
+            return (Axis)axisValue;
+        }
+
+        /// <summary>
+        /// Converts the RectTransformProperties to an equivalent
+        /// Axis value for size delta.
+        /// </summary>
+        static public Axis ToSizeDeltaAxis(this RectTransformProperties inProperties)
+        {
+            uint axisValue = ((uint)inProperties >> 9) & 0x03;
+            return (Axis)axisValue;
+        }
+
+        /// <summary>
+        /// Converts the RectTransformProperties to an equivalent
+        /// Axis value for scales.
+        /// </summary>
+        static public Axis ToScaleAxis(this RectTransformProperties inProperties)
+        {
+            uint axisValue = ((uint)inProperties >> 11) & 0x07;
+            return (Axis)axisValue;
+        }
+
+        /// <summary>
+        /// Converts the RectTransformProperties to an equivalent
+        /// Axis value for rotations.
+        /// </summary>
+        static public Axis ToRotationAxis(this RectTransformProperties inProperties)
+        {
+            uint axisValue = ((uint)inProperties >> 14) & 0x07;
+            return (Axis)axisValue;
+        }
+
         #endregion
 
         #region Properties

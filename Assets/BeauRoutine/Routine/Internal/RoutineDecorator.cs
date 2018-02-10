@@ -15,7 +15,7 @@ namespace BeauRoutine.Internal
     [Flags]
     public enum RoutineDecoratorFlag
     {
-        Immediate   = 0x001
+        Inline   = 0x001
     }
 
     public struct RoutineDecorator : IEnumerator, IDisposable
@@ -42,6 +42,14 @@ namespace BeauRoutine.Internal
                 ((IDisposable)Enumerator).Dispose();
                 Enumerator = null;
             }
+        }
+
+        public override string ToString()
+        {
+            if (Enumerator == null)
+                return "null";
+
+            return Enumerator.ToString() + " [" + Flags.ToString() + "]";
         }
     }
 }

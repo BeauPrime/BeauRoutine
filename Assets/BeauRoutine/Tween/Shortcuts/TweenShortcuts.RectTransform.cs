@@ -9,6 +9,7 @@
 */
 
 using UnityEngine;
+using BeauRoutine.Internal;
 
 namespace BeauRoutine
 {
@@ -580,6 +581,137 @@ namespace BeauRoutine
         static public Tween PivotTo(this RectTransform inTransform, RectTransform inTarget, TweenSettings inSettings, Axis inAxis = Axis.XY)
         {
             return Tween.Create(new TweenData_RectTransform_PivotDynamic(inTransform, inTarget, inAxis), inSettings);
+        }
+
+        #endregion
+    
+        #region RectTransform
+
+        private sealed class TweenData_RectTransform_RectTransformState : ITweenData
+        {
+            private RectTransform m_Transform;
+            private RectTransformState m_Target;
+            private RectTransformProperties m_Properties;
+
+            private RectTransformState m_Start;
+            private RectTransformState m_Current;
+            private int m_RecordID;
+
+            public TweenData_RectTransform_RectTransformState(RectTransform inTransform, RectTransformState inTarget, RectTransformProperties inProperties)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Properties = inProperties;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new RectTransformState(m_Transform);
+
+                if ((m_Properties & RectTransformProperties.Rotation) != 0)
+                {
+                    EulerStorage.AddTransform(m_Transform);
+                    m_RecordID = m_Transform.GetInstanceID();
+                }
+            }
+
+            public void OnTweenEnd()
+            {
+                if ((m_Properties & RectTransformProperties.Rotation) != 0)
+                    EulerStorage.RemoveTransform(m_RecordID);
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                RectTransformState.Lerp(ref m_Current, m_Start, m_Target, inPercent);
+                m_Current.Apply(m_Transform, m_Properties);
+            }
+
+            public override string ToString()
+            {
+                return "RectTransform: RectTransformState (Fixed)";
+            }
+        }
+
+        private sealed class TweenData_RectTransform_Transform : ITweenData
+        {
+            private RectTransform m_Transform;
+            private RectTransform m_Target;
+            private RectTransformProperties m_Properties;
+
+            private RectTransformState m_Start;
+            private RectTransformState m_End;
+            private RectTransformState m_Current;
+
+            private int m_RecordID;
+
+            public TweenData_RectTransform_Transform(RectTransform inTransform, RectTransform inTarget, RectTransformProperties inProperties)
+            {
+                m_Transform = inTransform;
+                m_Target = inTarget;
+                m_Properties = inProperties;
+                m_End = new RectTransformState(inTarget);
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = new RectTransformState(m_Transform);
+                if ((m_Properties & RectTransformProperties.Rotation) != 0)
+                {
+                    EulerStorage.AddTransform(m_Transform);
+                    m_RecordID = m_Transform.GetInstanceID();
+                }
+            }
+
+            public void OnTweenEnd()
+            {
+                if ((m_Properties & RectTransformProperties.Rotation) != 0)
+                    EulerStorage.RemoveTransform(m_RecordID);
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_End.Refresh(m_Target, m_Properties);
+                RectTransformState.Lerp(ref m_Current, m_Start, m_End, inPercent);
+                m_Current.Apply(m_Transform, m_Properties);
+            }
+
+            public override string ToString()
+            {
+                return "RectTransform: RectTransformState (Dynamic)";
+            }
+        }
+
+        /// <summary>
+        /// Transforms the RectTransform to another RectTransform over time.
+        /// </summary>
+        static public Tween RectTransformTo(this RectTransform inTransform, RectTransformState inTarget, float inTime, RectTransformProperties inProperties = RectTransformProperties.All)
+        {
+            return Tween.Create(new TweenData_RectTransform_RectTransformState(inTransform, inTarget, inProperties), inTime);
+        }
+
+        /// <summary>
+        /// Transforms the RectTransform to another RectTransform over time.
+        /// </summary>
+        static public Tween RectTransformTo(this RectTransform inTransform, RectTransformState inTarget, TweenSettings inSettings, RectTransformProperties inProperties = RectTransformProperties.All)
+        {
+            return Tween.Create(new TweenData_RectTransform_RectTransformState(inTransform, inTarget, inProperties), inSettings);
+        }
+
+        /// <summary>
+        /// Transforms the RectTransform to another RectTransform over time.
+        /// </summary>
+        static public Tween RectTransformTo(this RectTransform inTransform, RectTransform inTarget, float inTime, RectTransformProperties inProperties = RectTransformProperties.All)
+        {
+            return Tween.Create(new TweenData_RectTransform_Transform(inTransform, inTarget, inProperties), inTime);
+        }
+
+        /// <summary>
+        /// Transforms the RectTransform to another RectTransform over time.
+        /// </summary>
+        static public Tween RectTransformTo(this RectTransform inTransform, RectTransform inTarget, TweenSettings inSettings, RectTransformProperties inProperties = RectTransformProperties.All)
+        {
+            return Tween.Create(new TweenData_RectTransform_Transform(inTransform, inTarget, inProperties), inSettings);
         }
 
         #endregion

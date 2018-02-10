@@ -645,6 +645,7 @@ namespace BeauRoutine
             private TransformProperties m_Properties;
 
             private TransformState m_Start;
+            private TransformState m_Current;
             private int m_RecordID;
 
             public TweenData_Transform_TransformState(Transform inTransform, TransformState inTarget, TransformProperties inProperties)
@@ -673,7 +674,8 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                TransformState.Lerp(m_Start, m_Target, inPercent).Apply(m_Transform, m_Properties);
+                TransformState.Lerp(ref m_Current, m_Start, m_Target, inPercent);
+                m_Current.Apply(m_Transform, m_Properties);
             }
 
             public override string ToString()
@@ -690,6 +692,7 @@ namespace BeauRoutine
 
             private TransformState m_Start;
             private TransformState m_End;
+            private TransformState m_Current;
 
             private int m_RecordID;
 
@@ -720,7 +723,8 @@ namespace BeauRoutine
             public void ApplyTween(float inPercent)
             {
                 m_End.Refresh(m_Target, m_Properties);
-                TransformState.Lerp(m_Start, m_End, inPercent).Apply(m_Transform, m_Properties);
+                TransformState.Lerp(ref m_Current, m_Start, m_End, inPercent);
+                m_Current.Apply(m_Transform, m_Properties);
             }
 
             public override string ToString()

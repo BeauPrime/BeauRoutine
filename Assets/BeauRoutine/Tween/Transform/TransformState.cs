@@ -188,5 +188,19 @@ namespace BeauRoutine
             newState.m_Space = inStateA.m_Space;
             return newState;
         }
+
+        /// <summary>
+        /// Interpolates betwen two TransformStates.
+        /// </summary>
+        static public void Lerp(ref TransformState outNewState, TransformState inStateA, TransformState inStateB, float inPercent)
+        {
+            if (inStateA.m_Space != inStateB.m_Space)
+                throw new InvalidOperationException("Cannot interpolate between world and self space TransformStates!");
+
+            outNewState.m_Position = Vector3.LerpUnclamped(inStateA.m_Position, inStateB.m_Position, inPercent);
+            outNewState.m_Scale = Vector3.LerpUnclamped(inStateA.m_Scale, inStateB.m_Scale, inPercent);
+            outNewState.m_Rotation = Quaternion.SlerpUnclamped(inStateA.Rotation, inStateB.Rotation, inPercent).eulerAngles;
+            outNewState.m_Space = inStateA.m_Space;
+        }
     }
 }

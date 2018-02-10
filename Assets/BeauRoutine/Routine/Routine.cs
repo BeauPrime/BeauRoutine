@@ -16,7 +16,7 @@ using UnityEngine;
 namespace BeauRoutine
 {
     /// <summary>
-    /// Custom Coroutine implementation.
+    /// Custom coroutines.
     /// </summary>
     public partial struct Routine : IEquatable<Routine>, IDisposable
     {
@@ -304,7 +304,9 @@ namespace BeauRoutine
             Manager m = GetManager();
             if (m != null)
             {
-                Stop();
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Stop();
                 m_Value = m.RunFiber(null, inNewRoutine).m_Value;
             }
             return this;
@@ -318,7 +320,9 @@ namespace BeauRoutine
             Manager m = GetManager();
             if (m != null)
             {
-                Stop();
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Stop();
                 m_Value = m.RunFiber(inHost, inNewRoutine).m_Value;
             }
             return this;
@@ -332,7 +336,9 @@ namespace BeauRoutine
             Manager m = GetManager();
             if (m != null)
             {
-                Stop();
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.Stop();
                 m_Value = inRoutine.m_Value;
             }
             return this;

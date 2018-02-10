@@ -25,12 +25,15 @@ namespace BeauRoutine
         bool IsFailed();
         void Fail();
         void Fail(object inArg);
+        void Fail(Exception inException);
+        void Fail(Future.Failure inFailure);
         void Fail(Future.FailureType inType);
         void Fail(Future.FailureType inType, object inArg);
 
         bool IsCancelled();
         void Cancel();
 
+        IFuture LinkTo(Routine inRoutine);
         IEnumerator Wait();
     }
 
@@ -213,7 +216,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Returns if the Future has been completed or failed.
+        /// Returns if the Future has been completed, failed, or cancelled.
         /// </summary>
         public bool IsDone() { return m_State != State.Uninitialized; }
 
@@ -336,6 +339,24 @@ namespace BeauRoutine
         /// Fails the Future, or throws an exception
         /// if the Future has already been set or failed.
         /// </summary>
+        public void Fail(Exception inException)
+        {
+            Fail(Future.FailureType.Exception, inException);
+        }
+
+        /// <summary>
+        /// Fails the Future, or throws an exception
+        /// if the Future has already been set or failed.
+        /// </summary>
+        public void Fail(Future.Failure inFailure)
+        {
+            Fail(inFailure.Type, inFailure.Object);
+        }
+
+        /// <summary>
+        /// Fails the Future, or throws an exception
+        /// if the Future has already been set or failed.
+        /// </summary>
         public void Fail(Future.FailureType inType)
         {
             Fail(inType, null);
@@ -428,6 +449,11 @@ namespace BeauRoutine
 
         #endregion
 
+        IFuture IFuture.LinkTo(Routine inRoutine)
+        {
+            return LinkTo(inRoutine);
+        }
+
         /// <summary>
         /// Links a Routine to the Future.
         /// If the Routine stops, the Future will fail.
@@ -461,7 +487,8 @@ namespace BeauRoutine
 
         private void OnProphetStopped()
         {
-            Fail(Future.FailureType.RoutineStopped);
+            if (m_State == State.Uninitialized)
+                Fail(Future.FailureType.RoutineStopped);
         }
 
         private void InvokeFailure(Action<Future.Failure> inFailure)

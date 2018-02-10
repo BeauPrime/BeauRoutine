@@ -50,6 +50,7 @@ namespace BeauRoutine
                     || stateInfo.normalizedTime >= 1 || stateInfo.normalizedTime < initialNormalizedTime)
                     break;
             }
+            yield return Routine.Command.BreakAndResume;
         }
 
         /// <summary>
@@ -57,8 +58,8 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitToCompleteState(this Animator inAnimator, string inStateName, int inLayer = 0)
         {
-            yield return Routine.Immediately(WaitForState(inAnimator, inStateName, inLayer));
-            yield return Routine.Immediately(WaitForNotState(inAnimator, inStateName, inLayer));
+            yield return Routine.Inline(WaitForState(inAnimator, inStateName, inLayer));
+            yield return Routine.Inline(WaitForNotState(inAnimator, inStateName, inLayer));
         }
 
         /// <summary>
@@ -70,7 +71,7 @@ namespace BeauRoutine
             {
                 AnimatorStateInfo stateInfo = inAnimator.GetCurrentAnimatorStateInfo(inLayer);
                 if (stateInfo.IsName(inStateName))
-                    yield break;
+                    yield return Routine.Command.BreakAndResume;
                 yield return null;
             }
         }
@@ -84,7 +85,7 @@ namespace BeauRoutine
             {
                 AnimatorStateInfo stateInfo = inAnimator.GetCurrentAnimatorStateInfo(inLayer);
                 if (!stateInfo.IsName(inStateName))
-                    yield break;
+                    yield return Routine.Command.BreakAndResume;
                 yield return null;
             }
         }
@@ -101,6 +102,8 @@ namespace BeauRoutine
         {
             while (inAudioSource.isPlaying)
                 yield return null;
+            
+            yield return Routine.Command.BreakAndResume;
         }
 
         #endregion
@@ -119,6 +122,8 @@ namespace BeauRoutine
             while(!inParticleSystem.isStopped || inParticleSystem.particleCount > 0)
                 yield return null;
             #endif
+
+            yield return Routine.Command.BreakAndResume;
         }
 
         #endregion

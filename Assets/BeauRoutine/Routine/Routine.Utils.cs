@@ -135,8 +135,9 @@ namespace BeauRoutine
 
         /// <summary>
         /// Executes the enclosed coroutine immediately when yielded.
+        /// Will resume its caller immediately once complete.
         /// </summary>
-        static public IEnumerator Immediately(IEnumerator inEnumerator)
+        static public IEnumerator Inline(IEnumerator inEnumerator)
         {
             RoutineDecorator decorator;
             if (inEnumerator is RoutineDecorator)
@@ -149,7 +150,7 @@ namespace BeauRoutine
                 decorator.Enumerator = inEnumerator;
             }
 
-            decorator.Flags |= RoutineDecoratorFlag.Immediate;
+            decorator.Flags |= RoutineDecoratorFlag.Inline;
             return decorator;
         }
 
@@ -171,7 +172,7 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitSeconds(float inSeconds)
         {
-            return Routine.Immediately(WaitSecondsImpl(inSeconds));
+            return Routine.Inline(WaitSecondsImpl(inSeconds));
         }
 
         // Implements waiting for a given number of seconds
@@ -471,7 +472,7 @@ namespace BeauRoutine
         {
             if (inSeconds > 0)
                 yield return inSeconds;
-            yield return Routine.Immediately(inRoutine);
+            yield return Routine.Inline(inRoutine);
         }
 
         #endregion
@@ -605,7 +606,7 @@ namespace BeauRoutine
         static private IEnumerator LoopedRoutine(Func<IEnumerator> inRoutine)
         {
             while(true)
-                yield return Routine.Immediately(inRoutine());
+                yield return Routine.Inline(inRoutine());
         }
 
         #endregion

@@ -427,14 +427,14 @@ namespace BeauRoutine.Internal
                     {
                         RoutineDecorator decorator = (RoutineDecorator)result;
                         IEnumerator decoratedEnumerator = decorator.Enumerator;
-                        bExecuteStack = (decorator.Flags & RoutineDecoratorFlag.Immediate) != 0;
+                        bExecuteStack = (decorator.Flags & RoutineDecoratorFlag.Inline) != 0;
 
                         if (decoratedEnumerator != null)
                         {
                             // Check if we need to resize the stack
                             if (m_StackPosition == m_StackSize - 1)
                                 Array.Resize(ref m_Stack, m_StackSize *= 2);
-                            m_Stack[++m_StackPosition] = decoratedEnumerator;
+                            m_Stack[++m_StackPosition] = decorator;
                         }
 
                         if (!bExecuteStack)
@@ -492,6 +492,7 @@ namespace BeauRoutine.Internal
                 }
                 else
                 {
+                    bExecuteStack = current is RoutineDecorator && (((RoutineDecorator)current).Flags & RoutineDecoratorFlag.Inline) != 0;
                     m_Stack[m_StackPosition--] = null;
                     ((IDisposable)current).Dispose();
                     if (m_StackPosition < 0)
