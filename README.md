@@ -1,14 +1,14 @@
 # BeauRoutine
 
 **Current Version: 0.9.0**  
-Updated 15 March 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/raw/master/CHANGELOG.md)
+Updated 15 March 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
 
 BeauRoutine also includes a powerful coroutine-driven tweening system. Tweens are highly configurable and easily integrated into a coroutine, allowing you to quickly iterate on programmatic animations and implement visual polish.
 
-**Note**: BeauRoutine is still in development. If you encounter any issues, please either [create an issue in GitHub](https://github.com/FilamentGames/BeauRoutine/issues/new) or [email the developer](mailto:abeauchesne@filamentgames.com).
+**Note**: BeauRoutine is still in development. If you encounter any issues, please either [create an issue in GitHub](https://github.com/FilamentGames/BeauRoutine/issues/new) or [send me an email](mailto:abeauchesne@filamentgames.com).
 
 ### Table of Contents
 1. [Basic Usage](#basic-usage)
