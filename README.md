@@ -1,16 +1,60 @@
 # BeauRoutine
 
-## About
-BeauRoutine is a coroutine framework for Unity3D. Intended as an alternative to Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic.
+**Current Version: 0.9.0**  
+Updated 15 March 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/raw/master/CHANGELOG.md)
 
-BeauRoutine also includes a powerful coroutine-driven tweening system. Fast programmatic animations can be written and configured quickly for rapid prototyping as well as visual polish.
+## About
+BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
+
+BeauRoutine also includes a powerful coroutine-driven tweening system. Tweens are highly configurable and easily integrated into a coroutine, allowing you to quickly iterate on programmatic animations and implement visual polish.
+
+**Note**: BeauRoutine is still in development. If you encounter any issues, please either [create an issue in GitHub](https://github.com/FilamentGames/BeauRoutine/issues/new) or [email the developer](mailto:abeauchesne@filamentgames.com).
 
 ### Table of Contents
 1. [Basic Usage](#basic-usage)
+    * [Installing BeauRoutine](#installing-beauroutine)
+	* [Running a Routine](#running-a-routine)
+	* [Hosting Routines](#hosting-routines)
+	* [Expanded Coroutine Syntax](#expanded-coroutine-syntax)
+	* [Handles](#handles)
+	* [Combine](#combine)
+	* [Race](#race)
+	* [Sequences](#sequences)
 2. [Tweens](#tweens)
+    * [Tweens as Coroutines](#tweens-as-coroutines)
+	* [Modifying a Tween](#modifying-a-tween)
+	* [Value Shortcuts](#value-shortcuts)
+	* [Extension Methods](#extension-methods)
+	* [Mirrored Tweens](#mirrored-tweens)
 3. [Advanced Features](#advanced-features)
+	* [Routine Identity](#routine-identity)
+	* [Time Scale](#time-scale)
+	* [Update Phase](#update-phase)
+	* [Priority](#priority)
+	* [Groups](#groups)
+	* [Inlined Coroutines](#inlined-coroutines)
+	* [Futures](#futures)
+	* [Custom Tweens](#custom-tweens)
+	* [Manual Updates](#manual-updates)
+	* [Debugger](#debugger)
 4. [Tips and Tricks](#tips-and-tricks)
-5. [Reference](#reference)
+5. [Technical Notes](#technical-notes)
+	* [On Starting BeauRoutines and Update Phases](#on-starting-beauroutines-and-update-phases)
+	* [On Stopping BeauRoutines](#on-stopping-beauroutines)
+	* [On Reserved Routine Names](#on-reserved-routine-names)
+	* [On Delta Time](#on-delta-time)
+	* [On Memory Allocation](#on-memory-allocation)
+	* [On Important Differences between BeauRoutines and Unity Coroutines](#on-important-differences-between-beauroutines-and-unity-coroutines)
+6. [Reference](#reference)
+	* [Routine Functions](#routine-functions)
+	* [Routine Utilities](#routine-utilities)
+	* [Routine Extensions](#routine-extensions)
+	* [Global Settings](#global-settings)
+	* [Future Functions](#future-functions)
+	* [Future Utilities](#future-utilities)
+	* [Tween Shortcuts](#tween-shortcuts)
+	* [Tween Modifiers](#tween-modifiers)
+	* [Utilities](#utilities)
 ----------------
 
 ## Basic Usage
@@ -52,9 +96,12 @@ To stop a hosted BeauRoutine, call
 Routine.Stop( this, "MyCoroutine" );
 ```
 
+It is highly recommended you host your BeauRoutines in most cases. In the event of a scene change, an unhosted BeauRoutine will keep executing, which may cause exceptions if your coroutine references objects from the previous scene.
+
 **Note:** Unity's built-in coroutines _will not pause_ while their host is inactive. By default, BeauRoutines _will pause_ in the same circumstances. If you are depending on the default Unity behavior, it is highly recommended you read the [Handles](#handles) section to understand how to enable it.
 
 ### Expanded Coroutine Syntax
+
 BeauRoutines allow for more flexibility when writing your coroutine logic.
 
 ```csharp
@@ -73,6 +120,7 @@ public IEnumerator MyCustomBeauRoutine()
 	// WWW objects, and CustomYieldInstructions.
 	yield return new WWW(...);
 	yield return new WaitForSeconds(2.0f);
+	yield return new WaitForEndOfFrame();
 	
 	// You can also yield commands that will
 	// modify the state of the currently executing
@@ -100,6 +148,8 @@ public bool CanProceed()
 	...
 }
 ```
+
+It is recommended you use ``Routine.DeltaTime`` in place of any usages of ``Time.deltaTime`` in your coroutines, as the former takes into account BeauRoutine-specific time scaling. See [Time Scale](#time-scale) for more information.
 
 ### Handles
 
@@ -158,6 +208,14 @@ myRoutine.ExecuteWhileDisabled();
 
 // You can also restore the default BeauRoutine pausing behavior.
 myRoutine.ExecuteWhileEnabled();
+
+// You can set when this BeauRoutine is updated.
+myRoutine.SetUpdatePhase(RoutinePhase.FixedUpdate);
+
+// You can delay the routine by a certain number of seconds.
+// Note that this is cumulative and affected by time scale.
+// See the section on Time Scale for more information.
+myRoutine.DelayBy(2f);
 ```
 
 Routine objects can also be used to start BeauRoutines.
@@ -203,6 +261,7 @@ Routine.Stop ("aDifferentName" ); // stops explicitlyNamed
 ```
 
 ### Combine
+
 ``Routine.Combine`` is a coroutine that executes multiple coroutines concurrently. This can be incredibly useful for programmatic animations or syncing operations between objects. It concludes when all the given coroutines have either concluded or halted.
 
 ```csharp
@@ -249,7 +308,8 @@ public IEnumerator Operation2()
 ```
 
 ### Sequences
-A ``Sequence`` is a customizable sequence of coroutines, function calls, and delays. Instead of creating a new function for every combination of coroutines, you can instead construct a coroutine out of common parts using a simple fluent interface.
+
+A ``Sequence`` is a customizable sequence of coroutines, function calls, and delays. Instead of creating a new function for every combination of coroutines, you can instead construct a coroutine out of common parts.
 
 ```csharp
 public void Awake()
@@ -270,7 +330,7 @@ public IEnumerator FirstBeauRoutine()
 
 ## Tweens
 
-### Tweens as coroutines
+### Tweens as Coroutines
 In BeauRoutine, tweens are implemented as a special kind of coroutine called ``Tween``.  They perform animation over time.
 
 ```csharp
@@ -318,7 +378,7 @@ tween.Duration(2.0f);
 
 // You can delay a tween or make it start from a specific time.
 // Note that these are mutually exclusive operations.
-tween.Delay(2.0f); // Will not start for 2 seconds.
+tween.DelayBy(2.0f); // Will not start for 2 seconds.
 tween.StartsAt(2.0f); // Will fast forward 2 seconds when starting.
 
 // These can be chained together for a more compressed and fluent syntax.
@@ -353,6 +413,7 @@ PropertyTo ( End, Duration, [Required Args], [Optional Args] )
 
 //Examples
 transform.MoveTo( new Vector3( 1.0f, 1.0f, 1.0f ), 2.0f );
+rectTransform.AnchorPosTo( 0f, 0.3f, Axis.X );
 audioSource.VolumeTo( 0.0f, 2.0f );
 ```
 
@@ -364,24 +425,52 @@ Put in other terms, a normal Tween that starts slow and speeds up animating from
 
 ## Advanced Features
 
-### Priority
+### Routine Identity
 
-BeauRoutine provides a way of changing the priority of any individual BeauRoutine. Priority determines the order in which BeauRoutines are executed, from highest priority to lowest. This could be useful if the execution of one routine is dependent on the result of another. BeauRoutines with equal priority will be executed in order of the last time priority was set, or creation if priority was never specifically set. Priority will default to 0.
+The ``RoutineIdentity`` component can be attached to any GameObject to apply a per-object time scale.  Note that this will only apply to BeauRoutines that are started after attaching the RoutineIdentity - it will not retroactively apply time scaling on BeauRoutines run before it was attached.
+
+You can find the RoutineIdentity for a given object by calling ``RoutineIdentity.Find``.  If you want to ensure the object has a RoutineIdentity, call ``RoutineIdentity.Require``, which will lazily instantiate an instance on the given object.
+
+Per-object time scale is controlled by the ``TimeScale`` property. See [Time Scale](#time-scale) for information about how time scale affects a BeauRoutine.
 
 ```csharp
-// Create the routines
-// r1 will be executed before r2, since it was created first
-Routine r1 = Routine.Start( this, MyCoroutineA() );
-Routine r2 = Routine.Start( this, MyCoroutineB() );
+// Make sure we have a RoutineIdentity for this object.
+RoutineIdentity identity = RoutineIdentity.Require(this);
 
-// Set the priorities of the routines
-// Higher priorities will be executed first
-// Priority defaults to 0
-int r1Priority = r1.GetPriority(); // 0
-r2.SetPriority(r1Priority + 100); // 100
+// Apply some slow motion.
+identity.TimeScale = 0.25f;
 
-// r2 will now execute before r1,
-// even though it was started after r1.
+// MyCoroutine will now run at 0.25 speed.
+Routine.Start( this, MyCoroutine() );
+```
+
+In the case you may want a BeauRoutine to ignore the per-object time scale,  you can call ``DisableObjectTimeScale``.  ``EnableObjectTimeScale`` will re-enable it.
+
+```csharp
+// Make sure we have a RoutineIdentity for this object.
+RoutineIdentity identity = RoutineIdentity.Require(this);
+
+// Apply some slow motion.
+identity.TimeScale = 0.25f;
+
+// Do something in slow motion.
+Routine.Start( this, MyCoroutine() );
+
+// After 2 real seconds, reset the time scale on this object's RoutineIdentity.
+Routine.Start (this, ResetTimeScale( 2.0f ) ).DisableObjectTimeScale();
+
+IEnumerator MyCoroutine()
+{
+	...
+	// This will run at 0.25 speed.
+}
+
+IEnumerator ResetTimeScale(float delay)
+{
+	// This will run at normal speed.
+	yield return delay;
+	RoutineIdentity.Require( this ).TimeScale = 1.0f;
+}
 ```
 
 ### Time Scale
@@ -438,60 +527,95 @@ IEnumerator MyCoroutine()
 Time scale also applies to any Tweens you're currently running.
 
 In total, there are four time scale values that can apply to a BeauRoutine.
-* ``Routine.TimeScale`` (alias for ``Time.timeScale``)
+* ``Routine.TimeScale`` (multiplied with ``Time.timeScale`` to get global time scale)
 * Per-group time scales (see [Groups](#groups))
 * Per-object time scales (see [Routine Identity](#routine-identity))
 * Time scale for an individual BeauRoutine
 
 You can calculate the total time scale that will be applied to BeauRoutines on a given object by calling ``Routine.CalculateTimeScale``. This is the accumulation of ``Routine.TimeScale``, the per-object time scale, and the per-group time scale.
 
-### Routine Identity
+### Update Phase
 
-The ``RoutineIdentity`` component can be attached to any GameObject to apply a per-object time scale.  Note that this will only apply to BeauRoutines that are started after attaching the RoutineIdentity - it will not retroactively apply time scaling on BeauRoutines run before it was attached.
+By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of four times: ``LateUpdate``, ``Update``, ``FixedUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
 
-You can find the RoutineIdentity for a given object by calling ``RoutineIdentity.Find``.  If you want to ensure the object has a RoutineIdentity, call ``RoutineIdentity.Require``, which will lazily instantiate an instance on the given object.
-
-Per-object time scale is controlled by the ``TimeScale`` property.
+``FixedUpdate`` routines work off of a consistent delta time.
 
 ```csharp
-// Make sure we have a RoutineIdentity for this object.
-RoutineIdentity identity = RoutineIdentity.Require(this);
+// By default, BeauRoutine starts routines in the LateUpdate phase.
+Routine.Start( this, MyCoroutine() ); // This executes in LateUpdate
 
-// Apply some slow motion.
-identity.TimeScale = 0.25f;
+// You can set the phase by calling SetPhase on a routine
+Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.FixedUpdate ); // This will execute during FixedUpdate
 
-// MyCoroutine will now run at 0.25 speed.
-Routine.Start( this, MyCoroutine() );
+// You can also set the default phase for new routines.
+Routine.Settings.DefaultPhase = RoutinePhase.FixedUpdate;
+Routine.Start( this, MyCoroutine() ).GetPhase(); // GetPhase will return FixedUpdate
+
+Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update ); // This will execute during Update
 ```
 
-In the case you may want a BeauRoutine to ignore the per-object time scale,  you can call ``DisableObjectTimeScale``.  ``EnableObjectTimeScale`` will re-enable it.
+Yielding a ``WaitForFixedUpdate``, ``WaitForEndOfFrame``, ``WaitForLateUpdate``, ``WaitForUpdate``, or any ``RoutinePhase`` will interrupt the normal timing of a BeauRoutine, and will instead execute it during those events. This does not apply for Manual updates, however; see the [Manual Updates](#manual-updates) section for more information. 
 
 ```csharp
-// Make sure we have a RoutineIdentity for this object.
-RoutineIdentity identity = RoutineIdentity.Require(this);
-
-// Apply some slow motion.
-identity.TimeScale = 0.25f;
-
-// Do something in slow motion.
-Routine.Start( this, MyCoroutine() );
-
-// After 2 real seconds, reset the time scale on this object's RoutineIdentity.
-Routine.Start (this, ResetTimeScale( 2.0f ) ).DisableObjectTimeScale();
+Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update );
 
 IEnumerator MyCoroutine()
 {
-	...
-	// This will run at 0.25 speed.
-}
+	// Executing during Update
+	Debug.Log( Routine.DeltaTime ); // Normal deltaTime
 
-IEnumerator ResetTimeScale(float delay)
-{
-	// This will run at normal speed.
-	yield return delay;
-	RoutineIdentity.Require( this ).TimeScale = 1.0f;
+	yield return Routine.WaitForFixedUpdate();
+	// Now executing during FixedUpdate.
+	Debug.Log( Routine.DeltaTime ); // Now using fixedDeltaTime
+
+	yield return null;
+	// Executing during Update again
+	Debug.Log( Routine.DeltaTime ); // Back to normal deltaTime
+
+	yield return Routine.WaitForEndOfFrame();
+	// Executing after all rendering is completed
+	Debug.Log( Routine.DeltaTime ); // Still using normal deltaTime
+
+	yield return RoutinePhase.FixedUpdate; // Same as WaitForFixedUpdate
+	
+	// Waits until the next Update phase
+	yield return Routine.WaitForUpdate();
+	yield return RoutinePhase.Update;
+
+	// Waits until the next LateUpdate phase
+	yield return Routine.WaitForLateUpdate();
+	yield return RoutinePhase.LateUpdate;
+
+	// This does not do anything meaningful, and is equivalent to yielding null.
+	yield return RoutinePhase.Manual;
 }
 ```
+
+The ``WaitForLateUpdate`` and ``WaitForUpdate`` events occur after their respective LateUpdate and Update phases. If a BeauRoutine is already executing in LateUpdate or Update, yielding for those phases will wait until after the next time the phase is executed, instead of executing immediately after the phase is complete.
+
+See Unity's [Execution Order of Event Function](https://docs.unity3d.com/Manual/ExecutionOrder.html) documentation for further information on update timing.
+
+### Priority
+
+BeauRoutine provides a way of changing the priority of any individual BeauRoutine. Priority determines the order in which BeauRoutines are executed, from highest priority to lowest. This could be useful if the execution of one routine is dependent on the result of another. BeauRoutines with equal priority will be executed in order of the last time priority was set, or creation if priority was never specifically set. Priority will default to 0.
+
+```csharp
+// Create the routines
+// r1 will be executed before r2, since it was created first
+Routine r1 = Routine.Start( this, MyCoroutineA() );
+Routine r2 = Routine.Start( this, MyCoroutineB() );
+
+// Set the priorities of the routines
+// Higher priorities will be executed first
+// Priority defaults to 0
+int r1Priority = r1.GetPriority(); // 0
+r2.SetPriority(r1Priority + 100); // 100
+
+// r2 will now execute before r1,
+// even though it was started after r1.
+```
+
+Note that this only affects order within an update phase. See [Update Phase](#update-phase) for more information.
 
 ### Groups
 
@@ -516,20 +640,20 @@ RoutineIdentity.Require( this ).Group = (int)ObjectGroup.Gameplay;
 Routine.Start( this, MyCoroutine() );
 
 // You can get, set, or reset the timescale for a group
-float groupTimeScale = Routine.GetGroupTimeScale( (int)ObjectGroup.Gameplay );
-Routine.SetGroupTimeScale( (int)ObjectGroup.Gameplay, 0.5f );
-Routine.ResetGroupTimeScale( (int)ObjectGroup.Gameplay ); // Resetting resets to 1.
+float groupTimeScale = Routine.GetGroupTimeScale( ObjectGroup.Gameplay );
+Routine.SetGroupTimeScale( ObjectGroup.Gameplay, 0.5f );
+Routine.ResetGroupTimeScale( ObjectGroup.Gameplay ); // Resetting resets to 1.
 
 // While a single group is referenced by index, the PauseGroups and ResumeGroups
 // functions take in a bitmask of all affected groups.
-int groupMask = Routine.GetGroupMask( (int)ObjectGroup.Gameplay, (int)ObjectGroup.UI );
+int groupMask = Routine.GetGroupMask( ObjectGroup.Gameplay, ObjectGroup.UI );
 
 // You can pause and resume multiple groups at a time.
 Routine.PauseGroups( groupMask );
 Routine.ResumeGroups( groupMask );
 ```
 
-It's important to note that a BeauRoutine can only belong to a single group.  This is to prevent any unwanted timescaling behavior.
+It's important to note that a BeauRoutine can only belong to a single group.  This is to ensure consistent timescaling behavior.
 
 ### Inlined Coroutines
 
@@ -539,13 +663,25 @@ Normally, yielding into a nested coroutine will wait until the next frame to beg
 IEnumerator RootCoroutine()
 {
 	Debug.Log("This is the RootCoroutine log");
-	yield return Routine.Immediately(NestedCoroutine());
+	yield return Routine.Inline( NestedCoroutine() );
 	Debug.Log("This will log on the same frame as the NestedCoroutine log");
 }
 
 IEnumerator NestedCoroutine()
 {
 	Debug.Log("This will log on the same frame as the RootCoroutine log");
+	...
+}
+```
+
+Note that this is not supported when starting a new BeauRoutine. See [On Starting BeauRoutines and Update Phases](#on-starting-beauroutines-and-update-phases) for more information.
+
+```csharp
+// Despite its appearance, this will not execute immediately.
+Routine.Start( Routine.Inline( RootCoroutine() ) );
+
+IEnumerator RootCoroutine()
+{
 	...
 }
 ```
@@ -567,57 +703,6 @@ IEnumerator NestedCoroutine()
 ```
 
 Be careful when using these features. Inlined execution offers more precise timing but runs the risk of executing too much in a single frame if overused.
-
-### Custom Tweens
-
-Tweens in BeauRoutine are highly extensible through the ``ITweenData`` interface. Tweens perform the timing, easing, and looping logic; an ITweenData object applies the animation.  To use one of your own ITweenData-derived objects, you can use the ``Tween.Create`` function with your object as an argument.
-
-```csharp
-// Making your own ITweenData
-public class SomeObjectTweenData : ITweenData
-{
-	private SomeObject m_Object;
-	
-	private float m_Start;
-	private float m_End;
-	
-	public SomeObjectTweenData( SomeObject inObject, float inEnd )
-	{
-		m_Object = inObject;
-		
-		m_Start = inObject.MyValue;
-		m_End = inEnd;
-	}
-
-	public void OnTweenStart()
-	{
-		...
-		// Any custom logic when a tween starts can go here
-	}
-	
-	public void ApplyTween(float inPercent)
-	{
-		m_Object.MyValue = Mathf.Lerp( m_Start, m_End, inPercent );
-	}
-	
-	public void OnTweenEnd()
-	{
-		..
-		// Any custom logic when a tween ends or is killed can go here
-	}
-}
-
-public class SomeObject
-{
-	public float MyValue = 0;
-	
-	public Tween MyValueTo( float inValue, float inTime )
-	{
-		SomeObjectTweenData tweenData = new SomeObjectTween( this, inValue );
-		return Tween.Create( iTweenData, inTime );
-	}
-}
-```
 
 ### Futures
 
@@ -651,7 +736,13 @@ Future<int> CalculateHashAsync( string str )
 IEnumerator CalculateHashAsyncImpl( Future<int> future, string str )
 {
 	// Some artificial delay to make this asynchronous
-	yield return 0.5f;
+	yield return 0.25f;
+
+	// Report progress information to the future.
+	future.SetProgress(0.5f);
+
+	// More artificial delay
+	yield return 0.25f;
     
     if (str == null)
     {
@@ -690,8 +781,76 @@ IEnumerator DoSomething()
     var future2 = CalculateHashAsync( null )
     	.OnComplete( (i) => { Debug.Log(i); } )
         .OnFail( () => { Debug.Log("error occurred"); } );
+
+	// You can also provide progress callbacks.
+	// These will get called when progress through a future changes.
+	future2.OnProgress( (progress) => { Debug.Log("progress: " + progress); } );
 }
 ```
+
+### Custom Tweens
+
+Tweens in BeauRoutine are highly extensible through the ``ITweenData`` interface. Tweens perform the timing, easing, and looping logic; an ITweenData object applies the animation.  To use one of your own ITweenData-derived objects, you can use the ``Tween.Create`` function with your object as an argument.
+
+```csharp
+// Making your own ITweenData
+public class SomeObjectTweenData : ITweenData
+{
+	private SomeObject m_Object;
+	
+	private float m_Start;
+	private float m_End;
+	
+	public SomeObjectTweenData( SomeObject inObject, float inEnd )
+	{
+		m_Object = inObject;
+		
+		m_Start = inObject.MyValue;
+		m_End = inEnd;
+	}
+
+	public void OnTweenStart()
+	{
+		...
+		// Any custom logic when a tween starts can go here
+	}
+	
+	public void ApplyTween(float inPercent)
+	{
+		m_Object.MyValue = Mathf.Lerp( m_Start, m_End, inPercent );
+	}
+	
+	public void OnTweenEnd()
+	{
+		...
+		// Any custom logic when a tween ends or is killed can go here
+	}
+}
+
+public class SomeObject
+{
+	public float MyValue = 0;
+	
+	public Tween MyValueTo( float inValue, float inTime )
+	{
+		SomeObjectTweenData tweenData = new SomeObjectTween( this, inValue );
+		return Tween.Create( iTweenData, inTime );
+	}
+}
+```
+
+### Manual Updates
+
+You can manually update both individual BeauRoutines and the set of BeauRoutines with their phase set to ``Manual``.
+
+#### Individual Routines  
+You can call ``TryManuallyUpdate`` on a BeauRoutine to attempt to force it to update, optionally providing a timestep. The BeauRoutine will fail to update if it is already updating. You can attempt to force other BeauRoutines to update from within a ``TryManuallyUpdate`` call. This call is not restricted by update phase.
+
+#### Manual Set
+You can call ``Routine.ManualUpdate`` to attempt to update the set of BeauRoutines set to the ``Manual`` phase. BeauRoutines that are already updating will not update. You cannot nest these calls.
+
+#### Restrictions
+Manual BeauRoutines will not respond to yields that would change their update phase, such as ``WaitForFixedUpdate`` or ``WaitForEndOfFrame``. While these phase changes make sense for an automatically-updated BeauRoutine, they do not for a manually-updated BeauRoutine. As such, these yields are equivalent to waiting for a frame.
 
 ### Debugger
 
@@ -704,6 +863,47 @@ The ``OPTIONS`` page displays the current time scale, as well as options for res
 The ``DETAILS`` page displays all the currently running BeauRoutines in a list.  From here, you can pause, resume, or stop any of them, as well as rename them or set their time scale.  Any Combine or Race routines are presented in a hierarchical format.
 
 ## Tips and Tricks
+
+#### Use ``Routine`` handles as slots
+
+Maintain ``Routine`` handles as "slots" for executing coroutines. This can be helpful for ensuring you only have one instance of a particular type of operation executing at a time. It can also help keep track of executing BeauRoutines, allowing you to selectively clean up any operations instead of stopping all BeauRoutines on a given object.
+
+This is particularly necessary if you have operations that execute on shared data. Two Tweens fading the same SpriteRenderer will interfere with one another, so ensuring you only have one Tween executing on that property at a time will help prevent unwanted behavior.
+
+```csharp
+// This class will move and fade the given object on command.
+// It can also perform an important operation on a string.
+public class MyAnimatingObject : MonoBehaviour
+{
+	// These Routine objects effectively act as slots.
+	// If you don't want duplicates of an operation running simultaneously,
+	// you can use these handles to stop old operations and start new ones
+	private Routine fadeAnimation;
+	private Routine moveAnimation;
+	private Routine importantRoutine;
+	
+	public void FadeTo(float alpha, float duration, Curve curve = Curve.Linear)
+	{
+		// Replace is safe to call, even if the Routine isn't currently referencing an active BeauRoutine
+		fadeAnimation.Replace( this, GetComponent<SpriteRenderer>().FadeTo( alpha, duration ).Ease( curve ) );
+	}
+	
+	public void MoveTo(Vector3 position, float duration, Curve curve = Curve.Linear)
+	{
+		moveAnimation.Replace( this, transform.MoveTo( position, duration ).Ease( curve ) );
+	}
+	
+	public void DoSomethingImportant(string data)
+	{
+		importantRoutine.Replace( this, DoSomethingImportantRoutine( data ) );
+	}
+	
+	private IEnumerator DoSomethingImportantRoutine(string data)
+	{
+		...
+	}
+}
+```
 
 #### Limit a BeauRoutine's lifetime with a ``using`` statement
 
@@ -750,57 +950,235 @@ IEnumerator PlayAnAnnoyingSoundOnce()
 }
 ```
 
-#### Use ``Routine`` handles as slots
+#### Split your coroutine functions to execute code immediately
 
-Maintain ``Routine`` handles as "slots" for executing coroutines. This can be helpful for ensuring you only have one instance of a particular type of operation executing at a time. It can also help keep track of executing BeauRoutines, allowing you to selectively clean up any operations instead of stopping all BeauRoutines on a given object.
+When starting a BeauRoutine, the work is queued up to execute at the next opportunity for the BeauRoutine's update phase. If you need some code to execute immediately, you can split your coroutine functions into instant and an over-time portions.
 
-This is particularly necessary if you have operations that execute on shared data. Two Tweens fading the same SpriteRenderer will interfere with one another, so ensuring you only have one Tween executing on that property at a time will help prevent unwanted behavior.
 ```csharp
-// This class will move and fade the given object on command.
-// It can also perform an important operation on a string.
-public class MyAnimatingObject : MonoBehaviour
+// This needs to happen as soon as the BeauRoutine starts.
+void ResetVisuals() { }
+
+// This happens within the BeauRoutine.
+void UpdateVisuals() { }
+
+Routine.Start( ReturnsACoroutine() );
+
+// This is a regular function.
+IEnumerator ReturnsACoroutine()
 {
-	// These Routine objects effectively act as slots.
-	// If you don't want duplicates of an operation running simultaneously,
-	// you can use these handles to stop old operations and start new ones
-	private Routine fadeAnimation;
-	private Routine moveAnimation;
-	private Routine importantRoutine;
+	// Instant work goes here
+	...
+
+	Debug.Log( "This is executing outside of the BeauRoutine." );
+
+	// This needs to happen immediately.
+	// Putting it in here ensures it will execute
+	// as soon as InstantWorkIntoRoutine is called.
+	ResetVisuals();
+
+	// You can return an IEnumerator directly.
+	return IsACoroutine();
+}
+
+// This is a coroutine.
+IEnumerator IsACoroutine()
+{
+	// If we call ResetVisuals here instead,
+	// it will happen on a one-frame delay.
+
+	UpdateVisuals();
+
+	// Important work goes here
+	...
+
+	// An IEnumerator function only becomes a coroutine
+	// once a yield statement is encountered.
+	yield return null;
 	
-	public void FadeTo(float alpha, float duration, Curve curve = Curve.Linear)
-	{
-		// Replace is safe to call, even if the Routine isn't currently referencing an active BeauRoutine
-		fadeAnimation.Replace( this, GetComponent<SpriteRenderer>().FadeTo( alpha, duration ).Ease( curve ) );
-	}
-	
-	public void MoveTo(Vector3 position, float duration, Curve curve = Curve.Linear)
-	{
-		moveAnimation.Replace( this, transform.MoveTo( position, duration ).Ease( curve ) );
-	}
-	
-	public void DoSomethingImportant(string data)
-	{
-		importantRoutine.Replace( this, DoSomethingImportantRoutine( data ) );
-	}
-	
-	private IEnumerator DoSomethingImportantRoutine(string data)
-	{
-		...
-	}
+	Debug.Log( "This is executing within the BeauRoutine." );
 }
 ```
 
+``IEnumerator`` functions only become coroutines once a ``yield return`` statement is used. If you ``return`` normally, it is treated as a regular function.
+
+See [On Starting BeauRoutines and Update Phases](#on-starting-beauroutines-and-update-phases) for more information.
+
+#### Use ``TweenUtil.Lerp`` to asymptotically interpolate to a changing target
+
+Tweens are great for interpolating towards fixed targets, but in cases where the target is changing continuously, they are suboptimal.
+
+As an example: Say you want the camera to smoothly interpolate to a point determined by player input.
+* You have a player character viewed from a top-down angle.
+* You want the camera to rest somewhere halfway between the player and a point extending out from the player's facing direction.
+* The facing direction may change often, since it is tied directly to player input.
+* You want the camera to smoothly transition to its target position.
+
+Given these constraints, there are several approaches you may take.
+* Start a tween every time the direction changes. This may result in jittery, inconsistent camera movement.
+* Interpolate with a fixed time towards your dynamic target. This may result in unwanted acceleration or deceleration as the target position changes during the interpolation.
+* Apply some level of physics simulation to the camera, or perhaps a steering behavior. This is a valid, if more complicated approach.
+* Forgo transitions entirely - instantly snap the camera to the target position. This is also a valid approach, if potentially disorienting depending on the perspective.
+
+There are simpler ways of achieving this effect.
+
+To achieve smoother, more consistent motion, you can asymptotically interpolate towards the target value. This involves moving the value by a percentage of the difference between the value and the target every frame. In effect, as the value gets closer to the target, the rate of change per-frame decreases, resulting in a smooth and pleasant deceleration.
+
+In games with a fixed framerate, or games that calculate based on frame, not delta time, it may look something like this:
+```csharp
+// This will interpolate someValue to someTarget by 25% each frame
+someValue = Mathf.Lerp( someValue, someTarget, 0.25f );
+```
+This approach is not sufficient for games with a variable framerate, however. As the game slows down and fewer frames are executed per second, the object will move at a slower rate towards the target.
+
+A revised approach needs to account for varying delta time, perhaps by scaling the percentage. It might look like this:
+```csharp
+// This scales the interpolation percent based on delta time.
+// The expected framerate is 60. Framerate multipled by delta time
+// should get a ratio of expected frame time to actual frame time.
+int targetFrameRate = 60;
+float lerpScale = targetFrameRate * Time.deltaTime;
+someValue = Mathf.Lerp( someValue, someTarget, 0.25f * lerpScale );
+```
+This feels more accurate, and but again, this approach falls apart with large timesteps, resulting in incorrect behavior. If, say, the game slows down enough to skip 60 frames, or 120 frames, you end up with larger and larger multiplies of your desired interpolation percentage, which could lead to reaching the target or even overshooting the target. This becomes more likely as the percentage increases, limiting the range of reasonable percentages you can use in this approach. Ultimately, this is not an accurate approach.
+
+To correctly simulate this type of asymptotic interpolation, we not only need to account for the distance remaining at the time of the lerp, we also need to account for the change in distance remaining _within the lerp itself_. In other words, the change in rate of change needs to occur _continuously_, instead of at discrete intervals. This can be modeled in terms of [expotential decay](https://en.wikipedia.org/wiki/Exponential_decay).
+
+BeauRoutine provides ``TweenUtil.Lerp``. This function scales the rate of change to appropriately handle fluctuations in framerate and maintain the asymptotic nature of the interpolation.
+
+It is important to note that these functions, by default, interpret the given percentages as _per-second_, not per-frame. If you already have your percentages specified in terms of a fixed framerate, you can call ``TweenUtil.SetDefaultLerpPeriodByFramerate`` to specify the expected timestep. Both functions can also accept a period and a timestep. If a timestep is not provide, these functions will use ``Routine.DeltaTime``.
+
+```csharp
+// Since we've already been using 25% with an expectation of 60 frames per second,
+// we can modify the default period to match.
+int targetFrameRate = 60;
+TweenUtil.SetDefaultLerpPeriodByFramerate( targetFrameRate );
+
+float scaledLerp = TweenUtil.Lerp( 0.25f );
+someValue = Mathf.Lerp( someValue, someTarget, scaledLerp );
+
+// You could also multiply out the percentage by the framerate for the same effect.
+TweenUtil.SetDefaultLerpPeriod(1);
+scaledLerp = TweenUtil.Lerp( 0.25f * targetFrameRate ); // This is mathematically equivalent
+```
+
+``TweenUtil.LerpDecay`` returns the equivalent of ``1 - TweenUtil.Lerp``, which can be a useful shortcut when interpolating towards 0. This might occur when simulating friction or drag, for example.
+
+## Technical Notes
+
+#### On Starting BeauRoutines and Update Phases
+
+When you start a BeauRoutine, you are adding it to a queue to execute during the next instance of its update phase. If you start a BeauRoutine for a currently-executing update phase, it will not begin executing until the next instance of that update phase.
+
+```csharp
+Routine.Start( PartA() ).SetPhase( RoutinePhase.Update );
+
+IEnumerator PartA()
+{
+	...
+	// This occurs on one frame
+
+	// This routine will not execute until the next frame,
+	// since PartA is executing in the same update phase
+	Routine.Start( PartB() ).SetPhase( RoutinePhase.Update );
+}
+
+IEnumerator PartB()
+{
+	...
+	// This occurs on the next frame
+}
+```
+
+If you need code to execute immediately, this can be worked around by dividing your routine into two functions. See [Split your coroutine functions to execute code immediately](#split-your-coroutine-functions-to-execute-code-immediately) for more information.
+
+This can also be circumvented by calling ``TryManuallyUpdate`` on a routine to attempt to force it to execute immediately. See [Manual Updates](#manual-updates) for more information.
+
+#### On Stopping BeauRoutines
+
+When you stop a BeauRoutine, it will not be cleaned up until the next time it attempts to execute. If the BeauRoutine is set to manually update, and is not currently executing, it will be cleaned up immediately.
+
+#### On Reserved Routine Names
+
+BeauRoutines must not be given a name that starts with ``[BeauRoutine]__``. This is a reserved prefix used for internal purposes. In the (admittedly unlikely) event you attempt to set a name with this prefix, it will log a warning instead and not change the name.
+
+#### On Delta Time
+
+For BeauRoutines paused for some amount of time, perhaps with a ``Routine.WaitSeconds`` or a ``yield return 1f``, ``Routine.DeltaTime`` will adjust when that period ends to account for time overlap. For example, if the BeauRoutine requests to wait for 2 seconds, but we wait for 2.1 seconds, delta time will be decreased by 0.1 seconds to compensate.
+
+This time adjustment does not apply during the FixedUpdate phase, or after yielding a ``WaitForFixedUpdate``. This is to ensure consistent delta time during FixedUpdate.
+
+#### On Memory Allocation
+
+BeauRoutine will be initialized the first time a BeauRoutine operation is performed. You can also initialize BeauRoutine in advance by calling ``Routine.Initialize``.
+
+BeauRoutine pre-allocates resources to run a default number of concurrent BeauRoutines. When there are no more resources available to execute all scheduled BeauRoutines, it will allocate more. This doubles the maximum number of concurrent BeauRoutines (16 -> 32 -> 64 -> ...), up to a maximum of 16,777,216. If you desire to reduce runtime allocations, you can call ``Routine.Settings.SetCapacity`` to pre-allocate the resources necessary to run the given number of BeauRoutines.
+
+To determine your game's requirements, open up the [Debugger](#debugger) during gameplay and view the ``MAX`` field in the ``STATS`` page. This will tell you how many BeauRoutines that the system needed to allocate resources for during the current session. The ``CAPACITY`` field will tell you how many were actually allocated in order to support it. By calling ``Routine.Settings.SetCapacity``, you can pre-allocate for the peak number of BeauRoutines in your game and optimize your memory usage.
+
+While BeauRoutine attempts to avoid runtime allocations as often as possible, there are unavoidable allocations associated with a C# coroutine framework. Coroutines, as implemented in C#, allocate memory when called. Coroutines are implemented in C# as _iterator blocks_. C# compilers transform iterator blocks into state machine classes. Calling an iterator block will allocate a new instance of its associated state machine. These allocations are tiny but worth mentioning for memory-constrained applications. Tweens and certain utilities, such as ``Routine.Combine`` and ``Routine.Delay``, will also allocate small amounts of memory.
+
+For more information on how coroutines are implemented in C# compilers, read this article: [C# In Depth: Iterator block implementation details](http://csharpindepth.com/Articles/Chapter6/IteratorBlockImplementation.aspx).
+
+#### On Important Differences between BeauRoutines and Unity Coroutines
+
+| **Category** | **BeauRoutine** | **Unity coroutines** |
+| ------------ | --------------- | -------------------- |
+| Starting a coroutine | ``Routine.Start`` queues the coroutine to be executed during its update phase. | ``StartCoroutine`` executes the first frame of the coroutine immediately. |
+| Enabling/Disabling MonoBehaviours | By default, BeauRoutines will pause when their host MonoBehaviour is inactive. | Unity coroutines will not pause when their host MonoBehaviour is inactive. |
+
 ## Reference
 
-### Routine Utilities
+### Routine Functions
+
+These functions can be called directly on a Routine handle.
 
 | Function | Description |
 | -------- | ----------- |
-| **Start Shortcuts** | |
+| **Pausing** |
+| ``Pause`` | Pauses the BeauRoutine. |
+| ``Resume`` | Resumes the BeauRoutine. |
+| ``GetPaused`` | Returns if the BeauRoutine is paused. |
+| ``Delay`` | Delays the BeauRoutine by the given number of seconds. This is cumulative. |
+| **Stopping** | |
+| ``Stop`` | Stops the BeauRoutine. |
+| ``Replace`` | Stops the BeauRoutine and replaces it with another one. |
+| **Time Scaling** | |
+| ``GetTimeScale`` | Returns the per-BeauRoutine timescale. |
+| ``SetTimeScale`` | Sets per-BeauRoutine timescale. |
+| ``DisableObjectTimeScale`` | Ignores per-object timescale on this BeauRoutine. |
+| ``EnableObjectTimeScale`` | [Default] Uses per-object timescale on this BeauRoutine. |
+| **Execution**| |
+| ``ExecuteWhileDisabled`` | BeauRoutine will continue to execute while its host is disabled. |
+| ``ExecuteWhileEnabled`` | [Default] BeauRoutine will not execute while its host is disabled. |
+| ``GetPriority`` | Returns the execution priority of the BeauRoutine. |
+| ``SetPriority`` | Sets the execution priority of the BeauRoutine. Greater priority BeauRoutines are executed first. |
+| ``GetPhase`` | Returns the update phase for the BeauRoutine. |
+| ``SetPhase`` | Sets the update phase for the BeauRoutine. The Routine be executed the next time the phase updates. |
+| ``TryManuallyUpdate`` | Attempts to manually update the BeauRoutine with the given delta time. |
+| **Name** | |
+| ``GetName`` | Gets the name of the BeauRoutine. If a name has not been set, this will return the name of the coroutine provided when starting the BeauRoutine. |
+| ``SetName`` | Sets the name of the BeauRoutine. |
+| **Events** | |
+| ``OnComplete`` | Registers a function to execute once the BeauRoutine completes naturally. |
+| ``OnStop`` | Registers a function to execute once the BeauRoutine completes prematurely. |
+| ``OnException`` | Registers a function to execute if an exception is encountered while updating the BeauRoutine. |
+| **Miscellaneous**| |
+| ``Exists`` | Returns if this BeauRoutine has not been stopped. |
+| ``Wait`` | Returns a coroutine that waits for the given BeauRoutine to end. |
+
+### Routine Utilities
+
+| Name | Description |
+| -------- | ----------- |
+| **Start** | |
+| ``Routine.Start`` | Starts a BeauRoutine. |
 | ``Routine.StartDelay`` | Starts a BeauRoutine that calls a function or executes a coroutine after a certain number of seconds. |
 | ``Routine.StartLoop`` | Starts a BeauRoutine that calls a function every frame. |
 | ``Routine.StartLoopRoutine`` | Starts a BeauRoutine that executes a coroutine in a never-ending loop. |
 | ``Routine.StartCall`` | Starts a BeauRoutine that calls a function at the end of the frame. |
+| **Time** | |
+| ``Routine.DeltaTime`` | Delta time for the current routine, with all applicable scaling applied. |
+| ``Routine.UnscaledDeltaTime`` | Unscaled delta time for all routines. |
 | **Flow** | |
 | ``Routine.Pause`` | Pauses the BeauRoutine with the given name. |
 | ``Routine.PauseAll`` | Pauses all BeauRoutines. |
@@ -818,6 +1196,10 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.WaitCondition`` | Waits for the given function to return ``true``. |
 | ``Routine.WaitForever`` | Waits until the heat death of the universe. |
 | ``Routine.WaitRoutines`` | Waits until the given Routines expire. |
+| ``Routine.WaitForFixedUpdate `` | Waits until FixedUpdate completes. |
+| ``Routine.WaitForEndOfFrame`` | Waits until rendering of the current frame completes. |
+| ``Routine.WaitForLateUpdate`` | Waits until LateUpdate completes. |
+| ``Routine.WaitForUpdate`` | Waits until Update completes. |
 | **Execution** | |
 | ``Routine.Delay`` | Calls a function after the specified number of seconds. |
 | ``Routine.Call`` | Calls a function at the end of the frame. |
@@ -825,6 +1207,8 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.Combine`` | Runs multiple coroutines concurrently, and completes all. |
 | ``Routine.Race`` | Runs multiple coroutines concurrently, and stops when one expires. |
 | ``Routine.Inline `` | Executes the given coroutine immediately after yielding into it. |
+| ``Routine.Yield`` | Immediately yields the provided value. |
+| ``Routine.ManualUpdate`` | Updates all routines in the Manual phase. |
 | **Groups** | |
 | ``Routine.PauseGroups`` | Pauses all BeauRoutines in the given groups |
 | ``Routine.ResumeGroups`` | Resumes all BeauRoutines in the given groups |
@@ -833,39 +1217,11 @@ public class MyAnimatingObject : MonoBehaviour
 | ``Routine.SetGroupTimeScale`` | Sets the time scale for the given group |
 | ``Routine.ResetGroupTimeScale`` | Resets the time scale for the given group |
 | ``Routine.GetGroupMask`` | Returns the bitmask for the given groups |
-
-### Routine Functions
-
-These functions can be called directly on a Routine handle.
-
-| Function | Description |
-| -------- | ----------- |
-| **Pausing** |
-| ``Pause`` | Pauses the BeauRoutine. |
-| ``Resume`` | Resumes the BeauRoutine. |
-| ``GetPaused`` | Returns if the BeauRoutine is paused. |
-| **Stopping** | |
-| ``Stop`` | Stops the BeauRoutine. |
-| ``Replace`` | Stops the BeauRoutine and replaces it with another one. |
-| **Time Scaling** | |
-| ``GetTimeScale`` | Returns the per-BeauRoutine timescale. |
-| ``SetTimeScale`` | Sets per-BeauRoutine timescale. |
-| ``DisableObjectTimeScale`` | Ignores per-object timescale on this BeauRoutine. |
-| ``EnableObjectTimeScale`` | [Default] Uses per-object timescale on this BeauRoutine. |
-| **Execution**| |
-| ``ExecuteWhileDisabled`` | BeauRoutine will continue to execute while its host is disabled. |
-| ``ExecuteWhileEnabled`` | [Default] BeauRoutine will not execute while its host is disabled. |
-| ``GetPriority`` | Returns the execution priority of the BeauRoutine. |
-| ``SetPriority`` | Sets the execution priority of the BeauRoutine. Greater priority BeauRoutines are executed first. |
-| **Name** | |
-| ``GetName`` | Gets the name of the BeauRoutine. If a name has not been set, this will return the name of the coroutine provided when starting the BeauRoutine. |
-| ``SetName`` | Sets the name of the BeauRoutine. |
-| **Events** | |
-| ``OnComplete`` | Registers a function to execute once the BeauRoutine completes naturally. |
-| ``OnStop`` | Registers a function to execute once the BeauRoutine completes prematurely. |
-| **Miscellaneous**| |
-| ``Exists`` | Returns if this BeauRoutine has not been stopped. |
-| ``Wait`` | Returns a coroutine that waits for the given BeauRoutine to end. |
+| **Misc** | |
+| ``Routine.Timer`` | Counts down for the given number of seconds, with a callback for time remaining. |
+| ``Routine.Accumulate`` | Counts up for the given number of seconds, with a callback for time accumulated. |
+| ``Routine.ForEach`` | Generates and executes, in sequence, a coroutine for every element in the given list. |
+| ``Routine.ForEachParallel`` | Generates and executes, in parallel, a coroutine for every element in the given list. |
 
 ### Routine Extensions
 
@@ -882,6 +1238,61 @@ BeauRoutine contains a few extension methods for generating coroutines.
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
 | UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked. |
 
+BeauRoutine also provides a set of extension methods to set an Update/FixedUpdate/LateUpdate routine on a MonoBehaviour as a substitute for creating an Update/FixedUpdate/LateUpdate function.
+
+| Type | Function | Description |
+| ---- | -------- | ----------- |
+| MonoBehaviour | ``SetUpdateRoutine`` | Sets a single Update/FixedUpdate/LateUpdate routine for the MonoBehaviour. Could be used to replace Update/FixedUpdate/LateUpdate functions. |
+| | ``GetUpdateRoutine`` | Returns the single Update/FixedUpdate/LateUpdate routine for the MonoBehaviour. |
+
+Note that these work with a specific set of names.
+
+### Global Settings
+
+All settings are available in the editor. Non-development builds disable access to several debug settings for performance reasons. Note that those settings can be safely called, but not modified.
+
+| Name | Description | Restrictions |
+| ---- | ----------- | --------- |
+| **Properties** | | |
+| ``Routine.Settings.Paused`` | Enables/disables all update loops. Note that manual updates will still function with this disabled. | --- |
+| ``Routine.Settings.DefaultPhase`` | Sets the default update phase for new BeauRoutines. | --- |
+| ``Routine.Settings.Version`` | Returns the BeauRoutine version number. | --- |
+| ``Routine.Settings.DebugMode`` | Enabled or disables additional error checks. | Debug Only |
+| ``Routine.Settings.HandleExceptions`` | Enables or disables exception handling on all BeauRoutines. Note that BeauRoutines with explicitly set exception handlers will still handle exceptions, regardless of this setting. | Debug Only |
+| ``Routine.Settings.SnapshotEnabled`` | Enables or disables snapshotting. This will take snapshots of the highest number of simultaneous executing BeauRoutines. | Debug Only |
+| **Functions** | | |
+| ``Routine.Settings.SetCapacity`` | Pre-allocates for the given number of simultaneous executing BeauRoutines. Useful for avoiding unexpected allocations. | --- |
+| ``Routine.Initialize`` | Initializes BeauRoutine. BeauRoutine will auto-initialize when you perform your first BeauRoutine operation, but this can be called earlier to allocate the necessary resources. | --- |
+| ``Routine.Shutdown`` | Shuts down BeauRoutine. Any BeauRoutine operations will now throw an exception until ``Routine.Initialize`` is called again. | --- |
+
+### Future Functions
+
+| Function | Description |
+| -------- | ----------- |
+| ``IsDone`` | Returns if the Future is no longer in progress. |
+| **Progress** | |
+| ``IsInProgress`` | Returns if the Future is in progress.
+| ``GetProgress`` | Returns the reported Future progress. |
+| ``SetProgress`` | Sets the reported Future progress. |
+| ``OnProgress`` | Registers a handler for when progress changes. |
+| **Complete** | |
+| ``IsComplete`` | Returns if the Future has been completed. |
+| ``Get`` | Returns the value the Future successfully completed with. Will throw an exception if the Future did not complete successfully. |
+| ``TryGet`` | Attempts to get the value the Future successfully completed with. |
+| ``Complete`` | Completes the Future successfully with a value. |
+| ``OnComplete`` | Registers a handler for when the Future successfully completes. |
+| **Fail** | |
+| ``IsFailed`` | Returns if the Future has failed. |
+| ``GetFailure`` | Returns a ``Future.Failure`` object if the future has failed. Throws an exception if the Future did not fail. |
+| ``TryGetFailure`` | Attempts to get the ``Future.Failure`` object the Future failed with. |
+| ``OnFail`` | Registers a handle for when the Future fails. |
+| **Cancel** | |
+| ``IsCancelled`` | Returns if the Future was cancelled. |
+| ``Cancel`` | Cancels the Future. |
+| **Misc** | |
+| ``LinkTo`` | Links the Future to a BeauRoutine. If the Future is cancelled, the BeauRoutine will stop. If the BeauRoutine stops before the Future is completed, the Future will fail. |
+| ``Wait`` | Waits for the Future to no longer be in progress. |
+
 ### Future Utilities
 
 BeauRoutine contains methods for creating Futures for simple tasks.
@@ -890,10 +1301,11 @@ BeauRoutine contains methods for creating Futures for simple tasks.
 | -------- | ----------- | ----------- |
 | **Download from URL** | |
 | ``Future.Download.WWW`` | WWW | Downloads and completes with a WWW. |
-| ``Future.Download.Text`` | String | Downloads and completes with text from a WWW. |
-| ``Future.Download.Bytes`` | Byte[] | Downloads and completes with a byte array from a WWW. |
-| ``Future.Download.Texture`` | Texture2D |  Downloads and completes with a texture from a WWW. |
-| ``Future.Download.AudioClip`` | AudioClip | Downloads and completes with an audio clip from a WWW. |
+| ``Future.Download.UnityWebRequest`` | UnityWebRequest | Downloads and completes with a UnityWebRequest. |
+| ``Future.Download.Text`` | String | Downloads and completes with text from a WWW/UnityWebRequest. |
+| ``Future.Download.Bytes`` | Byte[] | Downloads and completes with a byte array from a WWW/UnityWebRequest. |
+| ``Future.Download.Texture`` | Texture2D |  Downloads and completes with a texture from a WWW/UnityWebRequest. |
+| ``Future.Download.AudioClip`` | AudioClip | Downloads and completes with an audio clip from a WWW/UnityWebRequest. |
 | **Loading Resources** | |
 | ``Future.Resources.LoadAsync<T>`` | T (Object) | Wrapper for Unity's ``Resources.LoadAsync``. Loads an asset from the  Resources folder asynchronously. |
 | **Function Calls** | |
@@ -932,6 +1344,7 @@ Tween extension methods currently exist for the following types:
 | | Anchors | ``AnchorTo`` |
 | | Size Delta | ``SizeDeltaTo`` |
 | | Pivot | ``PivotTo`` |
+| | RectTransform | ``RectTransformTo`` |
 | AudioSource | Volume | ``VolumeTo`` |
 | | Pitch | ``PitchTo`` |
 | | Pan | ``PanTo`` |
@@ -976,7 +1389,7 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``YoyoLoop`` | Tween will yoyo and loop, with an optional number of loops. |
 | ``Once`` | [Default] Tween will play once. |
 | **Timing** | |
-| ``Duration`` | Sets the duration, in seconds, of a single Tween (from 0 to 1). |
+| ``Duration`` | Sets the duration, in seconds, of a single cycle. |
 | ``Randomize`` | Starts the Tween from a random position in its timeline. |
 | ``StartsAt`` | Starts the Tween from a set position in its timeline. |
 | ``DelayBy`` | Starts the Tween after a certain amount of seconds have elapsed. |
@@ -1006,6 +1419,8 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``TweenUtil.Evaluate`` | ``Curve`` | Evaluates an easing function for a given percentage. |
 | ``TweenUtil.Lerp `` | | Returns an interpolation percentage, corrected for delta time. |
 | ``TweenUtil.LerpDecay`` | | Returns a decay multiplier, corrected for delta time. |
+| ``TweenUtil.SetDefaultLerpPeriod`` | | Sets the default lerp period for use in ``TweenUtil.Lerp`` and ``TweenUtil.LerpDecay`` |
+| ``TweenUtil.SetDefaultLerpPeriodByFramerate`` | | Sets the default lerp period for use in ``TweenUtil.Lerp`` and ``TweenUtil.LerpDecay`` to ``1 / framerate``. |
 | **TransformUtil** | | 
 | ``TransformUtil.GetPosition`` | ``Transform`` | Returns the position of a transform in the given space along the given axes. |
 | ``TransformUtil.GetPositionAxis`` | ``Transform`` | Returns the position of transform in the given space for the given single axis. |
@@ -1021,7 +1436,7 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``Transformutil.SetAnchorPos`` | ``RectTransform`` | Sets the anchored position of a RectTransform along the given axes. |
 | ``TransformUtil.GetSizeDelta`` | ``RectTransform`` | Returns the sizeDelta of a RectTransform along the given axes. |
 | ``TransformUtil.GetSizeDeltaAxis`` | ``RectTransform`` | Returns the sizeDelta of a RectTransform for the given single axis. |
-| ``Transformutil.SetSizeDeltaPos`` | ``RectTransform`` | Sets the sizeDelta of a RectTransform along the given axes. |
+| ``Transformutil.SetSizeDelta`` | ``RectTransform`` | Sets the sizeDelta of a RectTransform along the given axes. |
 | **VectorUtil** | | |
 | ``VectorUtil.GetAxis`` | | Returns the value of a vector along the given axis. |
 | ``VectorUtil.CopyFrom`` | | Copies values from one vector to another for the given axes. |

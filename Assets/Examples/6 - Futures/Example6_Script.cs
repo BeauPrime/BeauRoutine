@@ -96,6 +96,8 @@ namespace BeauRoutine.Examples
                     m_ColorBoxInput.textComponent.color = Color.red;
                 });
 
+            future.OnProgress((f) => Debug.Log(future));
+
             Routine.Start(WaitForFutureToComplete(future));
         }
 
@@ -115,6 +117,8 @@ namespace BeauRoutine.Examples
                     m_URLBoxOutput.text = o.ToString();
                     m_URLBoxInput.textComponent.color = Color.red;
                 });
+
+            future.OnProgress((f) => Debug.Log(future));
 
             Routine.Start(WaitForFutureToComplete(future));
         }
@@ -137,6 +141,8 @@ namespace BeauRoutine.Examples
                     Debug.Log("Image download failed: " + o.ToString());
                     m_URLImageBoxInput.textComponent.color = Color.red;
                 });
+
+            future.OnProgress((f) => Debug.Log(future));
 
             Routine.Start(WaitForFutureToComplete(future));
         }
@@ -165,12 +171,15 @@ namespace BeauRoutine.Examples
                     m_URLAudioBoxInput.textComponent.color = Color.red;
                 });
 
+            future.OnProgress((f) => Debug.Log(future));
+
             Routine.Start(WaitForFutureToComplete(future));
         }
 
         private IEnumerator WaitForReversedFuture()
         {
             var future = m_Service.ReverseString(m_ReverseBoxInput.text);
+            future.OnProgress((f) => Debug.Log(future));
 
             Routine.Start(WaitForFutureToComplete(future));
 

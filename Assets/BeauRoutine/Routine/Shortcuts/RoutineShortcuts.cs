@@ -183,7 +183,7 @@ namespace BeauRoutine
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             private void OnInvoke()
@@ -247,7 +247,7 @@ namespace BeauRoutine
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             private void OnInvoke(T0 inArg0)
@@ -311,7 +311,7 @@ namespace BeauRoutine
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             private void OnInvoke(T0 inArg0, T1 inArg1)
@@ -375,7 +375,7 @@ namespace BeauRoutine
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             private void OnInvoke(T0 inArg0, T1 inArg1, T2 inArg2)
@@ -439,7 +439,7 @@ namespace BeauRoutine
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             private void OnInvoke(T0 inArg0, T1 inArg1, T2 inArg2, T3 inArg3)

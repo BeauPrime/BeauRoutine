@@ -19,6 +19,7 @@ namespace BeauRoutine.Internal
         public Routine Handle;
         public MonoBehaviour Host;
         public RoutineState State;
+        public RoutinePhase Phase;
         public float TimeScale;
         public int Priority;
         public string Name;
@@ -36,6 +37,10 @@ namespace BeauRoutine.Internal
         Disposing,
         WaitTime,
         WaitUnity,
+        WaitFixedUpdate,
+        WaitEndOfFrame,
+        WaitLateUpdate,
+        WaitUpdate,
         Paused
     }
 

@@ -202,12 +202,42 @@ namespace BeauRoutine
 
         #region Time-Independent Lerp
 
+        static private float s_DefaultLerpPeriod = 1.0f;
+
+        /// <summary>
+        /// Sets the default lerp period.
+        /// Used for the Lerp and LerpDecay functions.
+        /// </summary>
+        static public void SetDefaultLerpPeriod(float inPeriod)
+        {
+            s_DefaultLerpPeriod = inPeriod;
+        }
+
+        /// <summary>
+        /// Sets the default lerp period to 1 / framerate.
+        /// Used for the Lerp and LerpDecay functions.
+        /// </summary>
+        static public void SetDefaultLerpPeriodByFramerate(float inFrameRate)
+        {
+            s_DefaultLerpPeriod = 1f / inFrameRate;
+        }
+
         /// <summary>
         /// Returns a lerp percent for interpolating over
         /// given percent in a given period of time, scaled
         /// for delta time.
         /// </summary>
-        static public float Lerp(float inPercent, float inPeriod = 1.0f)
+        static public float Lerp(float inPercent)
+        {
+            return (float)(1.0f - Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod));
+        }
+
+        /// <summary>
+        /// Returns a lerp percent for interpolating over
+        /// given percent in a given period of time, scaled
+        /// for delta time.
+        /// </summary>
+        static public float Lerp(float inPercent, float inPeriod)
         {
             return (float)(1.0f - Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / inPeriod));
         }
@@ -227,7 +257,17 @@ namespace BeauRoutine
         /// given percent in a given period of time, scaled
         /// for delta time.
         /// </summary>
-        static public float LerpDecay(float inPercent, float inPeriod = 1.0f)
+        static public float LerpDecay(float inPercent)
+        {
+            return (float)Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod);
+        }
+
+        /// <summary>
+        /// Returns a lerp percent for decaying towards 0 by a
+        /// given percent in a given period of time, scaled
+        /// for delta time.
+        /// </summary>
+        static public float LerpDecay(float inPercent, float inPeriod)
         {
             return (float)Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / inPeriod);
         }
@@ -239,7 +279,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent, float inPeriod, float inDeltaTime)
         {
-            return (float)(Math.Pow(Math.E, -inPercent * inDeltaTime / inPercent));
+            return (float)(Math.Pow(Math.E, -inPercent * inDeltaTime / inPeriod));
         }
 
         #endregion

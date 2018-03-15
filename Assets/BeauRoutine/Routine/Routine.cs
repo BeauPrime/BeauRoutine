@@ -47,7 +47,7 @@ namespace BeauRoutine
         /// </summary>
         public IEnumerator Wait()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -62,7 +62,7 @@ namespace BeauRoutine
         /// </summary>
         public bool Exists()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 return m_Value > 0 && m.Fibers[this] != null;
@@ -79,7 +79,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Pause()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -94,7 +94,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Resume()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -109,7 +109,7 @@ namespace BeauRoutine
         /// </summary>
         public bool GetPaused()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -124,7 +124,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Stop()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null && m_Value != 0)
             {
                 Fiber fiber = m.Fibers[this];
@@ -136,11 +136,26 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Delays the routine by the given number of seconds.
+        /// </summary>
+        public Routine DelayBy(float inSeconds)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.AddDelay(inSeconds);
+            }
+            return this;
+        }
+
+        /// <summary>
         /// Returns the time scaling on the routine.
         /// </summary>
         public float GetTimeScale()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -154,7 +169,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetTimeScale(float inValue)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -170,7 +185,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine DisableObjectTimeScale()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -186,7 +201,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine EnableObjectTimeScale()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -201,7 +216,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine ExecuteWhileDisabled()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -217,7 +232,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine ExecuteWhileEnabled()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -233,7 +248,7 @@ namespace BeauRoutine
         /// </summary>
         public string GetName()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -249,7 +264,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetName(string inName)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -265,7 +280,7 @@ namespace BeauRoutine
         /// </summary>
         public int GetPriority()
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -282,7 +297,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine SetPriority(int inPriority)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -290,6 +305,66 @@ namespace BeauRoutine
                     fiber.SetPriority(inPriority);
             }
             return this;
+        }
+
+        /// <summary>
+        /// Gets the update timing for the routine.
+        /// </summary>
+        public RoutinePhase GetPhase()
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    return fiber.GetPhase();
+                return m.DefaultPhase;
+            }
+            return RoutinePhase.LateUpdate;
+        }
+
+        /// <summary>
+        /// Sets the update timing for the routine.
+        /// Note that if this update is currently running,
+        /// this routine will not execute until the next update.
+        /// </summary>
+        public Routine SetPhase(RoutinePhase inUpdate)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.SetPhase(inUpdate);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Attempts to manually update the given routine.
+        /// </summary>
+        public bool TryManuallyUpdate()
+        {
+            return TryManuallyUpdate(Time.deltaTime);
+        }
+
+        /// <summary>
+        /// Attempts to manually update the given routine
+        /// by the given delta time.
+        /// </summary>
+        public bool TryManuallyUpdate(float inDeltaTime)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                {
+                    return m.ManualUpdate(fiber, inDeltaTime);
+                }
+            }
+
+            return false;
         }
 
         #endregion
@@ -301,7 +376,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(IEnumerator inNewRoutine)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -317,7 +392,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(MonoBehaviour inHost, IEnumerator inNewRoutine)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -333,7 +408,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine Replace(Routine inRoutine)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -354,7 +429,7 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnComplete(Action inCallback)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
@@ -370,12 +445,28 @@ namespace BeauRoutine
         /// </summary>
         public Routine OnStop(Action inCallback)
         {
-            Manager m = GetManager();
+            Manager m = Manager.Get();
             if (m != null)
             {
                 Fiber fiber = m.Fibers[this];
                 if (fiber != null)
                     fiber.OnStop(inCallback);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Registers a function to be called if the
+        /// routine encounters an exception.
+        /// </summary>
+        public Routine OnException(ExceptionHandler inCallback)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                    fiber.OnException(inCallback);
             }
             return this;
         }

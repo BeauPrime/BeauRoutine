@@ -16,7 +16,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Collection of Fibers.
     /// </summary>
-    public sealed class Table
+    public sealed partial class Table
     {
         public const uint INDEX_MASK = 0x00FFFFFF;
         public const uint COUNTER_MASK = 0xFF000000;
@@ -31,46 +31,163 @@ namespace BeauRoutine.Internal
         {
             return (inIndex & INDEX_MASK) | ((inCounter << COUNTER_SHIFT) & COUNTER_MASK);
         }
+
+        #region Types
         
         private struct Entry
         {
             public Fiber Fiber;
 
-            /// <summary>
-            /// Previous entry index, or the index
-            /// of the last entry, if this is the first.
-            /// </summary>
-            public int PrevIndex;
+            // double-linked list for active/free
+            public int MainPrev;
+            public int MainNext;
 
-            /// <summary>
-            /// Next entry index, or -1 if this is the last.
-            /// </summary>
-            public int NextIndex;
+            // double-linked list for update types
+            public int UpdatePrev;
+            public int UpdateNext;
+
+            // double-linked list for yield types
+            public int YieldPrev;
+            public int YieldNext;
 
             public override string ToString()
             {
-                return (Fiber.IsRunning() ? "ACTIVE " : "INACTIVE ") + "Prev: " + PrevIndex.ToString() + "; Next: " + NextIndex.ToString();
+                return (Fiber.IsRunning() ? "ACTIVE" : "INACTIVE") + " Prev: " + MainPrev.ToString() + "; Next: " + MainNext.ToString();
             }
         }
+
+        private struct MainList
+        {
+            public int Head;
+            public int Count;
+
+            public void Create()
+            {
+                Head = -1;
+                Count = 0;
+            }
+        }
+
+        private struct UpdateList
+        {
+            public int Head;
+            public int Count;
+            public bool Updating;
+            public bool Dirty;
+
+            public void Create()
+            {
+                Head = -1;
+                Count = 0;
+            }
+        }
+
+        private struct YieldList
+        {
+            public int Head;
+            public int Count;
+            public bool Updating;
+            public bool Dirty;
+
+            public void Create()
+            {
+                Head = -1;
+                Count = 0;
+            }
+        }
+
+        private struct UpdateStackFrame
+        {
+            public RoutinePhase Phase;
+            public YieldPhase Yield;
+
+            public int Next;
+            public int Counter;
+
+            public void Start(RoutinePhase inPhase, ref UpdateList inList)
+            {
+                Phase = inPhase;
+                Yield = YieldPhase.None;
+
+                Next = inList.Head;
+                Counter = inList.Count;
+            }
+
+            public void Start(YieldPhase inYield, ref YieldList inList)
+            {
+                Phase = (RoutinePhase)(-1);
+                Yield = inYield;
+
+                Next = inList.Head;
+                Counter = inList.Count;
+            }
+
+            public void RemoveFromUpdate(Table inTable, RoutinePhase inPhase, Fiber inFiber)
+            {
+                if (Counter >= 0 && Next == inFiber.Index && Yield == YieldPhase.None && Phase == inPhase)
+                {
+                    Next = inTable.m_Entries[inFiber.Index].UpdateNext;
+                    --Counter;
+                }
+            }
+
+            public void RemoveFromYield(Table inTable, YieldPhase inPhase, Fiber inFiber)
+            {
+                if (Counter >= 0 && Next == inFiber.Index && Yield == inPhase)
+                {
+                    Next = inTable.m_Entries[inFiber.Index].YieldNext;
+                    --Counter;
+                }
+            }
+
+            public void Clear()
+            {
+                Phase = (RoutinePhase)(-1);
+                Yield = YieldPhase.None;
+                Next = -1;
+                Counter = -1;
+            }
+        }
+
+        #endregion
 
         public Table(Manager inManager)
         {
             m_Entries = new Entry[0];
             m_Manager = inManager;
-            m_FreeHead = m_ActiveHead = -1;
-            m_FreeCount = m_ActiveCount = 0;
+
+            m_FreeList.Create();
+            m_ActiveList.Create();
+
+            m_LateUpdateList.Create();
+            m_UpdateList.Create();
+            m_FixedUpdateList.Create();
+            m_ManualUpdateList.Create();
+
+            m_YieldFixedUpdateList.Create();
+            m_YieldEndOfFrameList.Create();
+            m_YieldLateUpdateList.Create();
+            m_YieldUpdateList.Create();
         }
 
         private Manager m_Manager;
         private Entry[] m_Entries;
 
-        private int m_FreeHead;
-        private int m_FreeCount;
+        private MainList m_FreeList;
+        private MainList m_ActiveList;
 
-        private int m_ActiveHead;
-        private int m_ActiveCount;
+        private UpdateList m_LateUpdateList;
+        private UpdateList m_UpdateList;
+        private UpdateList m_FixedUpdateList;
+        private UpdateList m_ManualUpdateList;
 
-        private bool m_SortDirty = false;
+        private YieldList m_YieldFixedUpdateList;
+        private YieldList m_YieldEndOfFrameList;
+        private YieldList m_YieldLateUpdateList;
+        private YieldList m_YieldUpdateList;
+
+        private UpdateStackFrame m_MainUpdate;
+        private UpdateStackFrame m_NestedUpdate;
 
         /// <summary>
         /// Returns the Fiber at the given index.
@@ -101,7 +218,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public int TotalRunning
         {
-            get { return m_Entries.Length - m_FreeCount; }
+            get { return m_Entries.Length - m_FreeList.Count; }
         }
 
         /// <summary>
@@ -109,7 +226,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public int TotalActive
         {
-            get { return m_ActiveCount; }
+            get { return m_ActiveList.Count; }
         }
 
         /// <summary>
@@ -117,61 +234,42 @@ namespace BeauRoutine.Internal
         /// </summary>
         public Fiber StartActive(ref int ioIndex)
         {
-            if (m_ActiveHead == -1)
+            if (m_ActiveList.Head == -1)
             {
                 ioIndex = -1;
                 return null;
             }
 
-            ioIndex = m_Entries[m_ActiveHead].NextIndex;
-            return m_Entries[m_ActiveHead].Fiber;
+            ioIndex = m_Entries[m_ActiveList.Head].MainNext;
+            return m_Entries[m_ActiveList.Head].Fiber;
         }
 
         /// <summary>
         /// Traverses to the next Fiber.
         /// </summary>
-        public Fiber Traverse(ref int ioIndex)
+        public Fiber TraverseActive(ref int ioIndex)
         {
             if (ioIndex == -1)
                 return null;
 
             Fiber fiber = m_Entries[ioIndex].Fiber;
-            ioIndex = m_Entries[ioIndex].NextIndex;
+            ioIndex = m_Entries[ioIndex].MainNext;
             return fiber;
         }
 
-        /// <summary>
-        /// Runs all active fibers.
-        /// </summary>
-        public void RunActive()
-        {
-            if (m_SortDirty)
-            {
-                SortActiveList();
-                m_SortDirty = false;
-            }
-
-            int totalLeft = m_ActiveCount;
-            int currentNode = m_ActiveHead;
-            while (currentNode != -1 && totalLeft-- > 0)
-            {
-                Entry e = m_Entries[currentNode];
-                currentNode = e.NextIndex;
-                e.Fiber.Run();
-            }
-        }
+        #region Queries
 
         /// <summary>
         /// Runs a query and returns the first routine to pass.
         /// </summary>
         public Routine RunQueryFirst(ITableQuery inQuery, ITableOperation inOperation)
         {
-            int totalLeft = m_ActiveCount;
-            int currentNode = m_ActiveHead;
+            int totalLeft = m_ActiveList.Count;
+            int currentNode = m_ActiveList.Head;
             while (currentNode != -1 && totalLeft-- > 0)
             {
                 Entry e = m_Entries[currentNode];
-                currentNode = e.NextIndex;
+                currentNode = e.MainNext;
                 if (inQuery.Validate(e.Fiber))
                 {
                     inOperation.Execute(e.Fiber);
@@ -186,12 +284,12 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void RunQueryAll(ITableQuery inQuery, ITableOperation inOperation)
         {
-            int totalLeft = m_ActiveCount;
-            int currentNode = m_ActiveHead;
+            int totalLeft = m_ActiveList.Count;
+            int currentNode = m_ActiveList.Head;
             while (currentNode != -1 && totalLeft-- > 0)
             {
                 Entry e = m_Entries[currentNode];
-                currentNode = e.NextIndex;
+                currentNode = e.MainNext;
                 if (inQuery.Validate(e.Fiber))
                     inOperation.Execute(e.Fiber);
             }
@@ -202,12 +300,12 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void RunQueryAll(ITableQuery inQuery, ITableOperation inOperation, ref ICollection<Routine> ioRoutines)
         {
-            int totalLeft = m_ActiveCount;
-            int currentNode = m_ActiveHead;
+            int totalLeft = m_ActiveList.Count;
+            int currentNode = m_ActiveList.Head;
             while (currentNode != -1 && totalLeft-- > 0)
             {
                 Entry e = m_Entries[currentNode];
-                currentNode = e.NextIndex;
+                currentNode = e.MainNext;
 
                 if (inQuery.Validate(e.Fiber))
                 {
@@ -219,17 +317,19 @@ namespace BeauRoutine.Internal
             }
         }
 
+        #endregion
+
         /// <summary>
         /// Disposes of all active Fibers.
         /// </summary>
         public void ClearAll()
         {
-            int totalLeft = m_ActiveCount;
-            int currentNode = m_ActiveHead;
+            int totalLeft = m_ActiveList.Count;
+            int currentNode = m_ActiveList.Head;
             while (currentNode != -1 && totalLeft-- > 0)
             {
                 Entry e = m_Entries[currentNode];
-                currentNode = e.NextIndex;
+                currentNode = e.MainNext;
                 e.Fiber.Dispose();
             }
         }
@@ -248,44 +348,47 @@ namespace BeauRoutine.Internal
             m_Manager.Log("Expanded capacity to " + inDesiredAmount.ToString());
 
             Array.Resize(ref m_Entries, inDesiredAmount);
-            m_FreeCount += inDesiredAmount - currentCount;
+            m_FreeList.Count += inDesiredAmount - currentCount;
 
             for (int i = currentCount; i < inDesiredAmount; ++i)
             {
                 Fiber fiber = new Fiber(m_Manager, (uint)i);
                 m_Entries[i].Fiber = fiber;
-                m_Entries[i].PrevIndex = i - 1;
-                m_Entries[i].NextIndex = i + 1;
+                m_Entries[i].MainPrev = i - 1;
+                m_Entries[i].MainNext = i + 1;
+
+                m_Entries[i].UpdateNext = m_Entries[i].UpdatePrev
+                = m_Entries[i].YieldNext = m_Entries[i].YieldPrev = -1;
             }
 
-            bool bStartingNew = m_FreeHead == -1;
+            bool bStartingNew = m_FreeList.Head == -1;
 
             // If we don't already have a free slot
             if (bStartingNew)
             {
-                m_FreeHead = currentCount;
-                m_Entries[m_FreeHead].PrevIndex = currentCount;
-                m_Entries[m_FreeHead].NextIndex = -1;
+                m_FreeList.Head = currentCount;
+                m_Entries[currentCount].MainPrev = currentCount;
+                m_Entries[currentCount].MainNext = -1;
             }
 
-            int lastIndex = m_Entries[m_FreeHead].PrevIndex;
+            int lastIndex = m_Entries[m_FreeList.Head].MainPrev;
 
             // Previous last should now point to the first new
             if (!bStartingNew)
             {
-                m_Entries[lastIndex].NextIndex = currentCount;
-                m_Entries[currentCount].PrevIndex = lastIndex;
+                m_Entries[lastIndex].MainNext = currentCount;
+                m_Entries[currentCount].MainPrev = lastIndex;
             }
             else
             {
-                m_Entries[m_FreeHead].NextIndex = currentCount + 1;
+                m_Entries[m_FreeList.Head].MainNext = currentCount + 1;
             }
 
             // Last pointer should now point to the last new
-            m_Entries[m_FreeHead].PrevIndex = inDesiredAmount - 1;
+            m_Entries[m_FreeList.Head].MainPrev = inDesiredAmount - 1;
 
             // Set last entry to point to none
-            m_Entries[inDesiredAmount - 1].NextIndex = -1;
+            m_Entries[inDesiredAmount - 1].MainNext = -1;
         }
 
         /// <summary>
@@ -293,9 +396,9 @@ namespace BeauRoutine.Internal
         /// </summary>
         public Fiber GetFreeFiber()
         {
-            if (m_FreeCount == 0)
+            if (m_FreeList.Count == 0)
                 SetCapacity(m_Entries.Length * 2);
-            return RemoveFirst(ref m_FreeHead, ref m_FreeCount);
+            return RemoveFirst(ref m_FreeList);
         }
 
         /// <summary>
@@ -303,8 +406,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void AddActiveFiber(Fiber inFiber)
         {
-            AddLast(inFiber, ref m_ActiveHead, ref m_ActiveCount);
-            MarkSortDirty();
+            AddLast(inFiber, ref m_ActiveList);
         }
 
         /// <summary>
@@ -312,7 +414,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void RemoveActiveFiber(Fiber inFiber)
         {
-            RemoveEntry(inFiber, ref m_ActiveHead, ref m_ActiveCount);
+            RemoveEntry(inFiber, ref m_ActiveList);
         }
 
         /// <summary>
@@ -320,285 +422,405 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void AddFreeFiber(Fiber inFiber)
         {
-            AddFirst(inFiber, ref m_FreeHead, ref m_FreeCount);
+            AddFirst(inFiber, ref m_FreeList);
+        }
+
+        #region Update Lists
+
+         /// <summary>
+        /// Updates all fibers in the given list.
+        /// </summary>
+        public void RunUpdate(RoutinePhase inUpdateMode)
+        {
+            switch(inUpdateMode)
+            {
+                case RoutinePhase.FixedUpdate:
+                    RunUpdate(RoutinePhase.FixedUpdate, ref m_FixedUpdateList);
+                    break;
+
+                case RoutinePhase.Update:
+                    RunUpdate(RoutinePhase.Update, ref m_UpdateList);
+                    break;
+
+                case RoutinePhase.LateUpdate:
+                    RunUpdate(RoutinePhase.LateUpdate, ref m_LateUpdateList);
+                    break;
+
+                case RoutinePhase.Manual:
+                    if (m_MainUpdate.Counter >= 0)
+                        RunUpdateNested(RoutinePhase.Manual, ref m_ManualUpdateList);
+                    else
+                        RunUpdate(RoutinePhase.Manual, ref m_ManualUpdateList);
+                    break;
+            }
+        }
+
+        // Runs a top-level update on the given update list
+        private void RunUpdate(RoutinePhase inUpdateMode, ref UpdateList ioList)
+        {
+            if (ioList.Dirty)
+            {
+                SortUpdateList(ref ioList);
+                ioList.Dirty = false;
+            }
+
+            m_MainUpdate.Start(inUpdateMode, ref ioList);
+
+            bool bPrevUpdating = ioList.Updating;
+            ioList.Updating = true;
+            {
+                while (m_MainUpdate.Next != -1 && m_MainUpdate.Counter-- > 0)
+                {
+                    Entry e = m_Entries[m_MainUpdate.Next];
+                    m_MainUpdate.Next = e.UpdateNext;
+                    if (e.Fiber.PrepareUpdate(inUpdateMode))
+                        e.Fiber.Update();
+                }
+            }
+            ioList.Updating = bPrevUpdating;
+
+            m_MainUpdate.Clear();
+        }
+
+        // Runs a nested update on the given update list (always manual)
+        private void RunUpdateNested(RoutinePhase inUpdateMode, ref UpdateList ioList)
+        {
+            if (ioList.Dirty)
+            {
+                SortUpdateList(ref ioList);
+                ioList.Dirty = false;
+            }
+
+            m_NestedUpdate.Start(inUpdateMode, ref ioList);
+
+            bool bPrevUpdating = ioList.Updating;
+            ioList.Updating = true;
+            {
+                while (m_NestedUpdate.Next != -1 && m_NestedUpdate.Counter-- > 0)
+                {
+                    Entry e = m_Entries[m_NestedUpdate.Next];
+                    m_NestedUpdate.Next = e.UpdateNext;
+                    if (e.Fiber.PrepareUpdate(inUpdateMode))
+                        e.Fiber.Update();
+                }
+            }
+            ioList.Updating = bPrevUpdating;
+
+            m_NestedUpdate.Clear();
         }
 
         /// <summary>
-        /// Marks the Table to be sorted at the next available time.
+        /// Marks an update list to be sorted at the next available time.
         /// </summary>
-        public void MarkSortDirty()
+        public void SetUpdateListDirty(RoutinePhase inUpdate)
         {
-            m_SortDirty = true;
-        }
-
-        // Adds the Fiber to the start of the given list
-        private void AddFirst(Fiber inFiber, ref int ioHead, ref int ioCount)
-        {
-            int fiberIndex = (int)inFiber.Index;
-
-            // If there are no free fibers currently,
-            // we can just add this as the first and only entry.
-            if (ioHead == -1)
+            switch(inUpdate)
             {
-                ioHead = fiberIndex;
-                m_Entries[fiberIndex].NextIndex = -1;
-                m_Entries[fiberIndex].PrevIndex = fiberIndex;
-            }
-            else
-            {
-                Entry firstEntry = m_Entries[ioHead];
-
-                // Point back at the current last entry
-                m_Entries[fiberIndex].PrevIndex = firstEntry.PrevIndex;
-
-                // Point at the old first free entry
-                m_Entries[fiberIndex].NextIndex = ioHead;
-
-                // Point the old first entry at the new first entry
-                m_Entries[ioHead].PrevIndex = fiberIndex;
-
-                ioHead = fiberIndex;
-            }
-
-            ++ioCount;
-        }
-
-        // Adds the Fiber to the end of the given list
-        private void AddLast(Fiber inFiber, ref int ioHead, ref int ioCount)
-        {
-            int fiberIndex = (int)inFiber.Index;
-
-            // If there are no free fibers currently,
-            // we can just add this as the first and only entry.
-            if (ioHead == -1)
-            {
-                ioHead = fiberIndex;
-                m_Entries[fiberIndex].NextIndex = -1;
-                m_Entries[fiberIndex].PrevIndex = fiberIndex;
-            }
-            else
-            {
-                Entry firstEntry = m_Entries[ioHead];
-
-                // Point the old last entry to this one
-                m_Entries[firstEntry.PrevIndex].NextIndex = fiberIndex;
-
-                // Point the new last entry at the previous one
-                m_Entries[fiberIndex].PrevIndex = firstEntry.PrevIndex;
-
-                // Point the new last entry at nothing
-                m_Entries[fiberIndex].NextIndex = -1;
-
-                // Point the first entry at this one
-                m_Entries[ioHead].PrevIndex = fiberIndex;
-            }
-
-            ++ioCount;
-        }
-
-        // Removes the first Fiber from the given list.
-        private Fiber RemoveFirst(ref int ioHead, ref int ioCount)
-        {
-            int fiberIndex = ioHead;
-
-            if (fiberIndex == -1)
-                return null;
-
-            int nextIndex = m_Entries[fiberIndex].NextIndex;
-            int prevIndex = m_Entries[fiberIndex].PrevIndex;
-
-            // If the table only has one entry,
-            // just remove it and set the table to empty.
-            if (nextIndex == -1)
-            {
-                m_Entries[fiberIndex].PrevIndex = -1;
-                ioHead = -1;
-                --ioCount;
-                return m_Entries[fiberIndex].Fiber;
-            }
-
-            // Point the next entry at the last entry
-            m_Entries[nextIndex].PrevIndex = prevIndex;
-
-            // Clear pointers in the current entry
-            m_Entries[fiberIndex].NextIndex = -1;
-            m_Entries[fiberIndex].PrevIndex = -1;
-
-            // Point to the next entry as the first.
-            ioHead = nextIndex;
-            --ioCount;
-
-            return m_Entries[fiberIndex].Fiber;
-        }
-
-        // Removes an entry from the Fiber list.
-        private void RemoveEntry(Fiber inFiber, ref int ioHead, ref int ioCount)
-        {
-            int fiberIndex = (int)inFiber.Index;
-            int nextIndex = m_Entries[fiberIndex].NextIndex;
-            int prevIndex = m_Entries[fiberIndex].PrevIndex;
-
-            // If the list is already empty, we can't do anything about it
-            if (ioHead == -1)
-                return;
-
-            // Ensure the next entry is pointing back to our previous index.
-            m_Entries[nextIndex == -1 ? ioHead : nextIndex].PrevIndex = prevIndex;
-
-            // If we're the first entry, the first entry is now our last
-            if (fiberIndex == ioHead)
-            {
-                ioHead = nextIndex;
-            }
-            else
-            {
-                // Previous entry should point back to our next entry
-                m_Entries[prevIndex].NextIndex = nextIndex;
-            }
-
-            m_Entries[fiberIndex].NextIndex = -1;
-            m_Entries[fiberIndex].PrevIndex = -1;
-
-            --ioCount;
-        }
-
-        #region Merge Sort
-
-        public void SortActiveList()
-        {
-            MergeSort(ref m_ActiveHead);
-        }
-
-        private void MergeSort(ref int ioHead)
-        {
-            if (ioHead == -1 || m_Entries[ioHead].NextIndex == -1)
-                return;
-
-            int listA;
-            int listB;
-
-            SplitLists(ioHead, out listA, out listB);
-
-            MergeSort(ref listA);
-            MergeSort(ref listB);
-
-            ioHead = InPlaceSortedMerge(listA, listB);
-        }
-
-        // Merging algorithm source: http://stackoverflow.com/a/11273262
-        private int InPlaceSortedMerge(int inHeadA, int inHeadB)
-        {
-            int outputResult = -1;
-            int newPtr = outputResult;
-
-            // Store the tail so we can write the correct tail pointer for the merged list.
-            int aTail = inHeadA == -1 ? -1 : m_Entries[inHeadA].PrevIndex;
-            int bTail = inHeadB == -1 ? -1 : m_Entries[inHeadB].PrevIndex;
-
-            int aPtr = inHeadA;
-            int bPtr = inHeadB;
-
-            while (aPtr != -1 && bPtr != -1)
-            {
-                if (m_Entries[aPtr].Fiber.Priority >= m_Entries[bPtr].Fiber.Priority)
-                {
-                    if (outputResult == -1)
-                    {
-                        outputResult = aPtr;
-                        newPtr = outputResult;
-                    }
-                    else
-                    {
-                        m_Entries[newPtr].NextIndex = aPtr;
-                        m_Entries[aPtr].PrevIndex = newPtr;
-
-                        newPtr = m_Entries[newPtr].NextIndex;
-                    }
-                    aPtr = m_Entries[aPtr].NextIndex;
-                }
-                else
-                {
-                    if (outputResult == -1)
-                    {
-                        outputResult = bPtr;
-                        newPtr = outputResult;
-                    }
-                    else
-                    {
-                        m_Entries[newPtr].NextIndex = bPtr;
-                        m_Entries[bPtr].PrevIndex = newPtr;
-
-                        newPtr = m_Entries[newPtr].NextIndex;
-                    }
-                    bPtr = m_Entries[bPtr].NextIndex;
-                }
-            }
-
-            if (aPtr != -1)
-            {
-                if (outputResult == -1)
-                {
-                    outputResult = aPtr;
-                }
-                else
-                {
-                    m_Entries[newPtr].NextIndex = aPtr;
-                    m_Entries[aPtr].PrevIndex = newPtr;
-
-                    m_Entries[outputResult].PrevIndex = aTail;
-                }
-            }
-            else if (bPtr != -1)
-            {
-                if (outputResult == -1)
-                {
-                    outputResult = bPtr;
-                }
-                else
-                {
-                    m_Entries[newPtr].NextIndex = bPtr;
-                    m_Entries[bPtr].PrevIndex = newPtr;
-
-                    m_Entries[outputResult].PrevIndex = bTail;
-                }
-            }
-
-            return outputResult;
-        }
-
-        private void SplitLists(int inHead, out int outHeadA, out int outHeadB)
-        {
-            if (inHead == -1 || m_Entries[inHead].NextIndex == -1)
-            {
-                outHeadA = inHead;
-                outHeadB = -1;
-                return;
-            }
-
-            int tail = m_Entries[inHead].PrevIndex;
-
-            int halfPtr = inHead;
-            int fullPtr = m_Entries[inHead].NextIndex;
-            while (fullPtr != -1)
-            {
-                fullPtr = m_Entries[fullPtr].NextIndex;
-                if (fullPtr == -1)
+                case RoutinePhase.FixedUpdate:
+                    m_FixedUpdateList.Dirty = true;
                     break;
-                halfPtr = m_Entries[halfPtr].NextIndex;
-                fullPtr = m_Entries[fullPtr].NextIndex;
+
+                case RoutinePhase.Update:
+                    m_UpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.LateUpdate:
+                    m_LateUpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.Manual:
+                    m_ManualUpdateList.Dirty = true;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Returns the total number of fibers for the given update list.
+        /// </summary>
+        public int GetUpdateCount(RoutinePhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case RoutinePhase.FixedUpdate:
+                    return m_FixedUpdateList.Count;
+
+                case RoutinePhase.Update:
+                    return m_UpdateList.Count;
+
+                case RoutinePhase.Manual:
+                    return m_ManualUpdateList.Count;
+
+                case RoutinePhase.LateUpdate:
+                    return m_LateUpdateList.Count;
+
+                default:
+                    return 0;
+            }
+        }
+
+        /// <summary>
+        /// Returns if the given list is updating.
+        /// </summary>
+        public bool GetIsUpdating(RoutinePhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case RoutinePhase.FixedUpdate:
+                    return m_FixedUpdateList.Updating;
+
+                case RoutinePhase.Update:
+                    return m_UpdateList.Updating;
+
+                case RoutinePhase.Manual:
+                    return m_ManualUpdateList.Updating;
+
+                case RoutinePhase.LateUpdate:
+                    return m_LateUpdateList.Updating;
+
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Adds a Fiber to the given update list.
+        /// </summary>
+        public void AddFiberToUpdateList(Fiber inFiber, RoutinePhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case RoutinePhase.FixedUpdate:
+                    AddLast(inFiber, ref m_FixedUpdateList);
+                    m_FixedUpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.Update:
+                    AddLast(inFiber, ref m_UpdateList);
+                    m_UpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.LateUpdate:
+                    AddLast(inFiber, ref m_LateUpdateList);
+                    m_LateUpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.Manual:
+                    AddLast(inFiber, ref m_ManualUpdateList);
+                    m_ManualUpdateList.Dirty = true;
+                    break;
+            }
+        }
+
+        /// <summary>
+        /// Removes a Fiber from the given update list.
+        /// </summary>
+        public void RemoveFiberFromUpdateList(Fiber inFiber, RoutinePhase inUpdate)
+        {
+            m_MainUpdate.RemoveFromUpdate(this, inUpdate, inFiber);
+
+            switch(inUpdate)
+            {
+                case RoutinePhase.FixedUpdate:
+                    RemoveEntry(inFiber, ref m_FixedUpdateList);
+                    break;
+
+                case RoutinePhase.Update:
+                    RemoveEntry(inFiber, ref m_UpdateList);
+                    break;
+
+                case RoutinePhase.LateUpdate:
+                    RemoveEntry(inFiber, ref m_LateUpdateList);
+                    break;
+
+                case RoutinePhase.Manual:
+                    // Nested list is only involved in a manual update
+                    m_NestedUpdate.RemoveFromUpdate(this, inUpdate, inFiber);
+
+                    RemoveEntry(inFiber, ref m_ManualUpdateList);
+                    break;
+            }
+        }
+
+        #endregion
+    
+        #region Updating a Fiber manually
+
+        /// <summary>
+        /// Attempts to update the given Routine manually.
+        /// </summary>
+        public void RunManualUpdate(Fiber inFiber)
+        {
+            bool bPrevUpdating = m_ManualUpdateList.Updating;
+            m_ManualUpdateList.Updating = true;
+            inFiber.Update();
+            m_ManualUpdateList.Updating = bPrevUpdating;
+        }
+
+        #endregion
+
+        #region Yield Lists
+
+        public void RunYieldUpdate(YieldPhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    RunYieldUpdate(YieldPhase.WaitForEndOfFrame, ref m_YieldEndOfFrameList);
+                    break;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForFixedUpdate, ref m_YieldFixedUpdateList);
+                    break;
+
+                case YieldPhase.WaitForLateUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForLateUpdate, ref m_YieldLateUpdateList);
+                    break;
+
+                case YieldPhase.WaitForUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForUpdate, ref m_YieldUpdateList);
+                    break;
+            }
+        }
+
+        private void RunYieldUpdate(YieldPhase inUpdate, ref YieldList ioList)
+        {
+            if (ioList.Dirty)
+            {
+                SortYieldList(ref ioList);
+                ioList.Dirty = false;
             }
 
-            outHeadA = inHead;
-            outHeadB = m_Entries[halfPtr].NextIndex;
+            m_MainUpdate.Start(inUpdate, ref ioList);
 
-            // Truncate list A
-            m_Entries[halfPtr].NextIndex = -1;
-            m_Entries[outHeadA].PrevIndex = halfPtr;
+            ioList.Updating = true;
+            {
+                while(m_MainUpdate.Next != -1 && m_MainUpdate.Counter-- > 0)
+                {
+                    Entry e = m_Entries[m_MainUpdate.Next];
+                    m_MainUpdate.Next = e.UpdateNext;
+                    e.Fiber.Update(inUpdate);
+                }
+            }
+            ioList.Updating = false;
 
-            // List B is already truncated
-            // Make sure the first entry is pointing at the original tail
-            if (outHeadB != -1)
-                m_Entries[outHeadB].PrevIndex = tail;
+            m_MainUpdate.Clear();
+        }
+
+        public void SetYieldListDirty(YieldPhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    m_YieldEndOfFrameList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    m_YieldFixedUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForLateUpdate:
+                    m_YieldLateUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForUpdate:
+                    m_YieldUpdateList.Dirty = true;
+                    break;
+            }
+        }
+
+        public int GetYieldCount(YieldPhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    return m_YieldEndOfFrameList.Count;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    return m_YieldFixedUpdateList.Count;
+
+                case YieldPhase.WaitForLateUpdate:
+                    return m_YieldLateUpdateList.Count;
+
+                case YieldPhase.WaitForUpdate:
+                    return m_YieldUpdateList.Count;
+
+                default:
+                    return 0;
+            }
+        }
+
+        public bool GetIsUpdatingYield(YieldPhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    return m_YieldEndOfFrameList.Updating;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    return m_YieldFixedUpdateList.Updating;
+
+                case YieldPhase.WaitForLateUpdate:
+                    return m_YieldLateUpdateList.Updating;
+
+                case YieldPhase.WaitForUpdate:
+                    return m_YieldUpdateList.Updating;
+
+                default:
+                    return false;
+            }
+        }
+
+        public void AddFiberToYieldList(Fiber inFiber, YieldPhase inUpdate)
+        {
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    AddLast(inFiber, ref m_YieldEndOfFrameList);
+                    m_YieldEndOfFrameList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    AddLast(inFiber, ref m_YieldFixedUpdateList);
+                    m_FixedUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForLateUpdate:
+                    AddLast(inFiber, ref m_YieldLateUpdateList);
+                    m_YieldLateUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForUpdate:
+                    AddLast(inFiber, ref m_YieldUpdateList);
+                    m_YieldUpdateList.Dirty = true;
+                    break;
+            }
+        }
+
+        public void RemoveFiberFromYieldList(Fiber inFiber, YieldPhase inUpdate)
+        {
+            m_MainUpdate.RemoveFromYield(this, inUpdate, inFiber);
+
+            // No need to check nested list, since the nested list will never be running a yield update
+            // m_NestedUpdate.RemoveFromYield(this, inUpdate, inFiber);
+
+            switch(inUpdate)
+            {
+                case YieldPhase.WaitForEndOfFrame:
+                    RemoveEntry(inFiber, ref m_YieldEndOfFrameList);
+                    break;
+
+                case YieldPhase.WaitForFixedUpdate:
+                    RemoveEntry(inFiber, ref m_YieldFixedUpdateList);
+                    break;
+
+                case YieldPhase.WaitForLateUpdate:
+                    RemoveEntry(inFiber, ref m_YieldLateUpdateList);
+                    break;
+
+                case YieldPhase.WaitForUpdate:
+                    RemoveEntry(inFiber, ref m_YieldUpdateList);
+                    break;
+            }
         }
 
         #endregion

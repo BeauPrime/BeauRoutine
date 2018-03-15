@@ -35,6 +35,7 @@ namespace BeauRoutine.Examples
                 chars[chars.Length - 1 - i] = temp;
 
                 // Simulate doing some work with this delay
+                inFuture.SetProgress(i / (chars.Length / 2f));
                 yield return 0.2f;
             }
 

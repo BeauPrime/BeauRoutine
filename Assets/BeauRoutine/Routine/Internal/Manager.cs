@@ -8,7 +8,7 @@
 */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-#define DEVELOPMENT
+    #define DEVELOPMENT
 #endif
 
 using System;
@@ -20,6 +20,12 @@ namespace BeauRoutine.Internal
 {
     public sealed class Manager
     {
+        // Version number
+        static public readonly Version VERSION = new Version("0.9.0");
+
+        // Used to perform check for starting a Routine.Inline in development builds
+        static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
+
         #region Singleton
 
         static private Manager s_Instance = new Manager();
@@ -42,7 +48,7 @@ namespace BeauRoutine.Internal
         {
             if (s_Instance != null)
             {
-                if (!s_Instance.IsUpdating)
+                if (!s_Instance.m_Updating)
                 {
                     s_Instance.Shutdown();
                     s_Instance = null;
@@ -96,7 +102,7 @@ namespace BeauRoutine.Internal
         private int m_MaxConcurrent;
         private bool m_NeedsSnapshot;
         private RoutineStats[] m_Snapshot;
-        private int m_UpdateSamples;
+        private int m_TotalUpdateFrames;
         private long m_TotalUpdateTime;
         private float m_LastProfileLogTime;
         private const int MAX_UPDATE_SAMPLES = 60;
@@ -144,11 +150,29 @@ namespace BeauRoutine.Internal
         public bool SnapshotEnabled = false;
 
         /// <summary>
+        /// Determines whether exception handling is enabled.
+        /// </summary>
+        public bool HandleExceptions = true;
+
+        /// <summary>
+        /// Default update phase for routines.
+        /// </summary>
+        public RoutinePhase DefaultPhase = RoutinePhase.LateUpdate;
+
+        /// <summary>
         /// Is the manager in the middle of updating routines right now?
         /// </summary>
-        public bool IsUpdating
+        public bool IsUpdating()
         {
-            get { return m_Updating; }
+            return m_Updating;
+        }
+        
+        /// <summary>
+        /// Is the manager in the middle of updating the given update list.
+        /// </summary>
+        public bool IsUpdating(RoutinePhase inUpdate)
+        {
+            return Fibers.GetIsUpdating(inUpdate);
         }
 
         #region Lifecycle
@@ -170,8 +194,16 @@ namespace BeauRoutine.Internal
                 m_QueuedGroupTimescale[i] = Frame.GroupTimeScale[i] = 1.0f;
 
 #if DEVELOPMENT
+    #if UNITY_EDITOR
             DebugMode = true;
-#endif
+    #else
+            DebugMode = UnityEngine.Debug.isDebugBuild;
+    #endif // UNITY_EDITOR
+#else
+            DebugMode = false;
+#endif // DEVELOPMENT
+
+            HandleExceptions = DebugMode;
         }
 
         /// <summary>
@@ -182,19 +214,13 @@ namespace BeauRoutine.Internal
             if (m_Initialized)
                 return;
 
-#if DEVELOPMENT
-            DebugMode = true;
-#else
-            DebugMode = UnityEngine.Debug.isDebugBuild;
-#endif
-
             GameObject hostGO = new GameObject("Routine::Manager");
             Host = hostGO.AddComponent<RoutineUnityHost>();
             Host.Initialize(this);
             hostGO.hideFlags = HideFlags.HideAndDontSave;
             GameObject.DontDestroyOnLoad(hostGO);
 
-            Log("Initialize()");
+            Log("Initialize() -- Version " + VERSION.ToString());
 
             m_Initialized = true;
             m_LastProfileLogTime = Time.unscaledTime;
@@ -203,8 +229,9 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Updates all running routines.
         /// </summary>
-        public void Update()
+        public void Update(RoutinePhase inPhase)
         {
+            Frame.IncrementSerial();
             Frame.ResetTime(TimeScale);
             Frame.PauseMask = m_QueuedPauseMask;
             if (m_GroupTimescaleDirty)
@@ -213,8 +240,10 @@ namespace BeauRoutine.Internal
                 Array.Copy(m_QueuedGroupTimescale, Frame.GroupTimeScale, Routine.MAX_GROUPS);
             }
 
+            bool bPrevUpdating = m_Updating;
             m_Updating = true;
             {
+#if DEVELOPMENT
                 if (DebugMode)
                 {
                     m_UpdateTimer.Reset();
@@ -226,45 +255,205 @@ namespace BeauRoutine.Internal
                         m_NeedsSnapshot = false;
                     }
 
-                    if (!Paused && !SystemPaused && Fibers.TotalActive > 0)
+                    if (!Paused && !SystemPaused && Fibers.GetUpdateCount(inPhase) > 0)
                     {
-                        Fibers.RunActive();
+                        Fibers.RunUpdate(inPhase);
                         Frame.ResetTimeScale();
                     }
 
                     m_UpdateTimer.Stop();
 
-                    if (m_UpdateSamples >= MAX_UPDATE_SAMPLES || m_UpdateTimer.ElapsedMilliseconds > MAX_UPDATE_MS)
-                    {
-                        m_UpdateSamples = 0;
-                        m_TotalUpdateTime = 0;
-                    }
-
-                    ++m_UpdateSamples;
                     m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
 
-                    if (Time.unscaledTime >= m_LastProfileLogTime + 10f)
+                    if (inPhase == RoutinePhase.LateUpdate)
                     {
-                        m_LastProfileLogTime = Time.unscaledTime;
-                        Log(string.Format("Running: {0}/{1}/{2}; Avg Update: {3}ms", Fibers.TotalActive, m_MaxConcurrent, Fibers.TotalCapacity, (m_TotalUpdateTime / 10000f) / m_UpdateSamples));
+                        ++m_TotalUpdateFrames;
+                        if (Time.unscaledTime >= m_LastProfileLogTime + 10f)
+                        {
+                            m_LastProfileLogTime = Time.unscaledTime;
+                            Log(string.Format("Running: {0}/{1}/{2}; Avg Update: {3}ms", Fibers.TotalActive, m_MaxConcurrent, Fibers.TotalCapacity, (m_TotalUpdateTime / 10000f) / m_TotalUpdateFrames));
+                        }
+
+                        if (m_TotalUpdateFrames >= MAX_UPDATE_SAMPLES || m_UpdateTimer.ElapsedMilliseconds > MAX_UPDATE_MS)
+                        {
+                            m_TotalUpdateFrames = 0;
+                            m_TotalUpdateTime = 0;
+                        }
                     }
                 }
                 else
+#endif // DEVELOPMENT
                 {
-                    if (!Paused && Fibers.TotalActive > 0)
+                    if (!Paused && !SystemPaused && Fibers.GetUpdateCount(inPhase) > 0)
                     {
-                        Fibers.RunActive();
+                        Fibers.RunUpdate(inPhase);
                         Frame.ResetTimeScale();
                     }
                 }
             }
-            m_Updating = false;
+            m_Updating = bPrevUpdating;
 
-            if (m_Destroying)
+            if (!m_Updating)
             {
-                m_Destroying = false;
-                Destroy();
+                if (m_Destroying)
+                {
+                    m_Destroying = false;
+                    Destroy();
+                }
             }
+        }
+
+        /// <summary>
+        /// Manually updates routines set to Manual.
+        /// </summary>
+        public bool ManualUpdate(float inDeltaTime)
+        {
+            if (Fibers.GetIsUpdating(RoutinePhase.Manual))
+            {
+                UnityEngine.Debug.LogWarning("[BeauRoutine] Cannot nest ManualUpdate calls!");
+                return false;
+            }
+
+            Frame oldFrame = Frame;
+            bool bPrevUpdating = m_Updating;
+
+            if (bPrevUpdating)
+            {
+                // Copy this, so we have a consistent group time scale
+                // for any previous updates
+                oldFrame.GroupTimeScale = (float[])oldFrame.GroupTimeScale.Clone();
+            }
+
+            Frame.IncrementSerial();
+            Frame.ResetTime(inDeltaTime, TimeScale);
+            Frame.PauseMask = m_QueuedPauseMask;
+            if (m_GroupTimescaleDirty)
+            {
+                if (!bPrevUpdating)
+                    m_GroupTimescaleDirty = false;
+                
+                // This is only temporary, so we won't reset the dirty flag here
+                Array.Copy(m_QueuedGroupTimescale, Frame.GroupTimeScale, Routine.MAX_GROUPS);
+            }
+            
+            m_Updating = true;
+            {
+#if DEVELOPMENT
+                if (DebugMode)
+                {
+                    m_UpdateTimer.Reset();
+                    m_UpdateTimer.Start();
+
+                    if (m_NeedsSnapshot)
+                    {
+                        m_Snapshot = GetRoutineStats();
+                        m_NeedsSnapshot = false;
+                    }
+
+                    if (Fibers.GetUpdateCount(RoutinePhase.Manual) > 0)
+                    {
+                        Fibers.RunUpdate(RoutinePhase.Manual);
+                        Frame.ResetTimeScale();
+                    }
+
+                    m_UpdateTimer.Stop();
+
+                    m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
+                }
+                else
+#endif // DEVELOPMENT
+                {
+                    if (Fibers.GetUpdateCount(RoutinePhase.Manual) > 0)
+                    {
+                        Fibers.RunUpdate(RoutinePhase.Manual);
+                        Frame.ResetTimeScale();
+                    }
+                }
+            }
+            m_Updating = bPrevUpdating;
+            Frame = oldFrame;
+
+            if (!m_Updating)
+            {
+                if (m_Destroying)
+                {
+                    m_Destroying = false;
+                    Destroy();
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>
+        /// Manually updates the given routine.
+        /// </summary>
+        public bool ManualUpdate(Fiber inFiber, float inDeltaTime)
+        {
+            if (!inFiber.PrepareManualUpdate())
+                return false;
+
+            Frame oldFrame = Frame;
+            bool bPrevUpdating = m_Updating;
+
+            if (bPrevUpdating)
+            {
+                // Copy this, so we have a consistent group time scale
+                // for any previous updates
+                oldFrame.GroupTimeScale = (float[])oldFrame.GroupTimeScale.Clone();
+            }
+
+            Frame.IncrementSerial();
+            Frame.ResetTime(inDeltaTime, TimeScale);
+            Frame.PauseMask = m_QueuedPauseMask;
+            if (m_GroupTimescaleDirty)
+            {
+                if (!bPrevUpdating)
+                    m_GroupTimescaleDirty = false;
+                Array.Copy(m_QueuedGroupTimescale, Frame.GroupTimeScale, Routine.MAX_GROUPS);
+            }
+
+            m_Updating = true;
+            {
+#if DEVELOPMENT
+                if (DebugMode)
+                {
+                    m_UpdateTimer.Reset();
+                    m_UpdateTimer.Start();
+
+                    if (m_NeedsSnapshot)
+                    {
+                        m_Snapshot = GetRoutineStats();
+                        m_NeedsSnapshot = false;
+                    }
+
+                    Fibers.RunManualUpdate(inFiber);
+                    Frame.ResetTimeScale();
+
+                    m_UpdateTimer.Stop();
+
+                    m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
+                }
+                else
+#endif // DEVELOPMENT
+                {
+                    Fibers.RunManualUpdate(inFiber);
+                    Frame.ResetTimeScale();
+                }
+            }
+            m_Updating = bPrevUpdating;
+            Frame = oldFrame;
+
+            if (!m_Updating)
+            {
+                if (m_Destroying)
+                {
+                    m_Destroying = false;
+                    Destroy();
+                }
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -324,6 +513,17 @@ namespace BeauRoutine.Internal
             if (ReferenceEquals(inHost, null))
                 inHost = Host;
 
+#if DEVELOPMENT
+            if (inStart.GetType().TypeHandle.Value == TYPEHANDLE_DECORATOR)
+            {
+                RoutineDecorator decorator = (RoutineDecorator)inStart;
+                if ((decorator.Flags & RoutineDecoratorFlag.Inline) != 0)
+                {
+                    UnityEngine.Debug.LogWarning("[BeauRoutine] Starting a BeauRoutine with an Inlined coroutine. This is not supported, and the coroutine will not execute immediately.");
+                }
+            }
+#endif // DEVELOPMENT
+
             Routine handle;
             Fiber fiber = CreateFiber(inHost, inStart, false, out handle);
             Fibers.AddActiveFiber(fiber);
@@ -371,6 +571,64 @@ namespace BeauRoutine.Internal
 
         #endregion
 
+        #region Yield Updates
+
+        public void UpdateYield(YieldPhase inYieldUpdate)
+        {
+            Frame.IncrementSerial();
+            Frame.ResetTime(TimeScale);
+            Frame.PauseMask = m_QueuedPauseMask;
+            if (m_GroupTimescaleDirty)
+            {
+                m_GroupTimescaleDirty = false;
+                Array.Copy(m_QueuedGroupTimescale, Frame.GroupTimeScale, Routine.MAX_GROUPS);
+            }
+
+            m_Updating = true;
+            {
+#if DEVELOPMENT
+                if (DebugMode)
+                {
+                    m_UpdateTimer.Reset();
+                    m_UpdateTimer.Start();
+
+                    if (m_NeedsSnapshot)
+                    {
+                        m_Snapshot = GetRoutineStats();
+                        m_NeedsSnapshot = false;
+                    }
+
+                    if (!Paused && !SystemPaused && Fibers.GetYieldCount(inYieldUpdate) > 0)
+                    {
+                        Fibers.RunYieldUpdate(inYieldUpdate);
+                        Frame.ResetTimeScale();
+                    }
+
+                    m_UpdateTimer.Stop();
+
+                    m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
+                }
+                else
+#endif // DEVELOPMENT
+                {
+                    if (!Paused && !SystemPaused && Fibers.GetYieldCount(inYieldUpdate) > 0)
+                    {
+                        Fibers.RunYieldUpdate(inYieldUpdate);
+                        Frame.ResetTimeScale();
+                    }
+                }
+            }
+            m_Updating = false;
+
+            if (m_Destroying)
+            {
+                m_Destroying = false;
+                Destroy();
+            }
+        }
+
+        #endregion
+
         #region Stats
 
         /// <summary>
@@ -390,7 +648,7 @@ namespace BeauRoutine.Internal
             while (fiber != null)
             {
                 stats[i++] = fiber.GetStats();
-                fiber = Fibers.Traverse(ref next);
+                fiber = Fibers.TraverseActive(ref next);
             }
 
             return stats;
@@ -406,7 +664,7 @@ namespace BeauRoutine.Internal
             stats.Running = Fibers.TotalRunning;
             stats.Capacity = Fibers.TotalCapacity;
             stats.Max = m_MaxConcurrent;
-            stats.AvgMillisecs = (m_UpdateSamples == 0 ? 0 : (m_TotalUpdateTime / 10000f) / m_UpdateSamples);
+            stats.AvgMillisecs = (m_TotalUpdateFrames == 0 ? 0 : (m_TotalUpdateTime / 10000f) / m_TotalUpdateFrames);
             stats.MaxSnapshot = m_Snapshot;
             return stats;
         }
@@ -464,12 +722,15 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Logs a message to the console in Debug Mode.
         /// </summary>
+        [Conditional("DEVELOPMENT")]
         public void Log(string inMessage)
         {
+#if DEVELOPMENT
             if (DebugMode)
             {
                 UnityEngine.Debug.Log("[BeauRoutine] " + inMessage);
             }
+#endif // DEVELOPMENT
         }
     }
 }

@@ -22,6 +22,8 @@ namespace BeauRoutine.Internal
         private List<IEnumerator> m_Enumerators;
         private List<Fiber> m_Fibers;
         private bool m_Race;
+        private bool m_Iterating = false;
+        private Fiber m_ParentFiber = null;
 
         public ParallelFibers(Manager inManager, List<IEnumerator> inEnumerators, bool inbRace)
         {
@@ -29,6 +31,22 @@ namespace BeauRoutine.Internal
             m_Enumerators = inEnumerators;
             m_Race = inbRace;
             m_Fibers = new List<Fiber>(m_Enumerators.Count);
+        }
+
+        public void RemoveFiber(Fiber inFiber)
+        {
+            // This will only get called during Fiber.Dispose
+            // If we're executing we don't have to remove from the list
+            // since that will be taken care of in ParallelFibers.MoveNext
+            if (!m_Iterating && m_Fibers != null)
+            {
+                m_Fibers.Remove(inFiber);
+            }
+        }
+
+        public void SetParentFiber(Fiber inFiber)
+        {
+            m_ParentFiber = inFiber;
         }
 
         public void Dispose()
@@ -45,9 +63,15 @@ namespace BeauRoutine.Internal
             }
 
             for (int i = 0; i < m_Fibers.Count; ++i)
-                m_Fibers[i].Dispose();
+            {
+                Fiber fiber = m_Fibers[i];
+                fiber.ClearParallelOwner();
+                fiber.Dispose();
+            }
             m_Fibers.Clear();
             m_Fibers = null;
+
+            m_ParentFiber = null;
         }
 
         public object Current
@@ -62,7 +86,12 @@ namespace BeauRoutine.Internal
                 for (int i = 0; i < m_Enumerators.Count; ++i)
                 {
                     if (m_Enumerators[i] != null)
-                        m_Fibers.Add(m_Manager.ChainFiber(m_Enumerators[i]));
+                    {
+                        Fiber fiber = m_Manager.ChainFiber(m_Enumerators[i]);
+                        fiber.SetParallelOwner(this);
+                        fiber.SetParentFiber(m_ParentFiber);
+                        m_Fibers.Add(fiber);
+                    }
                 }
 
                 m_Enumerators.Clear();
@@ -73,16 +102,25 @@ namespace BeauRoutine.Internal
 
             if (m_Fibers.Count > 0)
             {
-                for (int i = 0; i < m_Fibers.Count; ++i)
+                bool prevIterating = m_Iterating;
+                m_Iterating = true;
                 {
-                    Fiber myFiber = m_Fibers[i];
-                    if (!myFiber.Run())
+                    for (int i = 0; i < m_Fibers.Count; ++i)
                     {
-                        m_Fibers.RemoveAt(i--);
-                        if (m_Race)
-                            return false;
+                        Fiber myFiber = m_Fibers[i];
+                        m_Manager.Frame.RefreshTimeScale();
+                        if (!myFiber.Update())
+                        {
+                            m_Fibers.RemoveAt(i--);
+                            if (m_Race)
+                            {
+                                m_Iterating = false;
+                                return false;
+                            }
+                        }
                     }
                 }
+                m_Iterating = prevIterating;
             }
 
             return m_Fibers.Count > 0;
@@ -90,7 +128,7 @@ namespace BeauRoutine.Internal
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         public override string ToString()

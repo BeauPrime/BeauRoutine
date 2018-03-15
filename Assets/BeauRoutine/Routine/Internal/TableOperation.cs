@@ -39,7 +39,7 @@ namespace BeauRoutine.Internal
     {
         public void Execute(Fiber inFiber)
         {
-            if (inFiber.Manager.IsUpdating)
+            if (inFiber.Manager.IsUpdating())
                 inFiber.Stop();
             else
                 inFiber.Dispose();

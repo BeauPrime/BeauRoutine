@@ -176,7 +176,7 @@ namespace BeauRoutine
 
         public void Reset()
         {
-            throw new NotImplementedException();
+            throw new NotSupportedException();
         }
 
         #endregion

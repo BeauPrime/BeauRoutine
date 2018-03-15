@@ -94,7 +94,7 @@ namespace BeauRoutine
         /// <summary>
         /// Returns an empty state.
         /// </summary>
-        static public RectTransformState State()
+        static public RectTransformState Create()
         {
             return new RectTransformState();
         }
@@ -102,7 +102,7 @@ namespace BeauRoutine
         /// <summary>
         /// Returns a new world-space state for the given transform.
         /// </summary>
-        static public RectTransformState State(RectTransform inTransform)
+        static public RectTransformState Create(RectTransform inTransform)
         {
             return new RectTransformState(inTransform);
         }

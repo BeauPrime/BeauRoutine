@@ -19,20 +19,34 @@ namespace BeauRoutine
     public interface IFuture : IDisposable
     {
         bool IsDone();
-        
+
+        // Progress
+        bool IsInProgress();
+        float GetProgress();
+        void SetProgress(float inProgress);
+        IFuture OnProgress(Action<float> inProgressCallback);
+
+        // Completion
         bool IsComplete();
         
+        // Failure
         bool IsFailed();
+        Future.Failure GetFailure();
+        bool TryGetFailure(out Future.Failure outFailure);
         void Fail();
         void Fail(object inArg);
         void Fail(Exception inException);
         void Fail(Future.Failure inFailure);
         void Fail(Future.FailureType inType);
         void Fail(Future.FailureType inType, object inArg);
+        IFuture OnFail(Action inFailureCallback);
+        IFuture OnFail(Action<Future.Failure> inFailureCallback);
 
+        // Cancellation
         bool IsCancelled();
         void Cancel();
 
+        // Coroutines
         IFuture LinkTo(Routine inRoutine);
         IEnumerator Wait();
     }
@@ -154,9 +168,12 @@ namespace BeauRoutine
     /// </summary>
     public class Future<T> : IFuture
     {
-        private enum State { Uninitialized, Completed, Failed, Cancelled }
+        private enum State { InProgress, Completed, Failed, Cancelled }
 
         private State m_State;
+
+        private float m_Progress = 0;
+        private Action<float> m_CallbackProgress;
 
         private T m_Value;
         private Action<T> m_CallbackComplete;
@@ -169,7 +186,7 @@ namespace BeauRoutine
 
         public Future()
         {
-            m_State = State.Uninitialized;
+            m_State = State.InProgress;
             m_Value = default(T);
             m_CallbackComplete = null;
             m_CallbackFail = null;
@@ -177,7 +194,7 @@ namespace BeauRoutine
 
         public Future(Action<T> inCompleteCallback)
         {
-            m_State = State.Uninitialized;
+            m_State = State.InProgress;
             m_Value = default(T);
             m_CallbackComplete = inCompleteCallback;
             m_CallbackFail = null;
@@ -185,7 +202,7 @@ namespace BeauRoutine
 
         public Future(Action<T> inCompleteCallback, Action inFailureCallback)
         {
-            m_State = State.Uninitialized;
+            m_State = State.InProgress;
             m_Value = default(T);
             m_CallbackComplete = inCompleteCallback;
             m_CallbackFail = inFailureCallback;
@@ -193,7 +210,7 @@ namespace BeauRoutine
 
         public Future(Action<T> inCompleteCallback, Action<Future.Failure> inFailureCallback)
         {
-            m_State = State.Uninitialized;
+            m_State = State.InProgress;
             m_Value = default(T);
             m_CallbackComplete = inCompleteCallback;
             m_CallbackFailWithArgs = inFailureCallback;
@@ -207,18 +224,79 @@ namespace BeauRoutine
         {
             Cancel();
 
+            m_Progress = 0;
             m_Value = default(T);
             m_CallbackComplete = null;
             m_Failure.Object = null;
             m_Failure.Type = Future.FailureType.Unknown;
             m_CallbackFail = null;
             m_CallbackFailWithArgs = null;
+            m_CallbackProgress = null;
         }
 
         /// <summary>
         /// Returns if the Future has been completed, failed, or cancelled.
         /// </summary>
-        public bool IsDone() { return m_State != State.Uninitialized; }
+        public bool IsDone() { return m_State != State.InProgress; }
+
+        #region Progress
+
+        /// <summary>
+        /// Returns if a Future is in progress.
+        /// </summary>
+        public bool IsInProgress() { return m_State == State.InProgress; }
+
+        /// <summary>
+        /// Returns the future's progress towards completion. [0, 1]
+        /// </summary>
+        public float GetProgress()
+        {
+            return m_Progress;
+        }
+
+        /// <summary>
+        /// Sets the future's progress towards completion. [0, 1]
+        /// </summary>
+        public void SetProgress(float inProgress)
+        {
+            if (m_State != State.InProgress)
+                return;
+            
+            inProgress = inProgress < 0 ? 0 : (inProgress > 1 ? 1 : inProgress);
+            if (m_Progress != inProgress)
+            {
+                m_Progress = inProgress;
+                if (m_CallbackProgress != null)
+                    Routine.StartCall(m_CallbackProgress, m_Progress);
+            }
+        }
+
+        IFuture IFuture.OnProgress(Action<float> inProgressCallback)
+        {
+            return OnProgress(inProgressCallback);
+        }
+
+        /// <summary>
+        /// Adds a callback for when the Future progresses.
+        /// </summary>
+        public Future<T> OnProgress(Action<float> inProgressCallback)
+        {
+            if (inProgressCallback == null)
+                return this;
+
+            if (m_State == State.Completed)
+                inProgressCallback(m_Progress);
+            else if (m_State == State.InProgress)
+            {
+                m_CallbackProgress += inProgressCallback;
+                if (m_Progress > 0)
+                    inProgressCallback(m_Progress);
+            }
+
+            return this;
+        }
+
+        #endregion
 
         #region Completion
 
@@ -256,10 +334,19 @@ namespace BeauRoutine
             if (m_State == State.Cancelled)
                 return;
 
-            if (m_State != State.Uninitialized)
+            if (m_State != State.InProgress)
                 throw new InvalidOperationException("Cannot set value of Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Completed;
             m_Value = inValue;
+
+            // Force progress to 1.
+            if (m_Progress < 1)
+            {
+                m_Progress = 1;
+                if (m_CallbackProgress != null)
+                    Routine.StartCall(m_CallbackProgress, m_Progress);
+                m_CallbackProgress = null;
+            }
 
             if (m_CallbackComplete != null)
             {
@@ -282,7 +369,7 @@ namespace BeauRoutine
 
             if (m_State == State.Completed)
                 inCallback(m_Value);
-            else if (m_State == State.Uninitialized)
+            else if (m_State == State.InProgress)
                 m_CallbackComplete += inCallback;
 
             return this;
@@ -371,7 +458,7 @@ namespace BeauRoutine
             if (m_State == State.Cancelled)
                 return;
             
-            if (m_State != State.Uninitialized)
+            if (m_State != State.InProgress)
                 throw new InvalidOperationException("Cannot fail Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Failed;
             m_Failure.Type = inType;
@@ -390,6 +477,12 @@ namespace BeauRoutine
             }
 
             m_CallbackComplete = null;
+            m_CallbackProgress = null;
+        }
+
+        IFuture IFuture.OnFail(Action inFailureCallback)
+        {
+            return OnFail(inFailureCallback);
         }
 
         /// <summary>
@@ -403,10 +496,15 @@ namespace BeauRoutine
 
             if (m_State == State.Failed)
                 inCallback();
-            else if (m_State == State.Uninitialized)
+            else if (m_State == State.InProgress)
                 m_CallbackFail += inCallback;
 
             return this;
+        }
+
+        IFuture IFuture.OnFail(Action<Future.Failure> inFailureCallback)
+        {
+            return OnFail(inFailureCallback);
         }
 
         /// <summary>
@@ -420,7 +518,7 @@ namespace BeauRoutine
 
             if (m_State == State.Failed)
                 inCallback(m_Failure);
-            else if (m_State == State.Uninitialized)
+            else if (m_State == State.InProgress)
                 m_CallbackFailWithArgs += inCallback;
 
             return this;
@@ -440,7 +538,7 @@ namespace BeauRoutine
         /// </summary>
         public void Cancel()
         {
-            if (m_State == State.Uninitialized)
+            if (m_State == State.InProgress)
             {
                 m_State = State.Cancelled;
                 m_Prophet.Stop();
@@ -461,7 +559,7 @@ namespace BeauRoutine
         /// </summary>
         public Future<T> LinkTo(Routine inRoutine)
         {
-            if (!m_Prophet && m_State == State.Uninitialized)
+            if (!m_Prophet && m_State == State.InProgress)
             {
                 m_Prophet = inRoutine;
                 m_Prophet.OnStop(OnProphetStopped);
@@ -474,20 +572,20 @@ namespace BeauRoutine
         /// </summary>
         public IEnumerator Wait()
         {
-            if (m_State == State.Uninitialized)
+            if (m_State == State.InProgress)
                 return WaitInternal();
             return null;
         }
 
         private IEnumerator WaitInternal()
         {
-            while(m_State == State.Uninitialized)
+            while(m_State == State.InProgress)
                 yield return null;
         }
 
         private void OnProphetStopped()
         {
-            if (m_State == State.Uninitialized)
+            if (m_State == State.InProgress)
                 Fail(Future.FailureType.RoutineStopped);
         }
 
@@ -499,6 +597,16 @@ namespace BeauRoutine
         static public implicit operator T(Future<T> inValue)
         {
             return inValue.Get();
+        }
+
+        public override string ToString()
+        {
+            string prophetName = m_Prophet.GetName();
+            if (prophetName != null)
+            {
+                return string.Format("[Future<{0}>; State={1}; Progress={2:0}%; LinkedTo={3}]", typeof(T).FullName, m_State, m_Progress * 100f, prophetName);
+            }
+            return string.Format("[Future<{0}>; State={1}; Progress={2:0}%]", typeof(T).FullName, m_State, m_Progress * 100);
         }
     }
 }

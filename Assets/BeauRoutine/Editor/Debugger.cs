@@ -409,6 +409,18 @@ namespace BeauRoutine.Editor
                     GUI.enabled = true;
                 }
                 EditorGUILayout.EndHorizontal();
+
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("PHASE/", GUILayout.Width(FIELD_NAME_WIDTH));
+                    if (!inbCanAdjust)
+                        GUI.enabled = false;
+                    RoutinePhase update = (RoutinePhase)EditorGUILayout.EnumPopup(inStats.Phase, GUILayout.ExpandWidth(true));
+                    if (update != inStats.Phase)
+                        inStats.Handle.SetPhase(update);
+                    GUI.enabled = true;
+                }
+                EditorGUILayout.EndHorizontal();
             }
 
             // Current Function Name

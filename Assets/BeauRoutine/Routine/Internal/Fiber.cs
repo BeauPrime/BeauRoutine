@@ -7,6 +7,10 @@
  * Purpose: Substrate on which Routines are executed.
 */
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    #define DEVELOPMENT
+#endif
+
 // CustomYieldInstructions were not introduced until 5.3
 #if UNITY_5_3 || UNITY_5_3_OR_NEWER
     #define SUPPORTS_CUSTOMYIELDINSTRUCTION
@@ -22,6 +26,8 @@ namespace BeauRoutine.Internal
 {
     public sealed class Fiber
     {
+        public const string RESERVED_NAME_PREFIX = "[BeauRoutine]__";
+
         static private readonly IntPtr TYPEHANDLE_INT = typeof(int).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_DOUBLE = typeof(double).TypeHandle.Value;
@@ -29,6 +35,16 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_COMMAND = typeof(Routine.Command).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORFIXEDUPDATE = typeof(WaitForFixedUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORENDOFFRAME = typeof(WaitForEndOfFrame).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORLATEUPDATE = typeof(WaitForLateUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORUPDATE = typeof(WaitForUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_PARALLELFIBERS = typeof(ParallelFibers).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_ROUTINEPHASE = typeof(RoutinePhase).TypeHandle.Value;
+
+        static private readonly IntPtr TYPEHANDLE_WAITFORSECONDS = typeof(WaitForSeconds).TypeHandle.Value;
+        static private readonly FieldInfo FIELD_WAITFORSECONDS_SECONDS = typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.Instance | BindingFlags.NonPublic);
+        static private readonly bool WAITFORSECONDS_BYPASS = FIELD_WAITFORSECONDS_SECONDS != null;
 
         private bool m_Paused;
         private bool m_Disposing;
@@ -38,9 +54,14 @@ namespace BeauRoutine.Internal
         private bool m_HostedByManager;
         private bool m_HasIdentity;
 
+        private bool m_Executing = false;
+
         private Routine m_Handle;
         private MonoBehaviour m_Host;
         private RoutineIdentity m_HostIdentity;
+
+        private ParallelFibers m_Parallel;
+        private Fiber m_RootFiber;
 
         private IEnumerator m_RootFunction;
         private IEnumerator[] m_Stack;
@@ -49,6 +70,8 @@ namespace BeauRoutine.Internal
 
         private float m_WaitTime = 0.0f;
         private Coroutine m_UnityWait = null;
+        private YieldPhase m_YieldPhase = YieldPhase.None;
+        private int m_YieldFrameDelay = 0;
 
         private string m_Name;
 
@@ -59,8 +82,12 @@ namespace BeauRoutine.Internal
 
         private float m_TimeScale = 1.0f;
 
+        private RoutinePhase m_UpdatePhase;
+
         private Action m_OnComplete;
         private Action m_OnStop;
+        private Routine.ExceptionHandler m_OnException;
+        private bool m_HandleExceptions = false;
 
         public Fiber(Manager inManager, uint inIndex)
         {
@@ -90,8 +117,10 @@ namespace BeauRoutine.Internal
         /// </summary>
         public Routine Initialize(MonoBehaviour inHost, IEnumerator inStart, bool inChained)
         {
+#if DEVELOPMENT
             if (Manager.DebugMode && !(inStart is IDisposable))
                 throw new ArgumentException("IEnumerators must also implement IDisposable.");
+#endif // DEVELOPMENT
 
             m_Counter = (byte)(m_Counter == byte.MaxValue ? 1 : m_Counter + 1);
 
@@ -121,6 +150,14 @@ namespace BeauRoutine.Internal
             m_RootFunction = inStart;
             m_Stack[m_StackPosition = 0] = inStart;
 
+            CheckForParallelFibers(inStart);
+
+            if (!m_Chained)
+            {
+                m_UpdatePhase = Manager.DefaultPhase;
+                Manager.Fibers.AddFiberToUpdateList(this, m_UpdatePhase);
+            }
+
             return m_Handle;
         }
 
@@ -147,17 +184,39 @@ namespace BeauRoutine.Internal
             m_Host = null;
             m_HostIdentity = null;
 
+            // If this is chained and we have a parallel
+            if (bChained && m_Parallel != null)
+            {
+                m_Parallel.RemoveFiber(this);
+            }
+
             m_Chained = m_Disposing = m_HasIdentity
             = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager
-            = m_IgnoreObjectActive = false;
+            = m_IgnoreObjectActive = m_Executing = false;
 
             m_WaitTime = 0;
             m_Name = null;
             Priority = 0;
 
-            m_TimeScale = 1.0f;
+            m_Parallel = null;
+            m_RootFiber = null;
 
+            m_TimeScale = 1.0f;
+            m_YieldFrameDelay = 0;
+
+            if (m_YieldPhase != YieldPhase.None)
+            {
+                Manager.Fibers.RemoveFiberFromYieldList(this, m_YieldPhase);
+                m_YieldPhase = YieldPhase.None;
+            }
+
+            if (!bChained)
+                Manager.Fibers.RemoveFiberFromUpdateList(this, m_UpdatePhase);
             Manager.RecycleFiber(this, bChained);
+
+            m_UpdatePhase = Manager.DefaultPhase;
+            m_OnException = null;
+            m_HandleExceptions = false;
 
             if (bKilled)
             {
@@ -193,6 +252,55 @@ namespace BeauRoutine.Internal
             m_RootFunction = null;
         }
 
+        // HACK: We need to pass a parent fiber into parallel/chained fibers
+        //      in order for them to have the proper time scale during yield updates
+        private void CheckForParallelFibers(IEnumerator inEnumerator)
+        {
+            IntPtr typePtr = inEnumerator.GetType().TypeHandle.Value;
+            if (typePtr == TYPEHANDLE_PARALLELFIBERS)
+            {
+                ((ParallelFibers)inEnumerator).SetParentFiber(this);
+            }
+        }
+
+        // HACK: We need to pass a parent fiber into parallel/chained fibers
+        //      in order for them to have the proper time scale during yield updates
+        private void CheckForParallelFibers(IEnumerator inEnumerator, IntPtr inTypePtr)
+        {
+            if (inTypePtr == TYPEHANDLE_PARALLELFIBERS)
+            {
+                ((ParallelFibers)inEnumerator).SetParentFiber(this);
+            }
+        }
+
+        #endregion
+
+        #region Parallel
+
+        /// <summary>
+        /// Indicates that the Fiber is owned by the given ParallelFiber.
+        /// </summary>
+        public void SetParallelOwner(ParallelFibers inParallel)
+        {
+            m_Parallel = inParallel;
+        }
+
+        /// <summary>
+        /// Clears the Fiber's ParallelFiber owner.
+        /// </summary>
+        public void ClearParallelOwner()
+        {
+            m_Parallel = null;
+        }
+
+        /// <summary>
+        /// Sets the parent Fiber to use for time scaling.
+        /// </summary>
+        public void SetParentFiber(Fiber inFiber)
+        {
+            m_RootFiber = inFiber.m_RootFiber == null ? inFiber : inFiber.m_RootFiber;
+        }
+
         #endregion
 
         #region Flow
@@ -202,6 +310,9 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void Pause()
         {
+            if (m_Chained)
+                return;
+                
             m_Paused = true;
         }
 
@@ -210,6 +321,9 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void Resume()
         {
+            if (m_Chained)
+                return;
+
             m_Paused = false;
         }
 
@@ -227,6 +341,11 @@ namespace BeauRoutine.Internal
         public void Stop()
         {
             m_Disposing = true;
+
+            if (m_UpdatePhase == RoutinePhase.Manual && !m_Executing)
+            {
+                Dispose();
+            }
         }
 
         /// <summary>
@@ -246,7 +365,10 @@ namespace BeauRoutine.Internal
             if (Priority != inPriority)
             {
                 Priority = inPriority;
-                Manager.Fibers.MarkSortDirty();
+
+                Manager.Fibers.SetUpdateListDirty(m_UpdatePhase);
+                if (m_YieldPhase != YieldPhase.None)
+                    Manager.Fibers.SetYieldListDirty(m_YieldPhase);
             }
         }
 
@@ -283,6 +405,52 @@ namespace BeauRoutine.Internal
         }
 
         /// <summary>
+        /// Returns the update timing.
+        /// </summary>
+        public RoutinePhase GetPhase()
+        {
+            return m_UpdatePhase;
+        }
+
+        /// <summary>
+        /// Sets the update timing.
+        /// </summary>
+        public void SetPhase(RoutinePhase inUpdateMode)
+        {
+            if (m_Chained || m_UpdatePhase == inUpdateMode)
+                return;
+
+            if (inUpdateMode == RoutinePhase.Manual)
+            {
+                if (m_Disposing && !m_Executing)
+                {
+                    Dispose();
+                    return;
+                }
+
+                // Clear out any special yield timing
+                // Yield phases are meaningless in the context of manual updates
+                if (m_YieldPhase != YieldPhase.None)
+                {
+                    Manager.Fibers.RemoveFiberFromYieldList(this, m_YieldPhase);
+                    m_YieldPhase = YieldPhase.None;
+                }
+            }
+
+            Manager.Fibers.RemoveFiberFromUpdateList(this, m_UpdatePhase);
+            m_UpdatePhase = inUpdateMode;
+            Manager.Fibers.AddFiberToUpdateList(this, m_UpdatePhase);
+        }
+
+        /// <summary>
+        /// Delays by the given number of seconds.
+        /// </summary>
+        public void AddDelay(float inSeconds)
+        {
+            m_WaitTime += inSeconds;
+        }
+
+        /// <summary>
         /// Optional name to use for finding Routines.
         /// </summary>
         public string Name
@@ -292,7 +460,25 @@ namespace BeauRoutine.Internal
                 CheckAutoName();
                 return m_Name;
             }
-            set { m_Name = value; }
+            set
+            {
+#if DEVELOPMENT
+                if (!string.IsNullOrEmpty(value) && value.StartsWith(RESERVED_NAME_PREFIX, StringComparison.Ordinal))
+                {
+                    Debug.LogWarning("[BeauRoutine] Cannot set name of BeauRoutine: contains reserved prefix '" + RESERVED_NAME_PREFIX + "'!");
+                    return;
+                }
+#endif // DEVELOPMENT
+                m_Name = value;
+            }
+        }
+
+        /// <summary>
+        /// Sets the name, without checking for reserved prefixes.
+        /// </summary>
+        public void SetNameUnchecked(string inName)
+        {
+            m_Name = inName;
         }
 
         #endregion
@@ -300,16 +486,37 @@ namespace BeauRoutine.Internal
         #region Update
 
         /// <summary>
+        /// Returns if the Fiber will update with the given mode.
+        /// </summary>
+        public bool PrepareUpdate(RoutinePhase inUpdateMode)
+        {
+            if (m_StackPosition < 0 || m_Executing)
+                return false;
+
+            return (m_UpdatePhase == inUpdateMode);
+        }
+
+        /// <summary>
+        /// Returns if the Fiber can perform a manual update.
+        /// </summary>
+        public bool PrepareManualUpdate()
+        {
+            return (m_StackPosition >= 0 && !m_Executing);
+        }
+
+        /// <summary>
         /// Runs the Fiber one frame.
         /// Will dispose itself if requested.
         /// Returns if still running.
         /// </summary>
-        public bool Run()
+        public bool Update(YieldPhase inYieldUpdate = YieldPhase.None)
         {
-            if ((uint)m_Handle == 0)
-            {
+            // We don't support recursive Fiber updates
+            if (m_Executing)
+                return true;
+
+            if (m_StackPosition < 0)
                 return false;
-            }
 
             if (m_Disposing || (!m_HostedByManager && !m_Host))
             {
@@ -317,16 +524,58 @@ namespace BeauRoutine.Internal
                 return false;
             }
 
+            if (inYieldUpdate != YieldPhase.None && m_YieldFrameDelay > 0)
+            {
+                --m_YieldFrameDelay;
+                return true;
+            }
+
             if (IsPaused() || m_UnityWait != null)
                 return true;
 
-            ApplyDeltaTime();
+            if (inYieldUpdate == YieldPhase.None)
+            {
+                if (m_YieldPhase != inYieldUpdate)
+                    return true;
+            }
+            else
+            {
+                if (m_YieldPhase != inYieldUpdate)
+                    return true;
+                
+                Manager.Fibers.RemoveFiberFromYieldList(this, m_YieldPhase);
+                m_YieldPhase = YieldPhase.None;
+
+                // If we're in a manual update, don't proceed from here
+                if (m_UpdatePhase == RoutinePhase.Manual)
+                    return true;
+            }
+
+            // If we're a chained routine, just accept
+            // the parent's delta time.
+            if (!m_Chained)
+            {
+                ApplyDeltaTime();
+            }
+            else if (inYieldUpdate != YieldPhase.None)
+            {
+                m_RootFiber.ApplyDeltaTime();
+            }
 
             if (m_WaitTime > 0)
             {
                 m_WaitTime -= Manager.Frame.DeltaTime;
                 if (m_WaitTime > 0)
                     return true;
+
+                // We don't modify delta time in the fixed update phase,
+                // to preserve a consistent delta time within fixed update.
+                if (m_UpdatePhase != RoutinePhase.FixedUpdate && inYieldUpdate != YieldPhase.WaitForFixedUpdate)
+                {
+                    Manager.Frame.DeltaTime += m_WaitTime;
+                }
+
+                m_WaitTime = 0;
             }
 
             bool bExecuteStack = true;
@@ -335,8 +584,41 @@ namespace BeauRoutine.Internal
             {
                 bExecuteStack = false;
                 
+                // Set this flag to prevent updating this routine mid-execution
+                m_Executing = true;
+                
                 IEnumerator current = m_Stack[m_StackPosition];
-                bool bMovedNext = current.MoveNext();
+                bool bMovedNext = false;
+
+                if (Manager.HandleExceptions || m_HandleExceptions || (m_Chained && m_RootFiber.m_HandleExceptions))
+                {
+                    try
+                    {
+                        bMovedNext = current.MoveNext();
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e);
+
+                        Routine.ExceptionHandler exceptionHandler = m_OnException;
+                        if (m_Chained)
+                        {
+                            exceptionHandler = m_RootFiber.m_OnException;
+                            m_RootFiber.m_Disposing = true;
+                        }
+
+                        if (exceptionHandler != null)
+                            exceptionHandler(e);
+                        
+                        m_Disposing = true;
+                    }
+                }
+                else
+                {
+                    bMovedNext = current.MoveNext();
+                }
+
+                m_Executing = false;
 
                 // Don't check for the object being destroyed.
                 // Destroy won't go into effect until after
@@ -435,12 +717,101 @@ namespace BeauRoutine.Internal
                             if (m_StackPosition == m_StackSize - 1)
                                 Array.Resize(ref m_Stack, m_StackSize *= 2);
                             m_Stack[++m_StackPosition] = decorator;
+
+                            CheckForParallelFibers(decoratedEnumerator);
                         }
 
                         if (!bExecuteStack)
                             return true;
 
                         continue;
+                    }
+
+                    // Check for yield timing changes
+
+                    if (m_UpdatePhase != RoutinePhase.Manual)
+                    {
+                        bool bApplyYieldDelay = !Manager.IsUpdating(RoutinePhase.Manual) && inYieldUpdate == YieldPhase.None;
+
+                        if (resultType == TYPEHANDLE_ROUTINEPHASE)
+                        {
+                            RoutinePhase phase = (RoutinePhase)result;
+
+                            switch (phase)
+                            {
+                                case RoutinePhase.FixedUpdate:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
+                                        Manager.Host.WaitForFixedUpdate();
+                                        m_YieldPhase = YieldPhase.WaitForFixedUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
+                                        return true;
+                                    }
+
+                                case RoutinePhase.LateUpdate:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForLateUpdate);
+                                        m_YieldPhase = YieldPhase.WaitForLateUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.LateUpdate && Manager.IsUpdating(RoutinePhase.LateUpdate)? 1 : 0;
+                                        return true;
+                                    }
+
+                                case RoutinePhase.Update:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForUpdate);
+                                        m_YieldPhase = YieldPhase.WaitForUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.Update && Manager.IsUpdating(RoutinePhase.Update) ? 1 : 0;
+                                        return true;
+                                    }
+
+                                case RoutinePhase.Manual:
+                                default:
+                                    {
+                                        // Yielding a manual will not do anything
+                                        return true;
+                                    }
+                            }
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORENDOFFRAME)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForEndOfFrame);
+                            Manager.Host.WaitForEndOfFrame();
+                            m_YieldPhase = YieldPhase.WaitForEndOfFrame;
+                            m_YieldFrameDelay = 0;
+                            return true;
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORFIXEDUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
+                            Manager.Host.WaitForFixedUpdate();
+                            m_YieldPhase = YieldPhase.WaitForFixedUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
+                            return true;
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORLATEUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForLateUpdate);
+                            m_YieldPhase = YieldPhase.WaitForLateUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.LateUpdate && Manager.IsUpdating(RoutinePhase.LateUpdate) ? 1 : 0;
+                            return true;
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForUpdate);
+                            m_YieldPhase = YieldPhase.WaitForUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.Update && Manager.IsUpdating(RoutinePhase.Update) ? 1 : 0;
+                            return true;
+                        }
+                    }
+
+                    if (WAITFORSECONDS_BYPASS && resultType == TYPEHANDLE_WAITFORSECONDS)
+                    {
+                        m_WaitTime = (float)FIELD_WAITFORSECONDS_SECONDS.GetValue(result);
+                        return true;
                     }
 
                     // Check for the subclassable types
@@ -487,6 +858,8 @@ namespace BeauRoutine.Internal
                             Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
+                        CheckForParallelFibers(enumerator, resultType);
+
                         return true;
                     }
                 }
@@ -509,11 +882,6 @@ namespace BeauRoutine.Internal
         // Applies time modifiers for this Fiber.
         private void ApplyDeltaTime()
         {
-            // If we're a chained routine, just accept
-            // the parent's delta time.
-            if (m_Chained)
-                return;
-
             float timeScale = m_TimeScale;
             if (m_HasIdentity)
             {
@@ -596,6 +964,11 @@ namespace BeauRoutine.Internal
             return (uint)m_Handle > 0;
         }
 
+        public bool IsWaiting(YieldPhase inYieldUpdate)
+        {
+            return m_YieldPhase == inYieldUpdate;
+        }
+
         #endregion
 
         #region Wait
@@ -637,7 +1010,7 @@ namespace BeauRoutine.Internal
 
             public void Reset()
             {
-                throw new NotImplementedException();
+                throw new NotSupportedException();
             }
 
             public override string ToString()
@@ -664,6 +1037,15 @@ namespace BeauRoutine.Internal
         public void OnStop(Action inCallback)
         {
             m_OnStop += inCallback;
+        }
+
+        /// <summary>
+        /// Registers a callback for when a routine encounters exceptions.
+        /// </summary>
+        public void OnException(Routine.ExceptionHandler inCallback)
+        {
+            m_OnException += inCallback;
+            m_HandleExceptions = true;
         }
 
         #endregion
@@ -810,12 +1192,21 @@ namespace BeauRoutine.Internal
                 stats.State = RoutineState.WaitTime;
             else if (m_UnityWait != null)
                 stats.State = RoutineState.WaitUnity;
+            else if (m_YieldPhase == YieldPhase.WaitForEndOfFrame)
+                stats.State = RoutineState.WaitEndOfFrame;
+            else if (m_YieldPhase == YieldPhase.WaitForFixedUpdate)
+                stats.State = RoutineState.WaitFixedUpdate;
+            else if (m_YieldPhase == YieldPhase.WaitForLateUpdate)
+                stats.State = RoutineState.WaitLateUpdate;
+            else if (m_YieldPhase == YieldPhase.WaitForUpdate)
+                stats.State = RoutineState.WaitUpdate;
             else
                 stats.State = RoutineState.Running;
 
             stats.TimeScale = m_TimeScale;
             stats.Name = Name;
             stats.Priority = Priority;
+            stats.Phase = m_UpdatePhase;
 
             if (m_StackPosition >= 0)
             {

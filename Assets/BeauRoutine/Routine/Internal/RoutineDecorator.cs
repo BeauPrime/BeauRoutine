@@ -32,7 +32,7 @@ namespace BeauRoutine.Internal
 
         public void Reset()
         {
-            Enumerator.Reset();
+            throw new NotSupportedException();
         }
 
         public void Dispose()

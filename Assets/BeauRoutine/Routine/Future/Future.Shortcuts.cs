@@ -37,7 +37,11 @@ namespace BeauRoutine
             static private IEnumerator DownloadResource<T>(Future<T> inFuture, string inPath) where T : UnityEngine.Object
             {
                 var resourceRequest = UnityEngine.Resources.LoadAsync<T>(inPath);
-                yield return resourceRequest;
+                while(!resourceRequest.isDone)
+                {
+                    yield return null;
+                    inFuture.SetProgress(resourceRequest.progress);
+                }
                 if (resourceRequest.asset == null)
                     inFuture.Fail(Future.FailureType.Unknown, "No resource found");
                 else

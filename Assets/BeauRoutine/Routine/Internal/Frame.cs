@@ -27,6 +27,11 @@ namespace BeauRoutine.Internal
         public float UnscaledDeltaTime;
 
         /// <summary>
+        /// Time scale factor.
+        /// </summary>
+        public float TimeScale;
+
+        /// <summary>
         /// Which groups are paused this frame.
         /// </summary>
         public int PauseMask;
@@ -37,11 +42,48 @@ namespace BeauRoutine.Internal
         public float[] GroupTimeScale;
 
         /// <summary>
+        /// Serial number.
+        /// </summary>
+        public byte Serial;
+
+        /// <summary>
+        /// Increments the serial counter.
+        /// </summary>
+        public void IncrementSerial()
+        {
+            if (Serial == 255)
+                Serial = 0;
+            else
+                ++Serial;
+        }
+
+        /// <summary>
+        /// Decrements the serial counter.
+        /// </summary>
+        public void DecrementSerial()
+        {
+            if (Serial == 0)
+                Serial = 255;
+            else
+                --Serial;
+        }
+
+        /// <summary>
         /// Resets delta time.
         /// </summary>
         public void ResetTime(float inGlobalTimescale)
         {
+            TimeScale = 1;
             DeltaTime = UnscaledDeltaTime = Time.deltaTime * inGlobalTimescale;
+        }
+
+        /// <summary>
+        /// Resets delta time.
+        /// </summary>
+        public void ResetTime(float inDeltaTime, float inGlobalTimescale)
+        {
+            TimeScale = 1;
+            DeltaTime = UnscaledDeltaTime = inDeltaTime * inGlobalTimescale;
         }
 
         /// <summary>
@@ -49,7 +91,16 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void SetTimeScale(float inScale)
         {
+            TimeScale = inScale;
             DeltaTime = UnscaledDeltaTime * inScale;
+        }
+
+        /// <summary>
+        /// Refreshes delta time to scaled value.
+        /// </summary>
+        public void RefreshTimeScale()
+        {
+            DeltaTime = UnscaledDeltaTime * TimeScale;
         }
 
         /// <summary>
@@ -57,6 +108,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void ResetTimeScale()
         {
+            TimeScale = 1;
             DeltaTime = UnscaledDeltaTime;
         }
     }
