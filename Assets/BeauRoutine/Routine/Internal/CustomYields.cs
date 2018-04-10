@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    8 March 2018
  * 
@@ -25,6 +25,30 @@ namespace BeauRoutine.Internal
 
     // Waits until after Update
     public class WaitForUpdate : CustomYieldInstruction
+    {
+        public override bool keepWaiting
+        {
+            get
+            {
+                return false;
+            }
+        }
+    }
+
+    // Waits until after ThinkUpdate
+    public class WaitForThinkUpdate : CustomYieldInstruction
+    {
+        public override bool keepWaiting
+        {
+            get
+            {
+                return false;
+            }
+        }
+    }
+
+    // Waits until after CustomUpdate
+    public class WaitForCustomUpdate : CustomYieldInstruction
     {
         public override bool keepWaiting
         {

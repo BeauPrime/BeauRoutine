@@ -1,7 +1,7 @@
 # BeauRoutine
 
-**Current Version: 0.9.0**  
-Updated 15 March 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
+**Current Version: 0.9.1**  
+Updated 10 April 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
@@ -473,6 +473,8 @@ IEnumerator ResetTimeScale(float delay)
 }
 ```
 
+All BeauRoutines on a RoutineIdentity's GameObject can be paused or resumed with the ``Paused`` property.
+
 ### Time Scale
 
 BeauRoutine offers a powerful time scaling system.  Every BeauRoutine has its own time scaling value, which can be retrieved or set by calling ``GetTimeScale`` or ``SetTimeScale`` on a Routine object.
@@ -536,9 +538,13 @@ You can calculate the total time scale that will be applied to BeauRoutines on a
 
 ### Update Phase
 
-By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of four times: ``LateUpdate``, ``Update``, ``FixedUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
+By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of six times: ``LateUpdate``, ``Update``, ``FixedUpdate``, ``ThinkUpdate``, ``CustomUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
 
-``FixedUpdate`` routines work off of a consistent delta time.
+FixedUpdate routines work off of a consistent delta time.
+
+ThinkUpdate and CustomUpdate routines execute at custom intervals, after the Update phase. This evaluates as an Update, followed by a possible ThinkUpdate, followed by a possible CustomUpdate. The intervals at which they are executed can be changed by setting the ``Routine.Settings.ThinkUpdateInterval`` and ``Routine.Settings.CustomUpdateInterval`` properties. By default, these are set to 1/10th of a second for ThinkUpdate and 1/8th of a second for CustomUpdate.
+
+**Note:** ThinkUpdate and CustomUpdate will only execute at most once per frame. A very small interval will not cause the phase to execute multiple times to compensate for a larger delta time, as might happen for a FixedUpdate.
 
 ```csharp
 // By default, BeauRoutine starts routines in the LateUpdate phase.
@@ -554,7 +560,7 @@ Routine.Start( this, MyCoroutine() ).GetPhase(); // GetPhase will return FixedUp
 Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update ); // This will execute during Update
 ```
 
-Yielding a ``WaitForFixedUpdate``, ``WaitForEndOfFrame``, ``WaitForLateUpdate``, ``WaitForUpdate``, or any ``RoutinePhase`` will interrupt the normal timing of a BeauRoutine, and will instead execute it during those events. This does not apply for Manual updates, however; see the [Manual Updates](#manual-updates) section for more information. 
+Yielding a ``WaitForFixedUpdate``, ``WaitForEndOfFrame``, ``WaitForLateUpdate``, ``WaitForUpdate``, ``WaitForThinkUpdate``, ``WaitForCustomUpdate``, or any ``RoutinePhase`` will interrupt the normal timing of a BeauRoutine, and will instead execute it during those events. This does not apply for Manual updates, however; see the [Manual Updates](#manual-updates) section for more information. 
 
 ```csharp
 Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update );
@@ -591,7 +597,7 @@ IEnumerator MyCoroutine()
 }
 ```
 
-The ``WaitForLateUpdate`` and ``WaitForUpdate`` events occur after their respective LateUpdate and Update phases. If a BeauRoutine is already executing in LateUpdate or Update, yielding for those phases will wait until after the next time the phase is executed, instead of executing immediately after the phase is complete.
+The ``WaitForLateUpdate``, ``WaitForUpdate``, ``WaitForThinkUpdate``, and ``WaitForCustomUpdate`` events occur after their respective phases. If a BeauRoutine is already executing in that phase, yielding for those phases will wait until after the next time the phase is executed, instead of executing immediately after the phase is complete.
 
 See Unity's [Execution Order of Event Function](https://docs.unity3d.com/Manual/ExecutionOrder.html) documentation for further information on update timing.
 
@@ -1041,7 +1047,7 @@ someValue = Mathf.Lerp( someValue, someTarget, 0.25f * lerpScale );
 ```
 This feels more accurate, and but again, this approach falls apart with large timesteps, resulting in incorrect behavior. If, say, the game slows down enough to skip 60 frames, or 120 frames, you end up with larger and larger multiplies of your desired interpolation percentage, which could lead to reaching the target or even overshooting the target. This becomes more likely as the percentage increases, limiting the range of reasonable percentages you can use in this approach. Ultimately, this is not an accurate approach.
 
-To correctly simulate this type of asymptotic interpolation, we not only need to account for the distance remaining at the time of the lerp, we also need to account for the change in distance remaining _within the lerp itself_. In other words, the change in rate of change needs to occur _continuously_, instead of at discrete intervals. This can be modeled in terms of [expotential decay](https://en.wikipedia.org/wiki/Exponential_decay).
+To correctly simulate this type of asymptotic interpolation, we not only need to account for the distance remaining at the time of the lerp, we also need to account for the change in distance remaining _within the lerp itself_. In other words, the change in rate of change needs to occur _continuously_, instead of at discrete intervals. This can be modeled in terms of [exponential decay](https://en.wikipedia.org/wiki/Exponential_decay).
 
 BeauRoutine provides ``TweenUtil.Lerp``. This function scales the rate of change to appropriately handle fluctuations in framerate and maintain the asymptotic nature of the interpolation.
 
@@ -1114,6 +1120,8 @@ BeauRoutine will be initialized the first time a BeauRoutine operation is perfor
 BeauRoutine pre-allocates resources to run a default number of concurrent BeauRoutines. When there are no more resources available to execute all scheduled BeauRoutines, it will allocate more. This doubles the maximum number of concurrent BeauRoutines (16 -> 32 -> 64 -> ...), up to a maximum of 16,777,216. If you desire to reduce runtime allocations, you can call ``Routine.Settings.SetCapacity`` to pre-allocate the resources necessary to run the given number of BeauRoutines.
 
 To determine your game's requirements, open up the [Debugger](#debugger) during gameplay and view the ``MAX`` field in the ``STATS`` page. This will tell you how many BeauRoutines that the system needed to allocate resources for during the current session. The ``CAPACITY`` field will tell you how many were actually allocated in order to support it. By calling ``Routine.Settings.SetCapacity``, you can pre-allocate for the peak number of BeauRoutines in your game and optimize your memory usage.
+
+In debug mode, BeauRoutine may generate garbage periodically if profiling is enabled. This is generated by a ``Debug.Log`` call, made in order to output stats to the console. This will not occur outside of debug mode. To disable profiling in debug mode, set ``Routine.Settings.ProfilingEnabled`` to ``false``. Note that this will also disable stats in the debugging window.
 
 While BeauRoutine attempts to avoid runtime allocations as often as possible, there are unavoidable allocations associated with a C# coroutine framework. Coroutines, as implemented in C#, allocate memory when called. Coroutines are implemented in C# as _iterator blocks_. C# compilers transform iterator blocks into state machine classes. Calling an iterator block will allocate a new instance of its associated state machine. These allocations are tiny but worth mentioning for memory-constrained applications. Tweens and certain utilities, such as ``Routine.Combine`` and ``Routine.Delay``, will also allocate small amounts of memory.
 
@@ -1238,14 +1246,15 @@ BeauRoutine contains a few extension methods for generating coroutines.
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
 | UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked. |
 
-BeauRoutine also provides a set of extension methods to set an Update/FixedUpdate/LateUpdate routine on a MonoBehaviour as a substitute for creating an Update/FixedUpdate/LateUpdate function.
+BeauRoutine also provides a set of extension methods to set an Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine on a MonoBehaviour as a substitute for managing those routines inside the component itself.
 
 | Type | Function | Description |
 | ---- | -------- | ----------- |
-| MonoBehaviour | ``SetUpdateRoutine`` | Sets a single Update/FixedUpdate/LateUpdate routine for the MonoBehaviour. Could be used to replace Update/FixedUpdate/LateUpdate functions. |
-| | ``GetUpdateRoutine`` | Returns the single Update/FixedUpdate/LateUpdate routine for the MonoBehaviour. |
+| MonoBehaviour | ``SetUpdateRoutine`` | Sets a single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine for the MonoBehaviour. |
+| | ``SetUpdateRoutineGenerator`` | Sets a single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine generator. |
+| | ``GetUpdateRoutine`` | Returns the single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdatee routine for the MonoBehaviour. |
 
-Note that these work with a specific set of names.
+Note that these work with a reserved set of names. See [On Reserved Routine Names](#on-reserved-routine-names) for more information.
 
 ### Global Settings
 
@@ -1256,10 +1265,13 @@ All settings are available in the editor. Non-development builds disable access 
 | **Properties** | | |
 | ``Routine.Settings.Paused`` | Enables/disables all update loops. Note that manual updates will still function with this disabled. | --- |
 | ``Routine.Settings.DefaultPhase`` | Sets the default update phase for new BeauRoutines. | --- |
+| ``Routine.Settings.ThinkUpdateInterval`` | Sets the interval between ThinkUpdate phases. | --- |
+| ``Routine.Settings.CustomUpdateInterval`` | Sets the interval between CustomUpdate phases. | --- |
 | ``Routine.Settings.Version`` | Returns the BeauRoutine version number. | --- |
+| ``Routine.Settings.HandleExceptions`` | Enables or disables exception handling on all BeauRoutines. Note that BeauRoutines with explicitly set exception handlers will still handle exceptions, regardless of this setting. | --- |
 | ``Routine.Settings.DebugMode`` | Enabled or disables additional error checks. | Debug Only |
-| ``Routine.Settings.HandleExceptions`` | Enables or disables exception handling on all BeauRoutines. Note that BeauRoutines with explicitly set exception handlers will still handle exceptions, regardless of this setting. | Debug Only |
-| ``Routine.Settings.SnapshotEnabled`` | Enables or disables snapshotting. This will take snapshots of the highest number of simultaneous executing BeauRoutines. | Debug Only |
+| ``Routine.Settings.ProfilingEnabled`` | Enabled or disables profiling. This will track execution time stats and periodically log them to the debug console. This will only function if Debug Mode is enabled. | Debug Only |
+| ``Routine.Settings.SnapshotEnabled`` | Enables or disables snapshot profiling. This will take snapshots of the highest number of simultaneous executing BeauRoutines. This will only function if Profiling is enabled. | Debug Only |
 | **Functions** | | |
 | ``Routine.Settings.SetCapacity`` | Pre-allocates for the given number of simultaneous executing BeauRoutines. Useful for avoiding unexpected allocations. | --- |
 | ``Routine.Initialize`` | Initializes BeauRoutine. BeauRoutine will auto-initialize when you perform your first BeauRoutine operation, but this can be called earlier to allocate the necessary resources. | --- |
@@ -1403,6 +1415,13 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``KeepOnCancel`` | [Default] Tween will keep its current value if cancelled mid-execution. |
 
 ### Utilities
+
+#### Components
+
+| Component | Description |
+| --------- | ----------- |
+| ``RoutineIdentity`` | Provides per-object time scaling and pausing. |
+| ``RoutineBootstrap`` | Configures BeauRoutine settings on Awake. |
 
 #### Classes
 

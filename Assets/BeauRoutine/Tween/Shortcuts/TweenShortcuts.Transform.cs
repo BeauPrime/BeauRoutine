@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 

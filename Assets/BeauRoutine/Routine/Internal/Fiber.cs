@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    4 Apr 2017
  * 
@@ -38,6 +38,8 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_WAITFORFIXEDUPDATE = typeof(WaitForFixedUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORENDOFFRAME = typeof(WaitForEndOfFrame).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORLATEUPDATE = typeof(WaitForLateUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORCUSTOMUPDATE = typeof(WaitForCustomUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORTHINKUPDATE = typeof(WaitForThinkUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORUPDATE = typeof(WaitForUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_PARALLELFIBERS = typeof(ParallelFibers).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_ROUTINEPHASE = typeof(RoutinePhase).TypeHandle.Value;
@@ -764,6 +766,22 @@ namespace BeauRoutine.Internal
                                         return true;
                                     }
 
+                                case RoutinePhase.CustomUpdate:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForCustomUpdate);
+                                        m_YieldPhase = YieldPhase.WaitForCustomUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.CustomUpdate && Manager.IsUpdating(RoutinePhase.CustomUpdate) ? 1 : 0;
+                                        return true;
+                                    }
+
+                                case RoutinePhase.ThinkUpdate:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForThinkUpdate);
+                                        m_YieldPhase = YieldPhase.WaitForThinkUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.CustomUpdate && Manager.IsUpdating(RoutinePhase.ThinkUpdate) ? 1 : 0;
+                                        return true;
+                                    }
+
                                 case RoutinePhase.Manual:
                                 default:
                                     {
@@ -804,6 +822,22 @@ namespace BeauRoutine.Internal
                             Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForUpdate);
                             m_YieldPhase = YieldPhase.WaitForUpdate;
                             m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.Update && Manager.IsUpdating(RoutinePhase.Update) ? 1 : 0;
+                            return true;
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORCUSTOMUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForCustomUpdate);
+                            m_YieldPhase = YieldPhase.WaitForCustomUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.CustomUpdate && Manager.IsUpdating(RoutinePhase.CustomUpdate) ? 1 : 0;
+                            return true;
+                        }
+
+                        if (resultType == TYPEHANDLE_WAITFORTHINKUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForThinkUpdate);
+                            m_YieldPhase = YieldPhase.WaitForThinkUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.ThinkUpdate && Manager.IsUpdating(RoutinePhase.ThinkUpdate) ? 1 : 0;
                             return true;
                         }
                     }
@@ -955,7 +989,8 @@ namespace BeauRoutine.Internal
                 return true;
             if (m_HostedByManager)
                 return false;
-            return (m_HasIdentity && (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0) || (!m_IgnoreObjectActive && !m_Host.isActiveAndEnabled);
+            return (m_HasIdentity && (m_HostIdentity.Paused || (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0))
+                || (!m_IgnoreObjectActive && !m_Host.isActiveAndEnabled);
         }
 
         // Returns if this fiber is running.
@@ -1200,6 +1235,10 @@ namespace BeauRoutine.Internal
                 stats.State = RoutineState.WaitLateUpdate;
             else if (m_YieldPhase == YieldPhase.WaitForUpdate)
                 stats.State = RoutineState.WaitUpdate;
+            else if (m_YieldPhase == YieldPhase.WaitForCustomUpdate)
+                stats.State = RoutineState.WaitCustomUpdate;
+            else if (m_YieldPhase == YieldPhase.WaitForThinkUpdate)
+                stats.State = RoutineState.WaitThinkUpdate;
             else
                 stats.State = RoutineState.Running;
 

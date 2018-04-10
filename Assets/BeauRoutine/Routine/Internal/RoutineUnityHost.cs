@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    4 Apr 2017
  * 
@@ -59,24 +59,52 @@ namespace BeauRoutine.Internal
 
         private void LateUpdate()
         {
-            if (m_Manager != null)
-                m_Manager.Update(RoutinePhase.LateUpdate);
-            if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForLateUpdate) > 0)
-                m_Manager.UpdateYield(YieldPhase.WaitForLateUpdate);
+            Manager m = m_Manager;
+            float deltaTime = Time.deltaTime;
+
+            if (m != null)
+            {
+                m.Update(deltaTime, RoutinePhase.LateUpdate);
+                if (m.Fibers.GetYieldCount(YieldPhase.WaitForLateUpdate) > 0)
+                    m.UpdateYield(deltaTime, YieldPhase.WaitForLateUpdate);
+            }
         }
 
         private void Update()
         {
-            if (m_Manager != null)
-                m_Manager.Update(RoutinePhase.Update);
-            if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForUpdate) > 0)
-                m_Manager.UpdateYield(YieldPhase.WaitForUpdate);
+            Manager m = m_Manager;
+            float deltaTime = Time.deltaTime;
+            float timestamp = Time.unscaledTime;
+
+            if (m != null)
+            {
+                m.Update(deltaTime, RoutinePhase.Update);
+                if (m.Fibers.GetYieldCount(YieldPhase.WaitForUpdate) > 0)
+                    m.UpdateYield(deltaTime, YieldPhase.WaitForUpdate);
+
+                float thinkCustomDelta;
+                if (m.AdvanceThinkUpdate(deltaTime, timestamp, out thinkCustomDelta))
+                {
+                    m.Update(thinkCustomDelta, RoutinePhase.ThinkUpdate);
+                    if (m.Fibers.GetYieldCount(YieldPhase.WaitForThinkUpdate) > 0)
+                        m.UpdateYield(thinkCustomDelta, YieldPhase.WaitForThinkUpdate);
+                }
+
+                if (m.AdvanceCustomUpdate(deltaTime, timestamp, out thinkCustomDelta))
+                {
+                    m.Update(thinkCustomDelta, RoutinePhase.CustomUpdate);
+                    if (m.Fibers.GetYieldCount(YieldPhase.WaitForCustomUpdate) > 0)
+                        m.UpdateYield(thinkCustomDelta, YieldPhase.WaitForCustomUpdate);
+                }
+            }
         }
 
         private void FixedUpdate()
         {
             if (m_Manager != null)
-                m_Manager.Update(RoutinePhase.FixedUpdate);
+            {
+                m_Manager.Update(Time.deltaTime, RoutinePhase.FixedUpdate);
+            }
         }
 
         #endregion
@@ -100,7 +128,7 @@ namespace BeauRoutine.Internal
             while(m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
             {
                 yield return s_CachedWaitForFixedUpdate;
-                m_Manager.UpdateYield(YieldPhase.WaitForFixedUpdate);
+                m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForFixedUpdate);
             }
             m_WaitForFixedUpdateRoutine = null;
         }
@@ -110,7 +138,7 @@ namespace BeauRoutine.Internal
             while(m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
             {
                 yield return s_CachedWaitForEndOfFrame;
-                m_Manager.UpdateYield(YieldPhase.WaitForEndOfFrame);
+                m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
             }
             m_WaitForEndOfFrameRoutine = null;
         }

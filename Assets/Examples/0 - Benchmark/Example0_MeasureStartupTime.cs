@@ -1,4 +1,8 @@
-﻿using UnityEngine;
+﻿#if !UNITY_5_0 && !UNITY_5_5_OR_NEWER
+#define REQUIRE_MAX_SAMPLE_ADJUST
+#endif
+
+using UnityEngine;
 using System.Collections;
 using System;
 using System.Diagnostics;
@@ -7,10 +11,6 @@ using System.Diagnostics;
 using Profiler = UnityEngine.Profiling.Profiler;
 #elif !UNITY_5_0
 using Profiler = UnityEngine.Profiler;
-#endif
-
-#if !UNITY_5_0 && !UNITY_5_5_OR_NEWER
-#define REQUIRE_MAX_SAMPLE_ADJUST
 #endif
 
 namespace BeauRoutine.Examples

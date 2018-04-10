@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    5 March 2018
  * 
@@ -22,6 +22,8 @@ namespace BeauRoutine
         private const string ROUTINE_UPDATER_UPDATE = Fiber.RESERVED_NAME_PREFIX + "Update";
         private const string ROUTINE_UPDATER_LATEUPDATE = Fiber.RESERVED_NAME_PREFIX + "LateUpdate";
         private const string ROUTINE_UPDATER_FIXEDUPDATE = Fiber.RESERVED_NAME_PREFIX + "FixedUpdate";
+        private const string ROUTINE_UPDATER_CUSTOMUPDATE = Fiber.RESERVED_NAME_PREFIX + "CustomUpdate";
+        private const string ROUTINE_UPDATER_THINKUPDATE = Fiber.RESERVED_NAME_PREFIX + "ThinkUpdate";
         private const string ROUTINE_UPDATER_MANUAL = Fiber.RESERVED_NAME_PREFIX + "Manual";
 
         static private string GetPhaseUpdaterName(RoutinePhase inPhase)
@@ -40,6 +42,12 @@ namespace BeauRoutine
                 case RoutinePhase.Manual:
                     return ROUTINE_UPDATER_MANUAL;
 
+                case RoutinePhase.CustomUpdate:
+                    return ROUTINE_UPDATER_CUSTOMUPDATE;
+
+                case RoutinePhase.ThinkUpdate:
+                    return ROUTINE_UPDATER_THINKUPDATE;
+
                 default:
                     return string.Empty;
             }
@@ -54,7 +62,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Sets the update routine associated with the object and update phase.
+        /// Sets the update routine for the object and update phase.
         /// </summary>
         static public Routine SetUpdateRoutine(this MonoBehaviour inHost, Action inAction, RoutinePhase inPhase = RoutinePhase.Update)
         {
@@ -67,7 +75,7 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Returns the update routine associated with the object and update phase.
+        /// Sets the update routine for the object and update phase.
         /// </summary>
         static public Routine SetUpdateRoutine(this MonoBehaviour inHost, IEnumerator inUpdateLoop, RoutinePhase inPhase = RoutinePhase.Update)
         {
@@ -80,9 +88,9 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Returns the update routine associated with the object and update phase.
+        /// Sets the update routine for the object and update phase.
         /// </summary>
-        static public Routine SetUpdateRoutine(this MonoBehaviour inHost, Func<IEnumerator> inUpdateFunc, RoutinePhase inPhase = RoutinePhase.Update)
+        static public Routine SetUpdateRoutineGenerator(this MonoBehaviour inHost, Func<IEnumerator> inUpdateFunc, RoutinePhase inPhase = RoutinePhase.Update)
         {
             string phaseName = GetPhaseUpdaterName(inPhase);
             Routine routine = Routine.Find(inHost, phaseName).Replace(Routine.StartLoopRoutine(inHost, inUpdateFunc)).SetPhase(inPhase);

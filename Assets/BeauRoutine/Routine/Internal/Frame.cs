@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    4 Apr 2017
  * 
@@ -66,15 +66,6 @@ namespace BeauRoutine.Internal
                 Serial = 255;
             else
                 --Serial;
-        }
-
-        /// <summary>
-        /// Resets delta time.
-        /// </summary>
-        public void ResetTime(float inGlobalTimescale)
-        {
-            TimeScale = 1;
-            DeltaTime = UnscaledDeltaTime = Time.deltaTime * inGlobalTimescale;
         }
 
         /// <summary>

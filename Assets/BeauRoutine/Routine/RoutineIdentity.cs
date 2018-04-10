@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -15,12 +15,17 @@ namespace BeauRoutine
 {
     /// <summary>
     /// Identifies a time scale and group for Routines run
-    /// on this GameObject.
+    /// on this GameObject. Provides a pause state for the GameObject.
     /// </summary>
     [DisallowMultipleComponent]
-    [AddComponentMenu("BeauRoutine/Routine Identity")]
+    [AddComponentMenu("BeauRoutine/Routine Identity", 1)]
     public sealed class RoutineIdentity : MonoBehaviour
     {
+        /// <summary>
+        /// Pauses all Routines on the GameObject.
+        /// </summary>
+        public bool Paused = false;
+
         /// <summary>
         /// Time scale to apply to Routines on this object.
         /// </summary>

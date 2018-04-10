@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -7,6 +7,10 @@
  * Purpose: Stores all existing Fibers in a table and
  *          provides methods for iterating over active Fibers.
 */
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+    #define DEVELOPMENT
+#endif
 
 using System;
 using System.Collections.Generic;
@@ -163,11 +167,15 @@ namespace BeauRoutine.Internal
             m_UpdateList.Create();
             m_FixedUpdateList.Create();
             m_ManualUpdateList.Create();
+            m_CustomUpdateList.Create();
+            m_ThinkUpdateList.Create();
 
             m_YieldFixedUpdateList.Create();
             m_YieldEndOfFrameList.Create();
             m_YieldLateUpdateList.Create();
             m_YieldUpdateList.Create();
+            m_YieldCustomUpdateList.Create();
+            m_YieldThinkUpdateList.Create();
         }
 
         private Manager m_Manager;
@@ -180,11 +188,15 @@ namespace BeauRoutine.Internal
         private UpdateList m_UpdateList;
         private UpdateList m_FixedUpdateList;
         private UpdateList m_ManualUpdateList;
+        private UpdateList m_CustomUpdateList;
+        private UpdateList m_ThinkUpdateList;
 
         private YieldList m_YieldFixedUpdateList;
         private YieldList m_YieldEndOfFrameList;
         private YieldList m_YieldLateUpdateList;
         private YieldList m_YieldUpdateList;
+        private YieldList m_YieldCustomUpdateList;
+        private YieldList m_YieldThinkUpdateList;
 
         private UpdateStackFrame m_MainUpdate;
         private UpdateStackFrame m_NestedUpdate;
@@ -397,7 +409,7 @@ namespace BeauRoutine.Internal
         public Fiber GetFreeFiber()
         {
             if (m_FreeList.Count == 0)
-                SetCapacity(m_Entries.Length * 2);
+                SetCapacity(m_Entries.Length == 0 ? Manager.DEFAULT_CAPACITY : m_Entries.Length * 2);
             return RemoveFirst(ref m_FreeList);
         }
 
@@ -444,6 +456,14 @@ namespace BeauRoutine.Internal
 
                 case RoutinePhase.LateUpdate:
                     RunUpdate(RoutinePhase.LateUpdate, ref m_LateUpdateList);
+                    break;
+
+                case RoutinePhase.CustomUpdate:
+                    RunUpdate(RoutinePhase.CustomUpdate, ref m_CustomUpdateList);
+                    break;
+
+                case RoutinePhase.ThinkUpdate:
+                    RunUpdate(RoutinePhase.ThinkUpdate, ref m_ThinkUpdateList);
                     break;
 
                 case RoutinePhase.Manual:
@@ -528,6 +548,14 @@ namespace BeauRoutine.Internal
                     m_LateUpdateList.Dirty = true;
                     break;
 
+                case RoutinePhase.CustomUpdate:
+                    m_CustomUpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.ThinkUpdate:
+                    m_ThinkUpdateList.Dirty = true;
+                    break;
+
                 case RoutinePhase.Manual:
                     m_ManualUpdateList.Dirty = true;
                     break;
@@ -553,6 +581,12 @@ namespace BeauRoutine.Internal
                 case RoutinePhase.LateUpdate:
                     return m_LateUpdateList.Count;
 
+                case RoutinePhase.CustomUpdate:
+                    return m_CustomUpdateList.Count;
+
+                case RoutinePhase.ThinkUpdate:
+                    return m_ThinkUpdateList.Count;
+
                 default:
                     return 0;
             }
@@ -576,6 +610,12 @@ namespace BeauRoutine.Internal
 
                 case RoutinePhase.LateUpdate:
                     return m_LateUpdateList.Updating;
+
+                case RoutinePhase.CustomUpdate:
+                    return m_CustomUpdateList.Updating;
+
+                case RoutinePhase.ThinkUpdate:
+                    return m_ThinkUpdateList.Updating;
 
                 default:
                     return false;
@@ -604,6 +644,16 @@ namespace BeauRoutine.Internal
                     m_LateUpdateList.Dirty = true;
                     break;
 
+                case RoutinePhase.CustomUpdate:
+                    AddLast(inFiber, ref m_CustomUpdateList);
+                    m_CustomUpdateList.Dirty = true;
+                    break;
+
+                case RoutinePhase.ThinkUpdate:
+                    AddLast(inFiber, ref m_ThinkUpdateList);
+                    m_ThinkUpdateList.Dirty = true;
+                    break;
+
                 case RoutinePhase.Manual:
                     AddLast(inFiber, ref m_ManualUpdateList);
                     m_ManualUpdateList.Dirty = true;
@@ -630,6 +680,14 @@ namespace BeauRoutine.Internal
 
                 case RoutinePhase.LateUpdate:
                     RemoveEntry(inFiber, ref m_LateUpdateList);
+                    break;
+
+                case RoutinePhase.CustomUpdate:
+                    RemoveEntry(inFiber, ref m_CustomUpdateList);
+                    break;
+
+                case RoutinePhase.ThinkUpdate:
+                    RemoveEntry(inFiber, ref m_ThinkUpdateList);
                     break;
 
                 case RoutinePhase.Manual:
@@ -679,6 +737,14 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForUpdate:
                     RunYieldUpdate(YieldPhase.WaitForUpdate, ref m_YieldUpdateList);
                     break;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForCustomUpdate, ref m_YieldCustomUpdateList);
+                    break;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForThinkUpdate, ref m_YieldThinkUpdateList);
+                    break;
             }
         }
 
@@ -697,7 +763,7 @@ namespace BeauRoutine.Internal
                 while(m_MainUpdate.Next != -1 && m_MainUpdate.Counter-- > 0)
                 {
                     Entry e = m_Entries[m_MainUpdate.Next];
-                    m_MainUpdate.Next = e.UpdateNext;
+                    m_MainUpdate.Next = e.YieldNext;
                     e.Fiber.Update(inUpdate);
                 }
             }
@@ -725,6 +791,14 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForUpdate:
                     m_YieldUpdateList.Dirty = true;
                     break;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    m_YieldCustomUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    m_YieldThinkUpdateList.Dirty = true;
+                    break;
             }
         }
 
@@ -743,6 +817,12 @@ namespace BeauRoutine.Internal
 
                 case YieldPhase.WaitForUpdate:
                     return m_YieldUpdateList.Count;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    return m_YieldCustomUpdateList.Count;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    return m_YieldThinkUpdateList.Count;
 
                 default:
                     return 0;
@@ -764,6 +844,12 @@ namespace BeauRoutine.Internal
 
                 case YieldPhase.WaitForUpdate:
                     return m_YieldUpdateList.Updating;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    return m_YieldCustomUpdateList.Updating;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    return m_YieldThinkUpdateList.Updating;
 
                 default:
                     return false;
@@ -793,6 +879,16 @@ namespace BeauRoutine.Internal
                     AddLast(inFiber, ref m_YieldUpdateList);
                     m_YieldUpdateList.Dirty = true;
                     break;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    AddLast(inFiber, ref m_YieldCustomUpdateList);
+                    m_YieldCustomUpdateList.Dirty = true;
+                    break;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    AddLast(inFiber, ref m_YieldThinkUpdateList);
+                    m_YieldThinkUpdateList.Dirty = true;
+                    break;
             }
         }
 
@@ -819,6 +915,14 @@ namespace BeauRoutine.Internal
 
                 case YieldPhase.WaitForUpdate:
                     RemoveEntry(inFiber, ref m_YieldUpdateList);
+                    break;
+
+                case YieldPhase.WaitForCustomUpdate:
+                    RemoveEntry(inFiber, ref m_YieldCustomUpdateList);
+                    break;
+
+                case YieldPhase.WaitForThinkUpdate:
+                    RemoveEntry(inFiber, ref m_YieldThinkUpdateList);
                     break;
             }
         }

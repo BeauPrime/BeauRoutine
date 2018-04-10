@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
@@ -142,6 +142,8 @@ namespace BeauRoutine
         static private readonly WaitForEndOfFrame s_CachedWaitForEndOfFrame = new WaitForEndOfFrame();
         static private readonly WaitForLateUpdate s_CachedWaitForLateUpdate = new WaitForLateUpdate();
         static private readonly WaitForUpdate s_CachedWaitForUpdate = new WaitForUpdate();
+        static private readonly WaitForCustomUpdate s_CachedWaitForCustomUpdate = new WaitForCustomUpdate();
+        static private readonly WaitForThinkUpdate s_CachedWaitForThinkUpdate = new WaitForThinkUpdate();
 
         /// <summary>
         /// Waits for a FixedUpdate to occur.
@@ -173,6 +175,22 @@ namespace BeauRoutine
         static public IEnumerator WaitForUpdate()
         {
             return s_CachedWaitForUpdate;
+        }
+
+        /// <summary>
+        /// Waits until after the CustomUpdate phase.
+        /// </summary>
+        static public IEnumerator WaitForCustomUpdate()
+        {
+            return s_CachedWaitForCustomUpdate;
+        }
+
+        /// <summary>
+        /// Waits until after the ThinkUpdate phase.
+        /// </summary>
+        static public IEnumerator WaitForThinkUpdate()
+        {
+            return s_CachedWaitForThinkUpdate;
         }
 
         /// <summary>

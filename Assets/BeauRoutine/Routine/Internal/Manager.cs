@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    4 Apr 2017
  * 
@@ -14,14 +14,19 @@
 using System;
 using System.Collections;
 using System.Diagnostics;
+using System.Text;
 using UnityEngine;
 
 namespace BeauRoutine.Internal
 {
     public sealed class Manager
     {
+        public const int DEFAULT_CAPACITY = 32;
+        public const float DEFAULT_THINKUPDATE_INTERVAL = 1f / 10f;
+        public const float DEFAULT_CUSTOMUPDATE_INTERVAL = 1f / 8f;
+
         // Version number
-        static public readonly Version VERSION = new Version("0.9.0");
+        static public readonly Version VERSION = new Version("0.9.1");
 
         // Used to perform check for starting a Routine.Inline in development builds
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
@@ -97,6 +102,12 @@ namespace BeauRoutine.Internal
         private float[] m_QueuedGroupTimescale;
         private bool m_GroupTimescaleDirty;
 
+        // Think/Custom update properties
+        private float m_LastThinkUpdateTime = 0;
+        private float m_ThinkUpdateDeltaAccum = 0;
+        private float m_LastCustomUpdateTime = 0;
+        private float m_CustomUpdateDeltaAccum = 0;
+
         // Profiling
         private Stopwatch m_UpdateTimer;
         private int m_MaxConcurrent;
@@ -107,6 +118,7 @@ namespace BeauRoutine.Internal
         private float m_LastProfileLogTime;
         private const int MAX_UPDATE_SAMPLES = 60;
         private const long MAX_UPDATE_MS = 1000;
+        private StringBuilder m_LogBuilder = new StringBuilder(128);
 
         /// <summary>
         /// Table containing all fibers.
@@ -155,9 +167,24 @@ namespace BeauRoutine.Internal
         public bool HandleExceptions = true;
 
         /// <summary>
+        /// Determines whether profiling will occur.
+        /// </summary>
+        public bool ProfilingEnabled = true;
+
+        /// <summary>
         /// Default update phase for routines.
         /// </summary>
         public RoutinePhase DefaultPhase = RoutinePhase.LateUpdate;
+
+        /// <summary>
+        /// Interval for CustomUpdate calls.
+        /// </summary>
+        public float CustomUpdateInterval = DEFAULT_CUSTOMUPDATE_INTERVAL;
+
+        /// <summary>
+        /// Interval for ThinkUpdate calls.
+        /// </summary>
+        public float ThinkUpdateInterval = DEFAULT_THINKUPDATE_INTERVAL;
 
         /// <summary>
         /// Is the manager in the middle of updating routines right now?
@@ -182,11 +209,10 @@ namespace BeauRoutine.Internal
             s_Instance = this;
 
             Fibers = new Table(this);
-            Fibers.SetCapacity(16);
 
             m_UpdateTimer = new Stopwatch();
 
-            Frame.ResetTime(TimeScale);
+            Frame.ResetTime(Time.deltaTime, TimeScale);
 
             m_QueuedGroupTimescale = new float[Routine.MAX_GROUPS];
             Frame.GroupTimeScale = new float[Routine.MAX_GROUPS];
@@ -223,16 +249,19 @@ namespace BeauRoutine.Internal
             Log("Initialize() -- Version " + VERSION.ToString());
 
             m_Initialized = true;
-            m_LastProfileLogTime = Time.unscaledTime;
+            m_LastProfileLogTime = m_LastCustomUpdateTime = m_LastThinkUpdateTime = Time.unscaledTime;
+
+            if (Fibers.TotalCapacity == 0)
+                Fibers.SetCapacity(DEFAULT_CAPACITY);
         }
 
         /// <summary>
         /// Updates all running routines.
         /// </summary>
-        public void Update(RoutinePhase inPhase)
+        public void Update(float inDeltaTime, RoutinePhase inPhase)
         {
             Frame.IncrementSerial();
-            Frame.ResetTime(TimeScale);
+            Frame.ResetTime(inDeltaTime, TimeScale);
             Frame.PauseMask = m_QueuedPauseMask;
             if (m_GroupTimescaleDirty)
             {
@@ -244,7 +273,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
 #if DEVELOPMENT
-                if (DebugMode)
+                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -271,7 +300,13 @@ namespace BeauRoutine.Internal
                         if (Time.unscaledTime >= m_LastProfileLogTime + 10f)
                         {
                             m_LastProfileLogTime = Time.unscaledTime;
-                            Log(string.Format("Running: {0}/{1}/{2}; Avg Update: {3}ms", Fibers.TotalActive, m_MaxConcurrent, Fibers.TotalCapacity, (m_TotalUpdateTime / 10000f) / m_TotalUpdateFrames));
+
+                            m_LogBuilder.Length = 0;
+                            m_LogBuilder.Append("Running: ").Append(Fibers.TotalActive)
+                                .Append('/').Append(m_MaxConcurrent)
+                                .Append('/').Append(Fibers.TotalCapacity)
+                                .Append("; Avg Update: ").Append((m_TotalUpdateTime / 10000f) / m_TotalUpdateFrames).Append("ms");
+                            Log(string.Empty);
                         }
 
                         if (m_TotalUpdateFrames >= MAX_UPDATE_SAMPLES || m_UpdateTimer.ElapsedMilliseconds > MAX_UPDATE_MS)
@@ -339,7 +374,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
 #if DEVELOPMENT
-                if (DebugMode)
+                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -416,7 +451,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
 #if DEVELOPMENT
-                if (DebugMode)
+                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -495,7 +530,75 @@ namespace BeauRoutine.Internal
             s_AppQuitting = true;
         }
 
-        #endregion
+        #endregion // Lifecycle
+
+        #region Think/Custom Updates
+
+        /// <summary>
+        /// Sets the CustomUpdate interval.
+        /// </summary>
+        public void SetCustomUpdateInterval(float inInterval)
+        {
+            if (CustomUpdateInterval != inInterval)
+            {
+                CustomUpdateInterval = inInterval;
+                m_LastCustomUpdateTime = Time.unscaledTime;
+            }
+        }
+
+        /// <summary>
+        /// Sets the ThinkUpdate interval.
+        /// </summary>
+        public void SetThinkUpdateInterval(float inInterval)
+        {
+            if (ThinkUpdateInterval != inInterval)
+            {
+                ThinkUpdateInterval = inInterval;
+                m_LastThinkUpdateTime = Time.unscaledTime;
+            }
+        }
+
+        /// <summary>
+        /// Advances the CustomUpdate counter.
+        /// Returns if a CustomUpdate is necessary, and outputs the delta time for that update.
+        /// </summary>
+        public bool AdvanceCustomUpdate(float inDeltaTime, float inTimestamp, out float outDeltaTime)
+        {
+            m_CustomUpdateDeltaAccum += inDeltaTime;
+
+            if (inTimestamp > m_LastCustomUpdateTime + CustomUpdateInterval)
+            {
+                m_LastCustomUpdateTime = inTimestamp;
+                outDeltaTime = m_CustomUpdateDeltaAccum;
+                m_CustomUpdateDeltaAccum = 0;
+                return true;
+            }
+
+            outDeltaTime = 0;
+            return false;
+        }
+
+        /// <summary>
+        /// Advances the ThinkUpdate counter.
+        /// Returns if a ThinkUpdate is necessary, and outputs the delta time for that update.
+        /// </summary>
+        public bool AdvanceThinkUpdate(float inDeltaTime, float inTimestamp, out float outDeltaTime)
+        {
+            m_ThinkUpdateDeltaAccum += inDeltaTime;
+
+            if (inTimestamp > m_LastThinkUpdateTime + ThinkUpdateInterval)
+            {
+                m_LastThinkUpdateTime = inTimestamp;
+                outDeltaTime = m_ThinkUpdateDeltaAccum;
+                m_ThinkUpdateDeltaAccum = 0;
+                return true;
+            }
+
+            outDeltaTime = 0;
+            return false;
+        }
+
+        #endregion // Think/Custom Updates
 
         #region Fiber Creation
 
@@ -569,14 +672,14 @@ namespace BeauRoutine.Internal
             return fiber;
         }
 
-        #endregion
+        #endregion // Fiber Creation
 
         #region Yield Updates
 
-        public void UpdateYield(YieldPhase inYieldUpdate)
+        public void UpdateYield(float inDeltaTime, YieldPhase inYieldUpdate)
         {
             Frame.IncrementSerial();
-            Frame.ResetTime(TimeScale);
+            Frame.ResetTime(inDeltaTime, TimeScale);
             Frame.PauseMask = m_QueuedPauseMask;
             if (m_GroupTimescaleDirty)
             {
@@ -587,7 +690,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
 #if DEVELOPMENT
-                if (DebugMode)
+                if (DebugMode && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -627,7 +730,7 @@ namespace BeauRoutine.Internal
             }
         }
 
-        #endregion
+        #endregion // Yield Updates
 
         #region Stats
 
@@ -669,7 +772,7 @@ namespace BeauRoutine.Internal
             return stats;
         }
 
-        #endregion
+        #endregion // Stats
 
         #region Groups
 
@@ -717,7 +820,7 @@ namespace BeauRoutine.Internal
             }
         }
 
-        #endregion
+        #endregion // Groups
 
         /// <summary>
         /// Logs a message to the console in Debug Mode.
@@ -728,7 +831,11 @@ namespace BeauRoutine.Internal
 #if DEVELOPMENT
             if (DebugMode)
             {
-                UnityEngine.Debug.Log("[BeauRoutine] " + inMessage);
+                m_LogBuilder.Insert(0, "[BeauRoutine] ");
+                m_LogBuilder.Append(inMessage);
+                string logged = m_LogBuilder.ToString();
+                m_LogBuilder.Length = 0;
+                UnityEngine.Debug.Log(logged);
             }
 #endif // DEVELOPMENT
         }

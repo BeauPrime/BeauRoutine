@@ -1,14 +1,13 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    21 Nov 2016
  * 
- * File:    TweenShortcuts.Renderer.cs
+ * File:    TweenShortcuts.Layout.cs
  * Purpose: Extension methods for creating Tweens affecting
  *          properties on LayoutElements and LayoutGroups.
 */
 
-using System;
 using UnityEngine;
 using UnityEngine.UI;
 

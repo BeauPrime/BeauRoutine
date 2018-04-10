@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2017. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
  * Date:    4 Nov 2017
  * 
@@ -9,7 +9,7 @@
 */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    #define DEVELOPMENT
+#define DEVELOPMENT
 #endif
 
 using BeauRoutine.Internal;
@@ -358,7 +358,7 @@ namespace BeauRoutine
         #endregion
 
         #region Manual Updates
-        
+
         /// <summary>
         /// Updates all routines with the Manual update mode.
         /// Note that you cannot nest a ManualUpdate call within a ManualUpdate call.
@@ -457,6 +457,32 @@ namespace BeauRoutine
             }
 
             /// <summary>
+            /// Enables/disables profiling.
+            /// Profiling will capture data about execution time
+            /// and periodically log stats to the console.
+            /// </summary>
+            static public bool ProfilingEnabled
+            {
+                get
+                {
+#if DEVELOPMENT
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.ProfilingEnabled;
+#endif // DEVELOPMENT
+                    return false;
+                }
+                set
+                {
+#if DEVELOPMENT
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.ProfilingEnabled = value;
+#endif // DEVELOPMENT
+                }
+            }
+
+            /// <summary>
             /// Enables/disables exception handling.
             /// By default this is enabled.
             /// </summary>
@@ -498,9 +524,10 @@ namespace BeauRoutine
             }
 
             /// <summary>
-            /// Enables/disables snapshotting.
+            /// Enables/disables snapshot profiling.
             /// Snapshots capture the routines running at the point
             /// when a new high watermark is established for concurrent routines.
+            /// This will only function when both Debug Mode and Profiling are enabled.
             /// </summary>
             static public bool SnapshotEnabled
             {
@@ -538,6 +565,46 @@ namespace BeauRoutine
                     Manager m = Manager.Get();
                     if (m != null)
                         m.SystemPaused = value;
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the interval between ThinkUpdate phases.
+            /// </summary>
+            static public float ThinkUpdateInterval
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.ThinkUpdateInterval;
+                    return Manager.DEFAULT_THINKUPDATE_INTERVAL;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.SetThinkUpdateInterval(value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the interval between CustomUpdate phases.
+            /// </summary>
+            static public float CustomUpdateInterval
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.CustomUpdateInterval;
+                    return Manager.DEFAULT_CUSTOMUPDATE_INTERVAL;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.SetCustomUpdateInterval(value);
                 }
             }
         }
