@@ -16,7 +16,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Runs fibers in parallel.
     /// </summary>
-    public sealed class ParallelFibers : IEnumerator, IDisposable
+    public sealed class ParallelFibers : IEnumerator, IDisposable, INestedFiberContainer
     {
         private Manager m_Manager;
         private List<IEnumerator> m_Enumerators;
@@ -65,7 +65,7 @@ namespace BeauRoutine.Internal
             for (int i = 0; i < m_Fibers.Count; ++i)
             {
                 Fiber fiber = m_Fibers[i];
-                fiber.ClearParallelOwner();
+                fiber.ClearNestedOwner();
                 fiber.Dispose();
             }
             m_Fibers.Clear();
@@ -88,7 +88,7 @@ namespace BeauRoutine.Internal
                     if (m_Enumerators[i] != null)
                     {
                         Fiber fiber = m_Manager.ChainFiber(m_Enumerators[i]);
-                        fiber.SetParallelOwner(this);
+                        fiber.SetNestedOwner(this);
                         fiber.SetParentFiber(m_ParentFiber);
                         m_Fibers.Add(fiber);
                     }
