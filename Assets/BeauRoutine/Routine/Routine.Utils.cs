@@ -709,10 +709,23 @@ namespace BeauRoutine
             while (true)
             {
                 accumulation += Routine.DeltaTime * inTimesPerSecond;
-                while (accumulation > 1)
+                if (accumulation >= 1)
                 {
-                    inAction();
-                    --accumulation;
+                    // Ensure DeltaTime reflects this interval
+                    Manager m = Manager.Get();
+                    float oldUnscaledDeltaTime = m.Frame.UnscaledDeltaTime;
+                    m.Frame.UnscaledDeltaTime = 1f / inTimesPerSecond;
+                    m.Frame.RefreshTimeScale();
+
+                    while (accumulation >= 1)
+                    {
+                        inAction();
+                        --accumulation;
+                    }
+
+                    // Reset DeltaTime
+                    m.Frame.UnscaledDeltaTime = oldUnscaledDeltaTime;
+                    m.Frame.RefreshTimeScale();
                 }
                 yield return null;
             }
@@ -727,17 +740,38 @@ namespace BeauRoutine
             while (true)
             {
                 accumulation += Routine.DeltaTime * inTimesPerSecond;
-                while (accumulation > 1)
+                if (accumulation >= 1)
                 {
-                    inAction(inArg);
-                    --accumulation;
+                    // Ensure DeltaTime reflects this interval
+                    Manager m = Manager.Get();
+                    float oldUnscaledDeltaTime = m.Frame.UnscaledDeltaTime;
+                    m.Frame.UnscaledDeltaTime = 1f / inTimesPerSecond;
+                    m.Frame.RefreshTimeScale();
+
+                    while (accumulation >= 1)
+                    {
+                        inAction(inArg);
+                        --accumulation;
+                    }
+
+                    // Reset DeltaTime
+                    m.Frame.UnscaledDeltaTime = oldUnscaledDeltaTime;
+                    m.Frame.RefreshTimeScale();
                 }
                 yield return null;
             }
         }
 
+        /// <summary>
+        /// Returns an IEnumerator that attempts to update the given routine a certain number of times per frame.
+        /// </summary>
+        static public IEnumerator PerSecond(IEnumerator inRoutine, float inTimesPerSecond)
+        {
+            return new IntervalFiber(Manager.Get(), inRoutine, 1f / inTimesPerSecond);
+        }
+
         #endregion
-    
+
         #region For Each
 
         /// <summary>
@@ -883,6 +917,11 @@ namespace BeauRoutine
             {
                 throw new NotSupportedException();
             }
+
+            public override string ToString()
+            {
+                return "Routine::Yield()";
+            }
         }
 
         // Yields a set of values in sequence
@@ -918,6 +957,11 @@ namespace BeauRoutine
             public void Reset()
             {
                 throw new NotSupportedException();
+            }
+
+            public override string ToString()
+            {
+                return "Routine::Yield()";
             }
         }
 

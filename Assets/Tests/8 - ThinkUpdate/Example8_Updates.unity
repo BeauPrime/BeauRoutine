@@ -124,9 +124,9 @@ GameObject:
   - component: {fileID: 1162206866}
   - component: {fileID: 1162206865}
   - component: {fileID: 1162206864}
+  - component: {fileID: 1162206869}
   - component: {fileID: 1162206863}
   - component: {fileID: 1162206868}
-  - component: {fileID: 1162206869}
   m_Layer: 0
   m_Name: Object
   m_TagString: Untagged
@@ -228,8 +228,8 @@ MonoBehaviour:
   m_Snapshots: 1
   m_HandleExceptions: 1
   m_DefaultPhase: 0
-  m_SlowUpdateInterval: 0.125
   m_ThinkUpdateInterval: 0.1
+  m_CustomUpdateInterval: 0.125
 --- !u!114 &1162206869
 MonoBehaviour:
   m_ObjectHideFlags: 0

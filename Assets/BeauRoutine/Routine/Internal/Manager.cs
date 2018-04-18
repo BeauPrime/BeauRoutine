@@ -659,6 +659,7 @@ namespace BeauRoutine.Internal
             Fiber fiber = Fibers.GetFreeFiber();
             outHandle = fiber.Initialize(inHost, inStart, inbChained);
 
+#if DEVELOPMENT
             if (DebugMode)
             {
                 int running = Fibers.TotalRunning;
@@ -668,6 +669,7 @@ namespace BeauRoutine.Internal
                     m_NeedsSnapshot = SnapshotEnabled;
                 }
             }
+#endif // DEVELOPMENT
 
             return fiber;
         }

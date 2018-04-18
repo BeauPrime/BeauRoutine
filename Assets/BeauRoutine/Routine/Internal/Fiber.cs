@@ -41,7 +41,6 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_WAITFORCUSTOMUPDATE = typeof(WaitForCustomUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORTHINKUPDATE = typeof(WaitForThinkUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORUPDATE = typeof(WaitForUpdate).TypeHandle.Value;
-        static private readonly IntPtr TYPEHANDLE_PARALLELFIBERS = typeof(ParallelFibers).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_ROUTINEPHASE = typeof(RoutinePhase).TypeHandle.Value;
 
         static private readonly IntPtr TYPEHANDLE_WAITFORSECONDS = typeof(WaitForSeconds).TypeHandle.Value;
@@ -62,7 +61,7 @@ namespace BeauRoutine.Internal
         private MonoBehaviour m_Host;
         private RoutineIdentity m_HostIdentity;
 
-        private ParallelFibers m_Parallel;
+        private INestedFiberContainer m_Container;
         private Fiber m_RootFiber;
 
         private IEnumerator m_RootFunction;
@@ -152,7 +151,7 @@ namespace BeauRoutine.Internal
             m_RootFunction = inStart;
             m_Stack[m_StackPosition = 0] = inStart;
 
-            CheckForParallelFibers(inStart);
+            CheckForNesting(inStart);
 
             if (!m_Chained)
             {
@@ -187,9 +186,9 @@ namespace BeauRoutine.Internal
             m_HostIdentity = null;
 
             // If this is chained and we have a parallel
-            if (bChained && m_Parallel != null)
+            if (bChained && m_Container != null)
             {
-                m_Parallel.RemoveFiber(this);
+                m_Container.RemoveFiber(this);
             }
 
             m_Chained = m_Disposing = m_HasIdentity
@@ -200,7 +199,7 @@ namespace BeauRoutine.Internal
             m_Name = null;
             Priority = 0;
 
-            m_Parallel = null;
+            m_Container = null;
             m_RootFiber = null;
 
             m_TimeScale = 1.0f;
@@ -254,45 +253,33 @@ namespace BeauRoutine.Internal
             m_RootFunction = null;
         }
 
-        // HACK: We need to pass a parent fiber into parallel/chained fibers
-        //      in order for them to have the proper time scale during yield updates
-        private void CheckForParallelFibers(IEnumerator inEnumerator)
+        // HACK: We need to pass a parent fiber into nested fibers
+        //       in order for timescale to work appropriately during a yield update.
+        private void CheckForNesting(IEnumerator inEnumerator)
         {
-            IntPtr typePtr = inEnumerator.GetType().TypeHandle.Value;
-            if (typePtr == TYPEHANDLE_PARALLELFIBERS)
-            {
-                ((ParallelFibers)inEnumerator).SetParentFiber(this);
-            }
-        }
-
-        // HACK: We need to pass a parent fiber into parallel/chained fibers
-        //      in order for them to have the proper time scale during yield updates
-        private void CheckForParallelFibers(IEnumerator inEnumerator, IntPtr inTypePtr)
-        {
-            if (inTypePtr == TYPEHANDLE_PARALLELFIBERS)
-            {
-                ((ParallelFibers)inEnumerator).SetParentFiber(this);
-            }
+            INestedFiberContainer container = inEnumerator as INestedFiberContainer;
+            if (container != null)
+                container.SetParentFiber(this);
         }
 
         #endregion
 
-        #region Parallel
+        #region Nesting
 
         /// <summary>
-        /// Indicates that the Fiber is owned by the given ParallelFiber.
+        /// Indicates that the Fiber is owned by the given nested container.
         /// </summary>
-        public void SetParallelOwner(ParallelFibers inParallel)
+        public void SetNestedOwner(INestedFiberContainer inParallel)
         {
-            m_Parallel = inParallel;
+            m_Container = inParallel;
         }
 
         /// <summary>
-        /// Clears the Fiber's ParallelFiber owner.
+        /// Clears the Fiber's nested owner.
         /// </summary>
-        public void ClearParallelOwner()
+        public void ClearNestedOwner()
         {
-            m_Parallel = null;
+            m_Container = null;
         }
 
         /// <summary>
@@ -535,16 +522,11 @@ namespace BeauRoutine.Internal
             if (IsPaused() || m_UnityWait != null)
                 return true;
 
-            if (inYieldUpdate == YieldPhase.None)
+            if (m_YieldPhase != inYieldUpdate)
+                return true;
+
+            if (inYieldUpdate != YieldPhase.None)
             {
-                if (m_YieldPhase != inYieldUpdate)
-                    return true;
-            }
-            else
-            {
-                if (m_YieldPhase != inYieldUpdate)
-                    return true;
-                
                 Manager.Fibers.RemoveFiberFromYieldList(this, m_YieldPhase);
                 m_YieldPhase = YieldPhase.None;
 
@@ -720,7 +702,7 @@ namespace BeauRoutine.Internal
                                 Array.Resize(ref m_Stack, m_StackSize *= 2);
                             m_Stack[++m_StackPosition] = decorator;
 
-                            CheckForParallelFibers(decoratedEnumerator);
+                            CheckForNesting(decoratedEnumerator);
                         }
 
                         if (!bExecuteStack)
@@ -892,7 +874,7 @@ namespace BeauRoutine.Internal
                             Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
-                        CheckForParallelFibers(enumerator, resultType);
+                        CheckForNesting(enumerator);
 
                         return true;
                     }
@@ -1252,10 +1234,9 @@ namespace BeauRoutine.Internal
                 IEnumerator current = m_Stack[m_StackPosition];
                 stats.Function = CleanIteratorName(current);
 
-                // HACK - to visualize combine iterators properly
-                ParallelFibers combine = current as ParallelFibers;
-                if (combine != null)
-                    stats.Nested = combine.GetStats();
+                INestedFiberContainer nested = current as INestedFiberContainer;
+                if (nested != null)
+                    stats.Nested = nested.GetStats();
             }
             else
             {
