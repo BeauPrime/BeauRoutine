@@ -613,6 +613,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop(Action inAction)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inAction));
         }
 
@@ -621,6 +623,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop<T>(Action<T> inAction, T inArg)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inAction, inArg));
         }
 
@@ -629,6 +633,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoopRoutine(Func<IEnumerator> inEnumerator)
         {
+            if (inEnumerator == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inEnumerator));
         }
 
@@ -637,6 +643,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop(MonoBehaviour inHost, Action inAction)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inAction));
         }
 
@@ -645,6 +653,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop<T>(MonoBehaviour inHost, Action<T> inAction, T inArg)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inAction, inArg));
         }
 
@@ -653,6 +663,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoopRoutine(MonoBehaviour inHost, Func<IEnumerator> inEnumerator)
         {
+            if (inEnumerator == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inEnumerator));
         }
 
