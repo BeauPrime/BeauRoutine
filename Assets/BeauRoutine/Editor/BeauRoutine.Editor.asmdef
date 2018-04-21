@@ -1,0 +1,10 @@
+{
+    "name": "BeauRoutine.Editor",
+    "references": [
+        "BeauRoutine"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": []
+}
