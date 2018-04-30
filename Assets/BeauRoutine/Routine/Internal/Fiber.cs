@@ -70,15 +70,14 @@ namespace BeauRoutine.Internal
         private short m_StackSize;
 
         private float m_WaitTime = 0.0f;
+        private int m_LockCount = 0;
         private Coroutine m_UnityWait = null;
         private YieldPhase m_YieldPhase = YieldPhase.None;
         private int m_YieldFrameDelay = 0;
 
         private string m_Name;
 
-        // HACK: Public variable instead of private here.
-        // Unity's compiler won't always inline accessors,
-        // so this saves a tiny bit of time when sorting
+        // Public, to reduce indirection when sorting
         public int Priority = 0;
 
         private float m_TimeScale = 1.0f;
@@ -131,6 +130,7 @@ namespace BeauRoutine.Internal
             m_HostIdentity = RoutineIdentity.Find(m_Host.gameObject);
 
             m_WaitTime = 0;
+            m_LockCount = 0;
 
             m_UnityWait = null;
             m_Name = null;
@@ -196,6 +196,7 @@ namespace BeauRoutine.Internal
             = m_IgnoreObjectActive = m_Executing = false;
 
             m_WaitTime = 0;
+            m_LockCount = 0;
             m_Name = null;
             Priority = 0;
 
@@ -437,6 +438,29 @@ namespace BeauRoutine.Internal
         public void AddDelay(float inSeconds)
         {
             m_WaitTime += inSeconds;
+        }
+
+        /// <summary>
+        /// Adds a lock on the Routine.
+        /// </summary>
+        public void AddLock()
+        {
+            ++m_LockCount;
+        }
+
+        /// <summary>
+        /// Releases a lock on the Routine.
+        /// </summary>
+        public void ReleaseLock()
+        {
+            if (m_LockCount == 0)
+            {
+#if DEVELOPMENT
+                Manager.Log("Mismatched lock count for fiber: " + Name);
+#endif // DEVELOPMENT
+                return;
+            }
+            --m_LockCount;
         }
 
         /// <summary>
@@ -967,7 +991,7 @@ namespace BeauRoutine.Internal
         // Returns if the Fiber has been paused.
         private bool IsPaused()
         {
-            if (m_Paused)
+            if (m_Paused || m_LockCount > 0)
                 return true;
             if (m_HostedByManager)
                 return false;
@@ -1203,10 +1227,12 @@ namespace BeauRoutine.Internal
 
             if (m_Disposing || (!m_HostedByManager && !m_Host))
                 stats.State = RoutineState.Disposing;
+            else if (m_LockCount > 0)
+                stats.State = RoutineState.Locked + ": " + m_LockCount;
+            else if (m_WaitTime > 0)
+                stats.State = RoutineState.WaitTime + ": " + m_WaitTime.ToString("0.000");
             else if (IsPaused())
                 stats.State = RoutineState.Paused;
-            else if (m_WaitTime > 0)
-                stats.State = RoutineState.WaitTime;
             else if (m_UnityWait != null)
                 stats.State = RoutineState.WaitUnity;
             else if (m_YieldPhase == YieldPhase.WaitForEndOfFrame)
