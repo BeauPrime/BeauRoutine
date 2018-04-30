@@ -455,9 +455,7 @@ namespace BeauRoutine
             return CreateParallel(new List<IEnumerator>(inRoutines), true);
         }
 
-        /// <summary>
-        /// Runs all the given IEnumerators
-        /// </summary>
+        // Runs all the given IEnumerators
         static private IEnumerator CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
         {
             Manager m = Manager.Get();
@@ -543,9 +541,59 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator Delay(IEnumerator inRoutine, float inSeconds)
         {
-            if (inSeconds > 0)
-                yield return inSeconds;
-            yield return Routine.Inline(inRoutine);
+            return new DelayedIEnumerator(inRoutine, inSeconds);
+        }
+
+        // Delays executing an IEnumerator by a certain amount of seconds
+        private class DelayedIEnumerator : IEnumerator, IDisposable
+        {
+            private IEnumerator m_Enumerator;
+            private float m_Delay;
+            private object m_Yielding = false;
+
+            public DelayedIEnumerator(IEnumerator inRoutine, float inSeconds)
+            {
+                m_Enumerator = inRoutine;
+                m_Delay = inSeconds;
+            }
+
+            public object Current
+            {
+                get { return m_Yielding; }
+            }
+
+            public void Dispose()
+            {
+                DisposeUtils.DisposeEnumerator(ref m_Enumerator);
+                m_Delay = 0;
+            }
+
+            public bool MoveNext()
+            {
+                if (m_Enumerator == null)
+                    return false;
+
+                if (m_Delay > 0)
+                {
+                    m_Yielding = m_Delay;
+                    m_Delay = 0;
+                    return true;
+                }
+
+                m_Yielding = Routine.Inline(m_Enumerator);
+                m_Enumerator = null;
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException();
+            }
+
+            public override string ToString()
+            {
+                return "Routine::Delay()";
+            }
         }
 
         #endregion
@@ -898,7 +946,7 @@ namespace BeauRoutine
 
             public void Dispose()
             {
-                m_Object = null;
+                DisposeUtils.DisposeObject(ref m_Object);
                 m_Finished = true;
             }
 
@@ -942,7 +990,7 @@ namespace BeauRoutine
                 if (m_Objects != null)
                 {
                     for (int i = m_Objects.Length - 1; i >= 0; --i)
-                        m_Objects[i] = null;
+                        DisposeUtils.DisposeObject(ref m_Objects[i]);
                     m_Objects = null;
                 }
 
