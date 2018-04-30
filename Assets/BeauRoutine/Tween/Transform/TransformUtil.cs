@@ -114,7 +114,7 @@ namespace BeauRoutine
             if (inAxis != 0)
             {
                 Vector3 pos;
-                if (inAxis == Axis.XYZ)
+                if ((inAxis & Axis.XYZ) == Axis.XYZ)
                     pos = inPosition;
                 else
                 {
@@ -167,7 +167,7 @@ namespace BeauRoutine
             if (inAxis != 0)
             {
                 Vector3 scale;
-                if (inAxis == Axis.XYZ)
+                if ((inAxis & Axis.XYZ) == Axis.XYZ)
                     scale = inScale;
                 else
                 {
@@ -227,7 +227,7 @@ namespace BeauRoutine
             if (inAxis != 0)
             {
                 Vector3 rotation;
-                if (inAxis == Axis.XYZ)
+                if ((inAxis & Axis.XYZ) == Axis.XYZ)
                 {
                     rotation = inRotation;
                 }
@@ -292,7 +292,7 @@ namespace BeauRoutine
             if (inAxis != 0)
             {
                 Vector2 pos;
-                if (inAxis == Axis.XYZ || inAxis == Axis.XY)
+                if ((inAxis & Axis.XY) == Axis.XY)
                     pos = inPosition;
                 else
                 {
@@ -342,7 +342,7 @@ namespace BeauRoutine
             if (inAxis != 0)
             {
                 Vector2 pos;
-                if (inAxis == Axis.XYZ || inAxis == Axis.XY)
+                if ((inAxis & Axis.XY) == Axis.XY)
                     pos = inSize;
                 else
                 {

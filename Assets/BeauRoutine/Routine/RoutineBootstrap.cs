@@ -54,12 +54,16 @@ namespace BeauRoutine
 
         #endregion // Inspector
 
+#if UNITY_EDITOR
         [NonSerialized]
         private bool m_Awoken = false;
+#endif // UNITY_EDITOR
 
         private void Awake()
         {
+#if UNITY_EDITOR
             m_Awoken = true;
+#endif // UNITY_EDITOR
             Apply();
         }
 

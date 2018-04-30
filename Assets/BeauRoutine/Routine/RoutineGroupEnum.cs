@@ -27,10 +27,10 @@ namespace BeauRoutine
     /// <summary>
     /// Identifies an enum as the type to use when specifying routine groups.
     /// </summary>
-    [AttributeUsage(AttributeTargets.Enum, AllowMultiple=false, Inherited=false)]
+    [AttributeUsage(AttributeTargets.Enum, AllowMultiple = false, Inherited = false)]
     public sealed class RoutineGroupEnum : Attribute
     {
-        #if UNITY_EDITOR
+#if UNITY_EDITOR
 
         static private Type s_Type;
         static private bool s_Initialized = false;
@@ -107,6 +107,6 @@ namespace BeauRoutine
 
         #endregion
 
-#endif
+#endif // UNITY_EDITOR
     }
 }

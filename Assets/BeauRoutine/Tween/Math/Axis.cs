@@ -23,11 +23,20 @@ namespace BeauRoutine
         X		= 0x01,
         Y		= 0x02,
         Z		= 0x04,
+        W       = 0x08,
 
         XY		= X | Y,
         XZ		= X | Z,
+        XW      = X | W,
         YZ		= Y | Z,
+        YW      = Y | W,
+        ZW      = Z | W,
 
-        XYZ		= X | Y | Z
+        XYZ		= X | Y | Z,
+        XYW     = X | Y | W,
+        XZW     = X | Z | W,
+        YZW     = Y | Z | W,
+
+        XYZW    = X | Y | Z | W
     }
 }

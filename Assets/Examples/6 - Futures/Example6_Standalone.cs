@@ -8,9 +8,6 @@ namespace BeauRoutine.Examples
     public class Example6_Standalone : MonoBehaviour
     {
         [SerializeField]
-        private Example6_Service m_Service = null;
-
-        [SerializeField]
         private AudioSource m_URLAudioBoxOutput = null;
 
         [SerializeField]

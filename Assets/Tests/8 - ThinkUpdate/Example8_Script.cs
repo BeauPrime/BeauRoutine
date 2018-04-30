@@ -16,6 +16,10 @@ namespace BeauRoutine.Examples
             // PerSecondRoutine.Start(this, Executing("PerSecond: "), 5);
             Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
             //Routine.Start(this, Routine.PerSecond(started, 5f));
+
+            Routine.Start(this, SquashStretch());
+
+            Routine.Start(this, Camera.main.BackgroundColorTo(Color.black, 0.5f).YoyoLoop());
         }
 
         private IEnumerator Executing(string inPrefix)
@@ -29,6 +33,11 @@ namespace BeauRoutine.Examples
                 //if (Random.value < 0.1f)
                 //    break;
             }
+        }
+
+        private IEnumerator SquashStretch()
+        {
+            yield return transform.SquashStretchTo(1.2f, 2f, Axis.Y, Axis.X).YoyoLoop().Wave(Wave.Function.CosFade, 5f);
         }
     }
 }

@@ -766,5 +766,156 @@ namespace BeauRoutine
         }
 
         #endregion
+    
+        #region Squash/Stretch
+
+        private sealed class TweenData_Transform_SquashStretch : ITweenData
+        {
+            private Transform m_Transform;
+            private Vector3 m_TargetSquash;
+            private Axis m_SquashAxis;
+            private Axis m_DependentAxis;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+
+            public TweenData_Transform_SquashStretch(Transform inTransform, Vector3 inTarget, Axis inSquashAxis, Axis inDependentAxis)
+            {
+                m_Transform = inTransform;
+                m_TargetSquash = inTarget;
+                m_SquashAxis = inSquashAxis;
+                m_DependentAxis = inDependentAxis & ~m_SquashAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Transform.localScale;
+
+                Vector3 axisMultipliers = Vector3.one;
+                float totalSquashMultiplier = 1f;
+                int dependentCount = 0;
+                float totalVolume = 1;
+
+                if ((m_SquashAxis & Axis.X) != 0)
+                {
+                    totalVolume *= m_Start.x;
+                    axisMultipliers.x = m_TargetSquash.x / m_Start.x;
+                    totalSquashMultiplier *= axisMultipliers.x;
+                }
+                else if ((m_DependentAxis & Axis.X) != 0)
+                {
+                    totalVolume *= m_Start.x;
+                    ++dependentCount;
+                }
+
+                if ((m_SquashAxis & Axis.Y) != 0)
+                {
+                    totalVolume *= m_Start.y;
+                    axisMultipliers.y = m_TargetSquash.y / m_Start.y;
+                    totalSquashMultiplier *= axisMultipliers.y;
+                }
+                else if ((m_DependentAxis & Axis.Y) != 0)
+                {
+                    totalVolume *= m_Start.y;
+                    ++dependentCount;
+                }
+
+                if ((m_SquashAxis & Axis.Z) != 0)
+                {
+                    totalVolume *= m_Start.z;
+                    axisMultipliers.z = m_TargetSquash.z / m_Start.z;
+                    totalSquashMultiplier *= axisMultipliers.z;
+                }
+                else if ((m_DependentAxis & Axis.Z) != 0)
+                {
+                    totalVolume *= m_Start.z;
+                    ++dependentCount;
+                }
+
+                if (dependentCount > 0)
+                {
+                    float multiplier = 1f / totalSquashMultiplier;
+                    if (dependentCount > 1)
+                        multiplier = Mathf.Pow(multiplier, 1f / dependentCount);
+                    if ((m_DependentAxis & Axis.X) != 0)
+                        axisMultipliers.x = multiplier;
+                    if ((m_DependentAxis & Axis.Y) != 0)
+                        axisMultipliers.y = multiplier;
+                    if ((m_DependentAxis & Axis.Z) != 0)
+                        axisMultipliers.z = multiplier;
+                }
+
+                Vector3 target = m_Start;
+                if (totalVolume == 0)
+                {
+                    Debug.LogWarning("[Tween: Transform SquashStretch] One or more axis scales are 0. Cannot maintain volume.");
+                    if ((m_SquashAxis & Axis.X) != 0)
+                        target.x = m_TargetSquash.x;
+                    else if ((m_SquashAxis & Axis.Y) != 0)
+                        target.y = m_TargetSquash.y;
+                    else if ((m_SquashAxis & Axis.Z) != 0)
+                        target.z = m_TargetSquash.z;
+                }
+                else
+                {
+                    target.x *= axisMultipliers.x;
+                    target.y *= axisMultipliers.y;
+                    target.z *= axisMultipliers.z;
+                }
+
+                m_Delta = target - m_Start;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 final = new Vector3(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent,
+                    m_Start.z + m_Delta.z * inPercent);
+
+                m_Transform.SetScale(final, m_SquashAxis | m_DependentAxis);
+            }
+
+            public override string ToString()
+            {
+                return "Transform: SquashStretch";
+            }
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time while maintaining volume.
+        /// </summary>
+        static public Tween SquashStretchTo(this Transform inTransform, Vector3 inTarget, float inTime, Axis inPrimaryAxis, Axis inDependentAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_SquashStretch(inTransform, inTarget, inPrimaryAxis, inDependentAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time while maintaining volume.
+        /// </summary>
+        static public Tween SquashStretchTo(this Transform inTransform, Vector3 inTarget, TweenSettings inSettings, Axis inPrimaryAxis, Axis inDependentAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_SquashStretch(inTransform, inTarget, inPrimaryAxis, inDependentAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time while maintaining volume.
+        /// </summary>
+        static public Tween SquashStretchTo(this Transform inTransform, float inTarget, float inTime, Axis inPrimaryAxis, Axis inDependentAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_SquashStretch(inTransform, new Vector3(inTarget, inTarget, inTarget), inPrimaryAxis, inDependentAxis), inTime);
+        }
+
+        /// <summary>
+        /// Scales the Transform to another scale over time while maintaining volume.
+        /// </summary>
+        static public Tween SquashStretchTo(this Transform inTransform, float inTarget, TweenSettings inSettings, Axis inPrimaryAxis, Axis inDependentAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_Transform_SquashStretch(inTransform, new Vector3(inTarget, inTarget, inTarget), inPrimaryAxis, inDependentAxis), inSettings);
+        }
+
+        #endregion // Squash/Stretch
     }
 }
