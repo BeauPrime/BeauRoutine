@@ -19,11 +19,11 @@ namespace BeauRoutine
     /// Locked Routines will suspend execution
     /// until all locks are removed.
     /// </summary>
-    public struct RoutineLock : IDisposable
+    public class RoutineLock : IDisposable, IEnumerator
     {
         private Routine m_Locked;
 
-        public RoutineLock(Routine inRoutine)
+        internal RoutineLock(Routine inRoutine)
         {
             m_Locked = inRoutine;
         }
@@ -47,14 +47,6 @@ namespace BeauRoutine
             m_Locked = Routine.Null;
         }
 
-        /// <summary>
-        /// Identical to Release.
-        /// </summary>
-        public void Dispose()
-        {
-            Release();
-        }
-
         static public implicit operator bool(RoutineLock inLock)
         {
             return inLock.m_Locked;
@@ -69,5 +61,30 @@ namespace BeauRoutine
         {
             return "RoutineLock";
         }
+
+        #region IDisposable
+
+        void IDisposable.Dispose()
+        {
+            Release();
+        }
+
+        #endregion // IDisposable
+
+        #region IEnumerator
+
+        object IEnumerator.Current { get { return null; } }
+
+        bool IEnumerator.MoveNext()
+        {
+            return m_Locked;
+        }
+
+        void IEnumerator.Reset()
+        {
+            throw new NotSupportedException();
+        }
+
+        #endregion // IEnumerator
     }
 }

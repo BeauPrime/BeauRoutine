@@ -456,7 +456,7 @@ namespace BeauRoutine.Internal
             if (m_LockCount == 0)
             {
 #if DEVELOPMENT
-                Manager.Log("Mismatched lock count for fiber: " + Name);
+                Debug.LogWarning("[BeauRoutine] Mismatched lock count for fiber: " + Name);
 #endif // DEVELOPMENT
                 return;
             }
