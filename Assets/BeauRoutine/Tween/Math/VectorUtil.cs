@@ -421,6 +421,36 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Multiplies the contents of one vector by a coefficient.
+        /// </summary>
+        static public void Multiply(ref Vector4 ioVector, float inCoefficient)
+        {
+            ioVector.x *= inCoefficient;
+            ioVector.y *= inCoefficient;
+            ioVector.z *= inCoefficient;
+            ioVector.w *= inCoefficient;
+        }
+
+        /// <summary>
+        /// Multiplies the contents of one vector by a coefficient.
+        /// </summary>
+        static public void Multiply(ref Vector3 ioVector, float inCoefficient)
+        {
+            ioVector.x *= inCoefficient;
+            ioVector.y *= inCoefficient;
+            ioVector.z *= inCoefficient;
+        }
+
+        /// <summary>
+        /// Multiplies the contents of one vector by a coefficient.
+        /// </summary>
+        static public void Multiply(ref Vector2 ioVector, float inCoefficient)
+        {
+            ioVector.x *= inCoefficient;
+            ioVector.y *= inCoefficient;
+        }
+
+        /// <summary>
         /// Divides the contents of one vector by the other.
         /// </summary>
         static public void Divide(ref Vector4 ioVector, Vector4 inDiv)
@@ -472,12 +502,42 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Divides the contents of one vector by the other.
+        /// Divides the contents of one vector by the other
         /// </summary>
         static public void Divide(ref Vector2 ioVector, Vector2 inDiv, float inCoefficient)
         {
             ioVector.x /= inDiv.x * inCoefficient;
             ioVector.y /= inDiv.y * inCoefficient;
+        }
+
+        /// <summary>
+        /// Divides the contents of one vector by a divisor.
+        /// </summary>
+        static public void Divide(ref Vector4 ioVector, float inDivisor)
+        {
+            ioVector.x /= inDivisor;
+            ioVector.y /= inDivisor;
+            ioVector.z /= inDivisor;
+            ioVector.w /= inDivisor;
+        }
+
+        /// <summary>
+        /// Divides the contents of one vector by a divisor.
+        /// </summary>
+        static public void Divide(ref Vector3 ioVector, float inDivisor)
+        {
+            ioVector.x /= inDivisor;
+            ioVector.y /= inDivisor;
+            ioVector.z /= inDivisor;
+        }
+
+        /// <summary>
+        /// Divides the contents of one vector by a divisor.
+        /// </summary>
+        static public void Divide(ref Vector2 ioVector, float inDivisor)
+        {
+            ioVector.x /= inDivisor;
+            ioVector.y /= inDivisor;
         }
 
         #endregion

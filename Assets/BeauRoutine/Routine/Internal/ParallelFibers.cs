@@ -62,14 +62,17 @@ namespace BeauRoutine.Internal
                 m_Enumerators = null;
             }
 
-            for (int i = 0; i < m_Fibers.Count; ++i)
+            if (m_Fibers != null)
             {
-                Fiber fiber = m_Fibers[i];
-                fiber.ClearNestedOwner();
-                fiber.Dispose();
+                for (int i = 0; i < m_Fibers.Count; ++i)
+                {
+                    Fiber fiber = m_Fibers[i];
+                    fiber.ClearNestedOwner();
+                    fiber.Dispose();
+                }
+                m_Fibers.Clear();
+                m_Fibers = null;
             }
-            m_Fibers.Clear();
-            m_Fibers = null;
 
             m_ParentFiber = null;
         }
@@ -100,30 +103,35 @@ namespace BeauRoutine.Internal
                     return false;
             }
 
-            if (m_Fibers.Count > 0)
+            if (m_Fibers != null)
             {
-                bool prevIterating = m_Iterating;
-                m_Iterating = true;
+                if (m_Fibers.Count > 0)
                 {
-                    for (int i = 0; i < m_Fibers.Count; ++i)
+                    bool prevIterating = m_Iterating;
+                    m_Iterating = true;
                     {
-                        Fiber myFiber = m_Fibers[i];
-                        m_Manager.Frame.RefreshTimeScale();
-                        if (!myFiber.Update())
+                        for (int i = 0; i < m_Fibers.Count; ++i)
                         {
-                            m_Fibers.RemoveAt(i--);
-                            if (m_Race)
+                            Fiber myFiber = m_Fibers[i];
+                            m_Manager.Frame.RefreshTimeScale();
+                            if (!myFiber.Update())
                             {
-                                m_Iterating = false;
-                                return false;
+                                m_Fibers.RemoveAt(i--);
+                                if (m_Race)
+                                {
+                                    m_Iterating = false;
+                                    return false;
+                                }
                             }
                         }
                     }
+                    m_Iterating = prevIterating;
                 }
-                m_Iterating = prevIterating;
+
+                return m_Fibers.Count > 0;
             }
 
-            return m_Fibers.Count > 0;
+            return false;
         }
 
         public void Reset()

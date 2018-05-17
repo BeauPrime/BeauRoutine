@@ -10,19 +10,20 @@
 
 #if UNITY_WEBGL
     #define DISABLE_THREADING
-#endif
+#endif // UNITY_WEBGL
 
 #if UNITY_5_5_OR_NEWER
     #define SUPPORTS_PARTICLESYSTEM_ISEMITTING
-#endif
+#endif // UNITY_5_5_OR_NEWER
 
 using System;
 using System.Collections;
-#if !DISABLE_THREADING
-using System.Threading;
-#endif
 using UnityEngine;
 using UnityEngine.Events;
+
+#if !DISABLE_THREADING
+using System.Threading;
+#endif // DISABLE_THREADING
 
 namespace BeauRoutine
 {
@@ -463,7 +464,7 @@ namespace BeauRoutine
             while (inThread.IsAlive)
                 yield return null;
         }
-#endif
+#endif // !DISABLE_THREADING
 
         #endregion
     }

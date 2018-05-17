@@ -552,12 +552,12 @@ namespace BeauRoutine
 
         #region IEnumerator
 
-        public object Current
+        object IEnumerator.Current
         {
             get { return null; }
         }
 
-        public bool MoveNext()
+        bool IEnumerator.MoveNext()
         {
             float deltaTime = Routine.DeltaTime;
 
@@ -623,7 +623,7 @@ namespace BeauRoutine
             }
         }
 
-        public void Reset()
+        void IEnumerator.Reset()
         {
             throw new InvalidOperationException();
         }

@@ -122,11 +122,9 @@ GameObject:
   m_Component:
   - component: {fileID: 1162206867}
   - component: {fileID: 1162206866}
-  - component: {fileID: 1162206865}
   - component: {fileID: 1162206864}
   - component: {fileID: 1162206869}
   - component: {fileID: 1162206863}
-  - component: {fileID: 1162206868}
   m_Layer: 0
   m_Name: Object
   m_TagString: Untagged
@@ -145,6 +143,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b260f2101ed9604f9174de52fea2a11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  Spline:
+    m_Points:
+    - {x: 0, y: 0, z: 0}
+    - {x: 4, y: 0, z: 0}
+    - {x: 2, y: 2, z: 0}
+    m_Closed: 0
 --- !u!23 &1162206864
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -179,18 +183,6 @@ MeshRenderer:
   m_SortingLayerID: 0
   m_SortingLayer: 0
   m_SortingOrder: 0
---- !u!65 &1162206865
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 1162206862}
-  m_Material: {fileID: 0}
-  m_IsTrigger: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!33 &1162206866
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -205,31 +197,12 @@ Transform:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1162206862}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.02, y: -0.13, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1162206868
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_PrefabParentObject: {fileID: 0}
-  m_PrefabInternal: {fileID: 0}
-  m_GameObject: {fileID: 1162206862}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c6f9f75e296baa5498bf192cbf09c503, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Capacity: 4
-  m_DebugMode: 1
-  m_Profiling: 1
-  m_Snapshots: 1
-  m_HandleExceptions: 1
-  m_DefaultPhase: 0
-  m_ThinkUpdateInterval: 0.1
-  m_CustomUpdateInterval: 0.125
 --- !u!114 &1162206869
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -255,6 +228,7 @@ GameObject:
   - component: {fileID: 1735345452}
   - component: {fileID: 1735345450}
   - component: {fileID: 1735345449}
+  - component: {fileID: 1735345451}
   m_Layer: 0
   m_Name: Camera
   m_TagString: MainCamera
@@ -276,6 +250,25 @@ Behaviour:
   m_PrefabInternal: {fileID: 0}
   m_GameObject: {fileID: 1735345448}
   m_Enabled: 1
+--- !u!114 &1735345451
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 0}
+  m_GameObject: {fileID: 1735345448}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c6f9f75e296baa5498bf192cbf09c503, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Capacity: 16384
+  m_DebugMode: 0
+  m_Profiling: 0
+  m_Snapshots: 0
+  m_HandleExceptions: 0
+  m_DefaultPhase: 0
+  m_ThinkUpdateInterval: 0.1
+  m_CustomUpdateInterval: 0.125
 --- !u!20 &1735345452
 Camera:
   m_ObjectHideFlags: 0
