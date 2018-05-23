@@ -51,7 +51,7 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Returns the correct interpolation percentage for the given percentage and method.
         /// </summary>
-        float CorrectPercent(float inPercent, SplineLerpSpace inLerpMethod);
+        float CorrectPercent(float inPercent, SplineLerp inLerpMethod);
 
         /// <summary>
         /// Performs any processing necessary to perform interpolations.
@@ -61,7 +61,7 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Interpolates along the spline.
         /// </summary>
-        Vector3 Lerp(float inPercent);
+        Vector3 Lerp(float inPercent, Curve inSegmentCurve = Curve.Linear);
         
         // /// <summary>
         // /// Returns the closest point along the spline to the given point.

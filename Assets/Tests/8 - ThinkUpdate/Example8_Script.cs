@@ -8,10 +8,12 @@ namespace BeauRoutine.Examples
 {
     public class Example8_Script : MonoBehaviour
     {
-        public VertexSpline Spline;
+        public SerializedVertexSpline Spline;
+        public SplineTweenSettings SplineTween;
 
         private IEnumerator Start()
         {
+            yield return null;
             yield return null;
             // Routine.Start(this, Executing("ThinkUpdate: ")).SetPhase(RoutinePhase.ThinkUpdate);
             // Routine.Start(this, Executing("CustomUpdate: ")).SetPhase(RoutinePhase.CustomUpdate);
@@ -20,13 +22,18 @@ namespace BeauRoutine.Examples
             // Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
             //Routine.Start(this, Routine.PerSecond(started, 5f));
 
-            Routine.Start(this, SquashStretch());
+            // Routine.Start(this, SquashStretch());
 
             // Routine.Start(this, Camera.main.BackgroundColorTo(Color.black, 0.5f).YoyoLoop());
 
-            transform.SetPosition(transform.position + Random.onUnitSphere * 10);
+            // transform.SetPosition(transform.position + Random.onUnitSphere * 10);
 
-            Routine.Start(this, transform.MoveAlong(Spline, 3, Axis.XYZ, Space.Self, SplinePositioning.Absolute).Loop().Randomize());
+            VertexSpline spline = Spline.Generate();
+            spline.Process();
+
+            Routine.Start(this,
+                transform.MoveAlong(spline, 5, Axis.XYZ, Space.Self, SplineTween).YoyoLoop().Randomize()
+            );
         }
 
         private IEnumerator Executing(string inPrefix)

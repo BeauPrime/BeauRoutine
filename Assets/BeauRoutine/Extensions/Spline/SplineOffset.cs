@@ -12,7 +12,7 @@ namespace BeauRoutine.Splines
     /// <summary>
     /// How a spline should affect transform positioning.
     /// </summary>
-    public enum SplinePositioning : byte
+    public enum SplineOffset : byte
     {
         /// <summary>
         /// Move relative to starting position.

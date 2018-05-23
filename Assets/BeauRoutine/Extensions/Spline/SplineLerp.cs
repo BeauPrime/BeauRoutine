@@ -13,7 +13,7 @@ namespace BeauRoutine.Splines
     /// <summary>
     /// How a spline should be interpolated.
     /// </summary>
-    public enum SplineLerpSpace : byte
+    public enum SplineLerp : byte
     {
         // Each segment takes an amount of time
         // proportional to the number of vertices

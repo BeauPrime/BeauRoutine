@@ -113,35 +113,39 @@ namespace BeauRoutine.Splines
 
         public bool IsClosed() { return m_IsClosed; }
 
-        public float CorrectPercent(float inPercent, SplineLerpSpace inLerpMethod)
+        public float CorrectPercent(float inPercent, SplineLerp inLerpMethod)
         {
             switch (inLerpMethod)
             {
-                case SplineLerpSpace.Vertex:
+                case SplineLerp.Vertex:
                 default:
                     {
                         return inPercent;
                     }
 
-                case SplineLerpSpace.Direct:
-                case SplineLerpSpace.Precise:
+                case SplineLerp.Direct:
+                case SplineLerp.Precise:
                     {
+                        int vertCount = m_VertexCount;
+
                         if (m_IsClosed)
                             inPercent = (inPercent + 1) % 1;
+                        else
+                            --vertCount;
 
-                        for (int i = 1; i < m_VertexCount; ++i)
+                        for (int i = vertCount - 1; i >= 1; --i)
                         {
                             if (m_VertexData[i].DirectStart <= inPercent)
                             {
                                 float lerp = (inPercent - m_VertexData[i].DirectStart) / m_VertexData[i].DirectLength;
-                                return (i + lerp) / m_VertexCount;
+                                return (i + lerp) / vertCount;
                             }
                         }
 
                         // If these fail, use the starting node
                         {
                             float lerp = (inPercent) / m_VertexData[0].DirectLength;
-                            return lerp / m_VertexCount;
+                            return lerp / vertCount;
                         }
                     }
             }
@@ -166,17 +170,35 @@ namespace BeauRoutine.Splines
             }
 
             float distance = 0;
+            float segmentDist = 0;
 
             for (int i = 0; i < vertCount; ++i)
             {
                 Vector3 myPos = m_Vertices[i];
                 Vector3 nextPos = m_Vertices[(i + 1) % m_VertexCount];
+
+                segmentDist = Vector3.Distance(myPos, nextPos);
+
+                m_VertexData[i].DirectStart = distance;
+                m_VertexData[i].DirectLength = segmentDist;
+
+                distance += segmentDist;
             }
+
+            float invDistance = 1f / distance;
+
+            for (int i = 0; i < vertCount; ++i)
+            {
+                m_VertexData[i].DirectStart *= invDistance;
+                m_VertexData[i].DirectLength *= invDistance;
+            }
+
+            m_Distance = distance;
 
             m_Dirty = false;
         }
 
-        public Vector3 Lerp(float inPercent)
+        public Vector3 Lerp(float inPercent, Curve inSegmentCurve = Curve.Linear)
         {
             if (m_Dirty)
                 Process();
@@ -200,7 +222,7 @@ namespace BeauRoutine.Splines
             float lerp = vertAF - vertA;
             int vertB = (vertA + 1) % m_VertexCount;
 
-            return Vector3.LerpUnclamped(m_Vertices[vertA], m_Vertices[vertB], lerp);
+            return Vector3.LerpUnclamped(m_Vertices[vertA], m_Vertices[vertB], inSegmentCurve.Evaluate(lerp));
         }
 
         #endregion // ISpline
@@ -211,6 +233,13 @@ namespace BeauRoutine.Splines
     {
         public Vector3[] Positions;
         public bool IsClosed;
+
+        public VertexSpline Generate()
+        {
+            VertexSpline spline = null;
+            Generate(ref spline);
+            return spline;
+        }
 
         public void Generate(ref VertexSpline ioSpline)
         {

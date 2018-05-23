@@ -144,11 +144,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Spline:
-    m_Points:
-    - {x: 0, y: 0, z: 0}
-    - {x: 4, y: 0, z: 0}
-    - {x: 2, y: 2, z: 0}
-    m_Closed: 0
+    Positions:
+    - {x: 0, y: 0, z: -3}
+    - {x: 5, y: 5, z: 3}
+    - {x: -5, y: -4, z: 5}
+    - {x: 2, y: -2, z: -4}
+    - {x: -12, y: 2, z: 15}
+    IsClosed: 0
+  SplineTween:
+    Offset: 0
+    LerpMethod: 1
+    SegmentEase: 1
 --- !u!23 &1162206864
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -261,9 +267,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c6f9f75e296baa5498bf192cbf09c503, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Capacity: 16384
-  m_DebugMode: 0
-  m_Profiling: 0
+  m_Capacity: 1024
+  m_DebugMode: 1
+  m_Profiling: 1
   m_Snapshots: 0
   m_HandleExceptions: 0
   m_DefaultPhase: 0
