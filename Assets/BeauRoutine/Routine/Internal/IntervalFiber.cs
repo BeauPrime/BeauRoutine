@@ -1,7 +1,7 @@
 ﻿/*
  * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
- * Date:    3 Apr 2017
+ * Date:    12 Apr 2018
  * 
  * File:    IntervalFiber.cs
  * Purpose: Iterator enabling periodic updates of a nested fiber.
