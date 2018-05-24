@@ -500,6 +500,7 @@ namespace BeauRoutine.Internal
                 return;
 
             Fibers.ClearAll();
+            TweenPool.StopPooling();
 
             if (Host != null)
             {

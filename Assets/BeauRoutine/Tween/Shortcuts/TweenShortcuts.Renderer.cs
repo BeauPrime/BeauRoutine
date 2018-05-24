@@ -4,8 +4,7 @@
  * Date:    21 Nov 2016
  * 
  * File:    TweenShortcuts.Renderer.cs
- * Purpose: Extension methods for creating Tweens affecting
- *          properties on both Canvas and World renderers.
+ * Purpose: Extension methods for creating Tweens affecting world renderers.
 */
 
 using UnityEngine;
@@ -169,7 +168,7 @@ namespace BeauRoutine
             return Tween.Create(new TweenData_SpriteRenderer_Gradient(inRenderer, inGradient, inUpdate), inSettings);
         }
 
-        #endregion
+        #endregion // SpriteRenderer
 
         #region TextMesh
 
@@ -322,7 +321,7 @@ namespace BeauRoutine
             return Tween.Create(new TweenData_TextMesh_Gradient(inRenderer, inGradient, inUpdate), inSettings);
         }
 
-        #endregion
+        #endregion // TextMesh
 
         #region SkinnedMeshRenderer
 
@@ -377,6 +376,6 @@ namespace BeauRoutine
             return Tween.Create(new TweenData_SkinnedMeshRenderer_BlendWeight(inRenderer, inIndex, inTarget), inSettings);
         }
 
-        #endregion
+        #endregion // SkinnedMeshRenderer
     }
 }

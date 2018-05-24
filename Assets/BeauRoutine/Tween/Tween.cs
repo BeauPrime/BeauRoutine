@@ -10,6 +10,7 @@
  * Notes:   Tweens must be run inside a Routine to be evaluated.
 */
 
+using BeauRoutine.Internal;
 using System;
 using System.Collections;
 using UnityEngine;
@@ -21,6 +22,8 @@ namespace BeauRoutine
     /// </summary>
     public sealed partial class Tween : IEnumerator, IDisposable
     {
+        public const int DEFAULT_POOL_SIZE = 32;
+
         private const int LOOPING_FOREVER = -1;
 
         private enum State : byte
@@ -82,7 +85,7 @@ namespace BeauRoutine
         // Current data
         private ITweenData m_TweenData;
 
-        private Tween() { }
+        internal Tween() { }
 
         private Tween SetData(ITweenData inData)
         {
@@ -271,7 +274,7 @@ namespace BeauRoutine
         {
             float duration = m_PercentIncrement == 0 ? 0 : 1 / m_PercentIncrement;
 
-            switch(m_Mode)
+            switch (m_Mode)
             {
                 case LoopMode.Loop:
                     return m_NumLoops == LOOPING_FOREVER ? float.PositiveInfinity : duration * m_NumLoops;
@@ -361,7 +364,7 @@ namespace BeauRoutine
             if (m_StartMode == StartMode.Randomize)
             {
                 m_CurrentPercent = UnityEngine.Random.value;
-                switch(m_Mode)
+                switch (m_Mode)
                 {
                     case LoopMode.Yoyo:
                     case LoopMode.YoyoLoop:
@@ -637,9 +640,9 @@ namespace BeauRoutine
         /// </summary>
         public void Dispose()
         {
-            if (m_TweenData != null && m_State == State.Run)
+            if (m_TweenData != null)
             {
-                if (m_Cancel != CancelMode.Nothing)
+                if (m_State == State.Run && m_Cancel != CancelMode.Nothing)
                 {
                     m_Reversed = false;
 
@@ -662,12 +665,13 @@ namespace BeauRoutine
                     m_TweenData.ApplyTween(curvedPercent);
                     if (m_OnUpdate != null)
                         m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
+
+                    m_TweenData.OnTweenEnd();
                 }
 
-                m_TweenData.OnTweenEnd();
+                m_TweenData = null;
+                TweenPool.Free(this);
             }
-
-            m_TweenData = null;
 
             m_Cancel = CancelMode.Nothing;
             m_Mode = LoopMode.Single;
@@ -716,14 +720,14 @@ namespace BeauRoutine
             return string.Format("Tween: [{0}, {1:0.00}%, Oneshot]", m_TweenData.ToString(), m_CurrentPercent * 100);
         }
 
-        #region Pooling
+        #region Creation
 
         /// <summary>
         /// Creates a tween with the given tween parameters.
         /// </summary>
         static public Tween Create(ITweenData inTweenData, float inDuration)
         {
-            return new Tween().SetData(inTweenData).Duration(inDuration);
+            return TweenPool.Alloc().SetData(inTweenData).Duration(inDuration);
         }
 
         /// <summary>
@@ -731,7 +735,7 @@ namespace BeauRoutine
         /// </summary>
         static public Tween Create(ITweenData inTweenData, TweenSettings inSettings)
         {
-            return new Tween().SetData(inTweenData).Duration(inSettings.Time).Ease(inSettings.Curve);
+            return TweenPool.Alloc().SetData(inTweenData).Duration(inSettings.Time).Ease(inSettings.Curve);
         }
 
         /// <summary>
@@ -739,9 +743,17 @@ namespace BeauRoutine
         /// </summary>
         static public Tween CreateEmpty()
         {
-            return new Tween().SetData(NULL_DATA).Duration(0);
+            return TweenPool.Alloc().SetData(NULL_DATA).Duration(0);
         }
 
-        #endregion
+        /// <summary>
+        /// Starts pooling tweens.
+        /// </summary>
+        static public void SetPooled(int inCapacity = DEFAULT_POOL_SIZE)
+        {
+            TweenPool.StartPooling(inCapacity);
+        }
+
+        #endregion // Creation
     }
 }
