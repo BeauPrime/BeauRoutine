@@ -8,8 +8,12 @@ namespace BeauRoutine.Examples
 {
     public class Example8_Script : MonoBehaviour
     {
-        public SerializedVertexSpline Spline;
+        public MultiSpline SplineArgs;
         public SplineTweenSettings SplineTween;
+
+        public AnimationCurve curve;
+
+        private Routine m_Path;
 
         private IEnumerator Start()
         {
@@ -28,24 +32,44 @@ namespace BeauRoutine.Examples
 
             // transform.SetPosition(transform.position + Random.onUnitSphere * 10);
 
-            VertexSpline spline = Spline.Generate();
-            spline.Process();
+            // SplineArgs.Process();
+
+            SplineTween.Orient = SplineOrientation.Custom;
+            SplineTween.OrientCallback = (t, r, s) =>
+            {
+                Debug.Log("Direction: " + r);
+                float y = 0;
+                float z = Mathf.Atan2(r.y, r.x) * Mathf.Rad2Deg;
+                if (z < 0)
+                    z += 360f;
+
+                if (z > 90 && z < 270)
+                {
+                    y = -180;
+                    z = 180 - z;
+                }
+
+                t.SetRotation(new Vector3(0, y, z), Axis.YZ, s);
+            };
 
             Routine.Start(this,
-                transform.MoveAlong(spline, 5, Axis.XYZ, Space.Self, SplineTween).YoyoLoop().Randomize()
+                transform.MoveAlongWithSpeed(SplineArgs, 8, Axis.XYZ, Space.World, SplineTween).Loop().Randomize()
             );
+
+            Debug.Log(JsonUtility.ToJson(SplineArgs));
         }
 
-        private IEnumerator Executing(string inPrefix)
+        private void Update()
         {
-            while (true)
+            if (Input.GetMouseButtonDown(0))
             {
-                yield return null;
-                Debug.Log(inPrefix + Routine.DeltaTime);
-                //yield return Random.value;
+                Camera c = Camera.main;
+                Vector3 mousePos = Input.mousePosition;
+                mousePos.z = transform.position.z - c.transform.position.z;
+                Vector3 worldMouse = c.ScreenToWorldPoint(mousePos);
 
-                //if (Random.value < 0.1f)
-                //    break;
+                var spline = Spline.Simple(transform.position, worldMouse, 0.5f, new Vector3(0, 8, 0));
+                m_Path.Replace(this, transform.MoveAlong(spline, .65f, Axis.XY));
             }
         }
 

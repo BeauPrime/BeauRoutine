@@ -4,7 +4,7 @@
  * Date:    8 May 2018
  * 
  * File:    SplineMath.cs
- * Purpose: Spline interpolation algorithms.
+ * Purpose: Spline interpolation algorithms and utilities.
 */
 
 using UnityEngine;
@@ -22,9 +22,14 @@ namespace BeauRoutine.Splines
         static public float DistancePrecision = 8;
 
         /// <summary>
+        /// Look-ahead percent to use for direction calculations.
+        /// </summary>
+        static public float LookAhead = 0.001f;
+
+        /// <summary>
         /// Quadratic bezier spline calculation.
         /// </summary>
-        static public Vector3 QuadraticBezier(Vector3 inP0, Vector3 inC0, Vector3 inP1, float inT)
+        static public Vector3 Quadratic(Vector3 inP0, Vector3 inC0, Vector3 inP1, float inT)
         {
             float tReverse = 1 - inT;
             float a = tReverse * tReverse;
@@ -39,9 +44,25 @@ namespace BeauRoutine.Splines
         }
 
         /// <summary>
+        /// First derivative of a quadratic bezier spline calculation.
+        /// </summary>
+        static public Vector3 QuadraticDerivative(Vector3 inP0, Vector3 inC0, Vector3 inP1, float inT)
+        {
+            float tReverse = 1 - inT;
+            float a = 2f * tReverse;
+            float b = 2f * inT;
+
+            return new Vector3(
+                a * (inC0.x - inP0.x) + b * (inP1.x - inC0.x),
+                a * (inC0.y - inP0.y) + b * (inP1.y - inC0.y),
+                a * (inC0.z - inP0.z) + b * (inP1.z - inC0.z)
+            );
+        }
+
+        /// <summary>
         /// Cubic hermite spline calculation.
         /// </summary>
-        static public Vector3 CubicHermite(Vector3 inT0, Vector3 inP0, Vector3 inP1, Vector3 inT1, float inT)
+        static public Vector3 Hermite(Vector3 inT0, Vector3 inP0, Vector3 inP1, Vector3 inT1, float inT)
         {
             float t2 = inT * inT;
             float t3 = t2 * inT;

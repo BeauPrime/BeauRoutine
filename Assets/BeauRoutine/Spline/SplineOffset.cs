@@ -3,7 +3,7 @@
  * Author:  Alex Beauchesne
  * Date:    8 May 2018
  * 
- * File:    SplineMode.cs
+ * File:    SplineOffset.cs
  * Purpose: Enum describing how Spline positions should be applied.
 */
 

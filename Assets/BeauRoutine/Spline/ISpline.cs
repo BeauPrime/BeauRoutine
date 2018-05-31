@@ -46,12 +46,17 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Returns if the spline is a closed loop.
         /// </summary>
-        bool IsClosed();
+        bool IsLooped();
 
         /// <summary>
-        /// Returns the correct interpolation percentage for the given percentage and method.
+        /// Returns the vertex interpolation percentage for the given percentage and method.
         /// </summary>
-        float CorrectPercent(float inPercent, SplineLerp inLerpMethod);
+        float TransformPercent(float inPercent, SplineLerp inLerpMethod);
+
+        /// <summary>
+        /// Returns the method interpolation percentage corresponding to the given percentage and method.
+        /// </summary>
+        float InvTransformPercent(float inPercent, SplineLerp inLerpMethod);
 
         /// <summary>
         /// Performs any processing necessary to perform interpolations.
@@ -61,29 +66,22 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Interpolates along the spline.
         /// </summary>
-        Vector3 Lerp(float inPercent, Curve inSegmentCurve = Curve.Linear);
+        Vector3 GetPoint(float inPercent, Curve inSegmentCurve = Curve.Linear);
+
+        /// <summary>
+        /// Returns the direction along the spline.
+        /// </summary>
+        Vector3 GetDirection(float inPercent, Curve inSegmentCurve = Curve.Linear);
+
+        /// <summary>
+        /// Retrieves info about the segment the given percentage of the way through the spline.
+        /// </summary>
+        void GetSegment(float inPercent, out SplineSegment outSegment);
         
         // /// <summary>
         // /// Returns the closest point along the spline to the given point.
-        // /// Also outputs how far along the path this is in the given lerp method space.
+        // /// Also outputs the percentage distance along the spline.
         // /// </summary>
-        // Vector3 GetClosestPoint(Vector3 inPoint, SplineLerpSpace inLerpMethod, out float outPercentage);
-
-        // /// <summary>
-        // /// Retrieves info about the segment the given percentage of the way through the spline.
-        // /// </summary>
-        // void GetSegment(float inPercent, out SplineSegment outSegment);
-
-        // /// <summary>
-        // /// Populates the given Vector3 array with vertices along the spline.
-        // /// Returns the number of vertices added.
-        // /// </summary>
-        // int Sample(Vector3[] outPoints, float inStart, float inEnd, int inStartIdx, float inNumSamples);
-
-        // /// <summary>
-        // /// Populates the given Vector3 list with vertices along the spline.
-        // /// Returns the number of vertices added.
-        // /// </summary>
-        // int Sample(List<Vector3> outPoints, float inStart, float inEnd, float inNumSamples);
+        // Vector3 GetClosestPoint(Vector3 inPoint, out float outPercentage);
     }
 }

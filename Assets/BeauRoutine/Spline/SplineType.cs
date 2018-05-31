@@ -18,7 +18,7 @@ namespace BeauRoutine.Splines
         SimpleSpline,
 
         // Polygonal "spline". Multiple points, no controls.
-        VertexSpline,
+        LinearSpline,
 
         // Cubic spline. Multiple points w/ tangents.
         CSpline

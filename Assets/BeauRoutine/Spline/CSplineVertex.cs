@@ -13,7 +13,7 @@ using UnityEngine;
 namespace BeauRoutine.Splines
 {
     /// <summary>
-    /// Spline point
+    /// Spline vertex, with position and tangents.
     /// </summary>
     [Serializable]
     public struct CSplineVertex

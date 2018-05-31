@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
- * Date:    8 May 2018
+ * Date:    24 May 2018
  * 
- * File:    Spline.cs
- * Purpose: Defines a common interface for splines, along with factory methods.
+ * File:    SplineTween.cs
+ * Purpose: Contains tweens related to splines.
 */
 
 using System;
@@ -12,7 +12,10 @@ using UnityEngine;
 
 namespace BeauRoutine.Splines
 {
-    static public class SplineTweens
+    /// <summary>
+    /// Contains tweens related to splines.
+    /// </summary>
+    static public class SplineTweenShortcuts
     {
         #region Transform
 
@@ -46,11 +49,52 @@ namespace BeauRoutine.Splines
 
             public void ApplyTween(float inPercent)
             {
-                Vector3 final = m_Spline.Lerp(m_Spline.CorrectPercent(inPercent, m_SplineSettings.LerpMethod), m_SplineSettings.SegmentEase);
+                inPercent = m_Spline.TransformPercent(inPercent, m_SplineSettings.LerpMethod);
+                Vector3 final = m_Spline.GetPoint(inPercent, m_SplineSettings.SegmentEase);
                 final.x += m_Start.x;
                 final.y += m_Start.y;
                 final.z += m_Start.z;
                 m_Transform.SetPosition(final, m_Axis, m_Space);
+
+                if (m_SplineSettings.Orient != SplineOrientation.Ignore)
+                {
+                    Axis maskedAxis = m_SplineSettings.OrientAxis & Axis.XYZ;
+                    if (maskedAxis != 0)
+                    {
+                        Vector3 direction = m_Spline.GetDirection(inPercent, m_SplineSettings.SegmentEase);
+                        if (maskedAxis != Axis.XYZ)
+                        {
+                            if ((m_SplineSettings.OrientAxis & Axis.X) == 0)
+                                direction.x = 0;
+                            if ((m_SplineSettings.OrientAxis & Axis.Y) == 0)
+                                direction.y = 0;
+                            if ((m_SplineSettings.OrientAxis & Axis.Z) == 0)
+                                direction.z = 0;
+                        }
+
+                        if (m_SplineSettings.Orient == SplineOrientation.ThreeD)
+                        {
+                            Quaternion dirRot = Quaternion.LookRotation(direction, m_SplineSettings.OrientUp);
+                            if (m_Space == Space.Self)
+                                m_Transform.localRotation = dirRot;
+                            else
+                                m_Transform.rotation = dirRot;
+                        }
+                        else if (m_SplineSettings.Orient == SplineOrientation.TwoD)
+                        {
+                            float dir = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                            if (dir < -180)
+                                dir += 360f;
+
+                            m_Transform.SetRotation(dir, Axis.Z, m_Space);
+                        }
+
+                        if (m_SplineSettings.OrientCallback != null)
+                        {
+                            m_SplineSettings.OrientCallback(m_Transform, direction, m_Space);
+                        }
+                    }
+                }
             }
 
             public override string ToString()
@@ -91,6 +135,36 @@ namespace BeauRoutine.Splines
             return Tween.Create(new TweenData_Transform_PositionSpline(inTransform, inSpline, inSpace, inAxis, inSplineSettings), inSettings);
         }
 
+        /// <summary>
+        /// Moves the Transform along a spline with the given average speed.
+        /// </summary>
+        static public Tween MoveAlongWithSpeed(this Transform inTransform, ISpline inSpline, float inSpeed, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
+        {
+            return MoveAlongWithSpeed(inTransform, inSpline, inSpeed, inAxis, inSpace, SplineTweenSettings.Default);
+        }
+
+        /// <summary>
+        /// Moves the Transform along a spline with the given average speed.
+        /// </summary>
+        static public Tween MoveAlongWithSpeed(this Transform inTransform, ISpline inSpline, float inSpeed, Axis inAxis, Space inSpace, SplineTweenSettings inSplineSettings)
+        {
+            float time;
+            switch(inSplineSettings.LerpMethod)
+            {
+                case SplineLerp.Direct:
+                case SplineLerp.Vertex:
+                    time = inSpline.GetDirectDistance() / inSpeed;
+                    break;
+
+                case SplineLerp.Precise:
+                default:
+                    time = inSpline.GetDistance() / inSpeed;
+                    break;
+            }
+
+            return Tween.Create(new TweenData_Transform_PositionSpline(inTransform, inSpline, inSpace, inAxis, inSplineSettings), time);
+        }
+
         #endregion // Transform
     
         #region RectTransform
@@ -123,7 +197,7 @@ namespace BeauRoutine.Splines
 
             public void ApplyTween(float inPercent)
             {
-                Vector2 final = (Vector2)m_Spline.Lerp(m_Spline.CorrectPercent(inPercent, m_SplineSettings.LerpMethod), m_SplineSettings.SegmentEase);
+                Vector2 final = (Vector2)m_Spline.GetPoint(m_Spline.TransformPercent(inPercent, m_SplineSettings.LerpMethod), m_SplineSettings.SegmentEase);
                 final.x += m_Start.x;
                 final.y += m_Start.y;
                 m_RectTransform.SetAnchorPos(final, m_Axis);
@@ -167,6 +241,36 @@ namespace BeauRoutine.Splines
             return Tween.Create(new TweenData_RectTransform_AnchorPosSpline(inRectTransform, inSpline, inAxis, inSplineSettings), inSettings);
         }
 
-        #endregion // Splines
+        /// <summary>
+        /// Moves the RectTransform's anchorPosition along a spline with the given average speed.
+        /// </summary>
+        static public Tween AnchorPosAlongWithSpeed(this RectTransform inRectTransform, ISpline inSpline, float inSpeed, Axis inAxis = Axis.XY)
+        {
+            return AnchorPosAlongWithSpeed(inRectTransform, inSpline, inSpeed, inAxis, SplineTweenSettings.Default);
+        }
+
+        /// <summary>
+        /// Moves the RectTransform's anchorPosition along a spline with the given average speed.
+        /// </summary>
+        static public Tween AnchorPosAlongWithSpeed(this RectTransform inRectTransform, ISpline inSpline, float inSpeed, Axis inAxis, SplineTweenSettings inSplineSettings)
+        {
+            float time;
+            switch(inSplineSettings.LerpMethod)
+            {
+                case SplineLerp.Direct:
+                case SplineLerp.Vertex:
+                    time = inSpline.GetDirectDistance() / inSpeed;
+                    break;
+
+                case SplineLerp.Precise:
+                default:
+                    time = inSpline.GetDistance() / inSpeed;
+                    break;
+            }
+
+            return Tween.Create(new TweenData_RectTransform_AnchorPosSpline(inRectTransform, inSpline, inAxis, inSplineSettings), time);
+        }
+
+        #endregion // RectTransform
     }
 }
