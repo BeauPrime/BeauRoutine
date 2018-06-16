@@ -52,11 +52,27 @@ namespace BeauRoutine.Examples
                 t.SetRotation(new Vector3(0, y, z), Axis.YZ, s);
             };
 
-            Routine.Start(this,
-                transform.MoveAlongWithSpeed(SplineArgs, 8, Axis.XYZ, Space.World, SplineTween).Loop().Randomize()
-            );
+            Routine.Start(this, Tween.Spline(
+                SplineArgs, OnSplineUpdate, 8f, SplineTween
+            ).Loop().Randomize()).SetPhase(RoutinePhase.FixedUpdate);
 
-            Debug.Log(JsonUtility.ToJson(SplineArgs));
+            for (int i = 0; i < SplineArgs.GetVertexCount(); ++i)
+            {
+                SplineArgs.SetVertexUserData(i, new Color(Random.value, Random.value, Random.value));
+            }
+        }
+
+        private void OnSplineUpdate(SplineUpdateInfo inInfo)
+        {
+            Vector3 diff = inInfo.Point - transform.position;
+            transform.position = inInfo.Point;
+
+            float speed = diff.magnitude / Routine.DeltaTime;
+            Debug.Log("Speed: " + speed.ToString());
+
+            SplineSegment seg = inInfo.GetSegment();
+            GetComponent<SpriteRenderer>().color =
+                Color.Lerp((Color)inInfo.Spline.GetVertexUserData(seg.VertexA), (Color)inInfo.Spline.GetVertexUserData(seg.VertexB), seg.Interpolation);
         }
 
         private void Update()

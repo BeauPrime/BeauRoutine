@@ -8,7 +8,6 @@
 */
 
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace BeauRoutine.Splines
@@ -18,10 +17,17 @@ namespace BeauRoutine.Splines
     /// </summary>
     public interface ISpline
     {
+        #region Basic Info
+
         /// <summary>
         /// Returns the type of spline.
         /// </summary>
         SplineType GetSplineType();
+
+        /// <summary>
+        /// Returns if the spline is a closed loop.
+        /// </summary>
+        bool IsLooped();
 
         /// <summary>
         /// Returns the total distance between vertices. 
@@ -32,6 +38,10 @@ namespace BeauRoutine.Splines
         /// Returns the direct distance between vertices.
         /// </summary>
         float GetDirectDistance();
+
+        #endregion // Basic Info
+
+        #region Vertex Info
 
         /// <summary>
         /// Returns the number of vertices.
@@ -44,9 +54,38 @@ namespace BeauRoutine.Splines
         Vector3 GetVertex(int inIndex);
 
         /// <summary>
-        /// Returns if the spline is a closed loop.
+        /// Sets the vertex at the given index.
         /// </summary>
-        bool IsLooped();
+        void SetVertex(int inIndex, Vector3 inVertex);
+
+        /// <summary>
+        /// Gets user data for the given vertex.
+        /// </summary>
+        object GetVertexUserData(int inIndex);
+
+        /// <summary>
+        /// Sets user data for the given vertex.
+        /// </summary>
+        void SetVertexUserData(int inIndex, object inUserData);
+
+        /// <summary>
+        /// Returns the number of control points.
+        /// </summary>
+        int GetControlCount();
+
+        /// <summary>
+        /// Returns the control point at the given index.
+        /// </summary>
+        Vector3 GetControlPoint(int inIndex);
+
+        /// <summary>
+        /// Sets the control point at the given index.
+        /// </summary>
+        void SetControlPoint(int inIndex, Vector3 inVertex);
+
+        #endregion // Vertex Info
+
+        #region Evaluation
 
         /// <summary>
         /// Returns the vertex interpolation percentage for the given percentage and method.
@@ -57,11 +96,6 @@ namespace BeauRoutine.Splines
         /// Returns the method interpolation percentage corresponding to the given percentage and method.
         /// </summary>
         float InvTransformPercent(float inPercent, SplineLerp inLerpMethod);
-
-        /// <summary>
-        /// Performs any processing necessary to perform interpolations.
-        /// </summary>
-        void Process();
 
         /// <summary>
         /// Interpolates along the spline.
@@ -83,5 +117,21 @@ namespace BeauRoutine.Splines
         // /// Also outputs the percentage distance along the spline.
         // /// </summary>
         // Vector3 GetClosestPoint(Vector3 inPoint, out float outPercentage);
+
+        #endregion // Evaluation
+
+        #region Operations
+
+        /// <summary>
+        /// Performs any processing necessary to perform interpolations.
+        /// </summary>
+        bool Process();
+
+        /// <summary>
+        /// Callback for when a Spline is updated.
+        /// </summary>
+        Action<ISpline> OnUpdated { get; set; }
+
+        #endregion // Operations
     }
 }

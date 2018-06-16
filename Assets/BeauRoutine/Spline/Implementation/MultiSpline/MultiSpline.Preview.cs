@@ -45,7 +45,7 @@ namespace BeauRoutine.Splines
             if (m_Type == GenType.Uninitialized)
                 return;
 
-            UpdateSpline();
+            RefreshSpline();
 
             switch (m_Type)
             {
@@ -62,8 +62,7 @@ namespace BeauRoutine.Splines
                     break;
 
                 case GenType.Cardinal:
-                case GenType.KBSpline:
-                    RenderGizmo_CardinalOrKBPreview(this, transform);
+                    RenderGizmo_CardinalPreview(this, transform);
                     break;
             }
         }
@@ -72,11 +71,11 @@ namespace BeauRoutine.Splines
         {
             RenderGizmo_PathPreview(inSpline, 0, 1, 24);
 
-            RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[0], true);
-            RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[1], false);
-            RenderGizmo_ControlPoint(inTransform, inSpline.m_Vertices[2]);
-            RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[0], inSpline.m_Vertices[2]);
-            RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[1], inSpline.m_Vertices[2]);
+            RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[0].Point, true);
+            RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[1].Point, false);
+            RenderGizmo_ControlPoint(inTransform, inSpline.m_ControlPointA);
+            RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[0].Point, inSpline.m_ControlPointA);
+            RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[1].Point, inSpline.m_ControlPointA);
         }
 
         static private void RenderGizmo_LinearPreview(MultiSpline inSpline, Transform inTransform)
@@ -89,62 +88,52 @@ namespace BeauRoutine.Splines
 
             for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
             {
-                RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i], i == 0);
+                RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i].Point, i == 0);
             }
         }
 
         static private void RenderGizmo_CSplinePreview(MultiSpline inSpline, Transform inTransform)
         {
-            int vertCount = inSpline.m_CSplineVertices.Length;
+            int vertCount = inSpline.m_Vertices.Length;
             if (!inSpline.m_Looped)
                 --vertCount;
 
-            for (int i = 0; i < inSpline.m_CSplineVertices.Length; ++i)
+            for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
             {
                 if (i < vertCount)
                     RenderGizmo_PathPreview(inSpline, (float)i / vertCount, (float)(i + 1) / vertCount, 24);
 
-                RenderGizmo_PathNode(inTransform, inSpline.m_CSplineVertices[i].Point, i == 0);
+                RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i].Point, i == 0);
                 
                 if (inSpline.m_Looped || i > 0)
                 {
-                    RenderGizmo_TangentLine(inTransform, inSpline.m_CSplineVertices[i].Point, -inSpline.m_CSplineVertices[i].InTangent, false);
-                    RenderGizmo_TangentPoint(inTransform, inSpline.m_CSplineVertices[i].Point, -inSpline.m_CSplineVertices[i].InTangent, false);
+                    RenderGizmo_TangentLine(inTransform, inSpline.m_Vertices[i].Point, -inSpline.m_Vertices[i].InTangent, false);
+                    RenderGizmo_TangentPoint(inTransform, inSpline.m_Vertices[i].Point, -inSpline.m_Vertices[i].InTangent, false);
                 }
 
                 if (i < vertCount)
                 {
-                    RenderGizmo_TangentLine(inTransform, inSpline.m_CSplineVertices[i].Point, inSpline.m_CSplineVertices[i].OutTangent, true);
-                    RenderGizmo_TangentPoint(inTransform, inSpline.m_CSplineVertices[i].Point, inSpline.m_CSplineVertices[i].OutTangent, true);
+                    RenderGizmo_TangentLine(inTransform, inSpline.m_Vertices[i].Point, inSpline.m_Vertices[i].OutTangent, true);
+                    RenderGizmo_TangentPoint(inTransform, inSpline.m_Vertices[i].Point, inSpline.m_Vertices[i].OutTangent, true);
                 }
             }
         }
 
-        static private void RenderGizmo_CardinalOrKBPreview(MultiSpline inSpline, Transform inTransform)
+        static private void RenderGizmo_CardinalPreview(MultiSpline inSpline, Transform inTransform)
         {
-            int vertCount = inSpline.m_Vertices.Length;
-            if (inSpline.m_Looped)
+            for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
             {
-                for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
-                {
-                    RenderGizmo_PathPreview(inSpline, (float)i / vertCount, (float)(i + 1) / vertCount, 24);
-                    RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i], i == 0);
-                }
+                RenderGizmo_PathPreview(inSpline, (float)i / inSpline.m_Vertices.Length, (float)(i + 1) / inSpline.m_Vertices.Length, 24);
+                RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i].Point, i == 0);
             }
-            else
+
+            if (!inSpline.m_Looped)
             {
-                vertCount -= 2;
-                for (int i = 0; i < vertCount; ++i)
-                {
-                    RenderGizmo_PathPreview(inSpline, (float)i / vertCount, (float)(i + 1) / vertCount, 24);
-                    RenderGizmo_PathNode(inTransform, inSpline.m_Vertices[i + 1], i == 0);
-                }
+                RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[0].Point, inSpline.m_ControlPointA);
+                RenderGizmo_ControlPoint(inTransform, inSpline.m_ControlPointA);
 
-                RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[1], inSpline.m_Vertices[0]);
-                RenderGizmo_ControlPoint(inTransform, inSpline.m_Vertices[0]);
-
-                RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[vertCount], inSpline.m_Vertices[vertCount + 1]);
-                RenderGizmo_ControlPoint(inTransform, inSpline.m_Vertices[vertCount + 1]);
+                RenderGizmo_ControlLine(inTransform, inSpline.m_Vertices[inSpline.m_Vertices.Length - 1].Point, inSpline.m_ControlPointB);
+                RenderGizmo_ControlPoint(inTransform, inSpline.m_ControlPointB);
             }
         }
 
@@ -214,11 +203,11 @@ namespace BeauRoutine.Splines
         static private void RenderGizmo_PathPreview(MultiSpline inSpline, float inStart = 0, float inEnd = 1, int inSegments = 64)
         {
             Transform tr = inSpline.transform;
-            int numSamples = Spline.Sample(inSpline.m_GeneratedSpline, s_CachedSamples, inStart, inEnd, 0, inSegments);
+            int numSamples = Spline.Sample(inSpline.m_TransformWrapper, s_CachedSamples, inStart, inEnd, 0, inSegments);
             for (int i = 0; i < numSamples - 1; ++i)
             {
-                Vector3 start = tr.TransformPoint(s_CachedSamples[i]);
-                Vector3 next = tr.TransformPoint(s_CachedSamples[i + 1]);
+                Vector3 start = s_CachedSamples[i];
+                Vector3 next = s_CachedSamples[i + 1];
 
                 Gizmos.color = Color.Lerp(GizmoConfig.LineColorNormalStart, GizmoConfig.LineColorNormalEnd, inStart + (inEnd - inStart) * ((float)i / (numSamples - 1)));
                 Gizmos.DrawLine(start, next);

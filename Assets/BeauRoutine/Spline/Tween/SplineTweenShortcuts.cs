@@ -3,8 +3,8 @@
  * Author:  Alex Beauchesne
  * Date:    24 May 2018
  * 
- * File:    SplineTween.cs
- * Purpose: Contains tweens related to splines.
+ * File:    SplineTweenShortcuts.cs
+ * Purpose: Contains shortcuts for splines.
 */
 
 using System;
@@ -49,19 +49,29 @@ namespace BeauRoutine.Splines
 
             public void ApplyTween(float inPercent)
             {
-                inPercent = m_Spline.TransformPercent(inPercent, m_SplineSettings.LerpMethod);
-                Vector3 final = m_Spline.GetPoint(inPercent, m_SplineSettings.SegmentEase);
-                final.x += m_Start.x;
-                final.y += m_Start.y;
-                final.z += m_Start.z;
-                m_Transform.SetPosition(final, m_Axis, m_Space);
+                SplineUpdateInfo info;
+                Splines.Spline.GetUpdateInfo(m_Spline, inPercent, m_SplineSettings, out info);
+                info.Point.x += m_Start.x;
+                info.Point.y += m_Start.y;
+                info.Point.z += m_Start.z;
 
+                m_Transform.SetPosition(info.Point, m_Axis, m_Space);
+                ApplyRotation(ref info);
+
+                if (m_SplineSettings.UpdateCallback != null)
+                {
+                    m_SplineSettings.UpdateCallback(info);
+                }
+            }
+
+            private void ApplyRotation(ref SplineUpdateInfo inInfo)
+            {
                 if (m_SplineSettings.Orient != SplineOrientation.Ignore)
                 {
                     Axis maskedAxis = m_SplineSettings.OrientAxis & Axis.XYZ;
                     if (maskedAxis != 0)
                     {
-                        Vector3 direction = m_Spline.GetDirection(inPercent, m_SplineSettings.SegmentEase);
+                        Vector3 direction = inInfo.Direction;
                         if (maskedAxis != Axis.XYZ)
                         {
                             if ((m_SplineSettings.OrientAxis & Axis.X) == 0)
@@ -88,8 +98,7 @@ namespace BeauRoutine.Splines
 
                             m_Transform.SetRotation(dir, Axis.Z, m_Space);
                         }
-
-                        if (m_SplineSettings.OrientCallback != null)
+                        else if (m_SplineSettings.OrientCallback != null)
                         {
                             m_SplineSettings.OrientCallback(m_Transform, direction, m_Space);
                         }
@@ -197,10 +206,57 @@ namespace BeauRoutine.Splines
 
             public void ApplyTween(float inPercent)
             {
-                Vector2 final = (Vector2)m_Spline.GetPoint(m_Spline.TransformPercent(inPercent, m_SplineSettings.LerpMethod), m_SplineSettings.SegmentEase);
-                final.x += m_Start.x;
-                final.y += m_Start.y;
-                m_RectTransform.SetAnchorPos(final, m_Axis);
+                SplineUpdateInfo info;
+                Splines.Spline.GetUpdateInfo(m_Spline, inPercent, m_SplineSettings, out info);
+                info.Point.x += m_Start.x;
+                info.Point.y += m_Start.y;
+
+                m_RectTransform.SetAnchorPos(info.Point, m_Axis);
+                ApplyRotation(ref info);
+
+                if (m_SplineSettings.UpdateCallback != null)
+                {
+                    m_SplineSettings.UpdateCallback(info);
+                }
+            }
+
+            private void ApplyRotation(ref SplineUpdateInfo inInfo)
+            {
+                if (m_SplineSettings.Orient != SplineOrientation.Ignore)
+                {
+                    Axis maskedAxis = m_SplineSettings.OrientAxis & Axis.XYZ;
+                    if (maskedAxis != 0)
+                    {
+                        Vector3 direction = inInfo.Direction;
+                        if (maskedAxis != Axis.XYZ)
+                        {
+                            if ((m_SplineSettings.OrientAxis & Axis.X) == 0)
+                                direction.x = 0;
+                            if ((m_SplineSettings.OrientAxis & Axis.Y) == 0)
+                                direction.y = 0;
+                            if ((m_SplineSettings.OrientAxis & Axis.Z) == 0)
+                                direction.z = 0;
+                        }
+
+                        if (m_SplineSettings.Orient == SplineOrientation.ThreeD)
+                        {
+                            Quaternion dirRot = Quaternion.LookRotation(direction, m_SplineSettings.OrientUp);
+                            m_RectTransform.localRotation = dirRot;
+                        }
+                        else if (m_SplineSettings.Orient == SplineOrientation.TwoD)
+                        {
+                            float dir = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
+                            if (dir < -180)
+                                dir += 360f;
+
+                            m_RectTransform.SetRotation(dir, Axis.Z, Space.Self);
+                        }
+                        else if (m_SplineSettings.OrientCallback != null)
+                        {
+                            m_SplineSettings.OrientCallback(m_RectTransform, direction, Space.Self);
+                        }
+                    }
+                }
             }
 
             public override string ToString()
@@ -272,5 +328,145 @@ namespace BeauRoutine.Splines
         }
 
         #endregion // RectTransform
+
+        #region Spline Vertices
+
+        private sealed class TweenData_SplineVertex_Position : ITweenData
+        {
+            private ISpline m_Spline;
+            private int m_Index;
+            private Vector3 m_Target;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+
+            public TweenData_SplineVertex_Position(ISpline inSpline, int inIndex, Vector3 inTarget, Axis inAxis)
+            {
+                m_Spline = inSpline;
+                m_Index = inIndex;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Spline.GetVertex(m_Index);
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 final = new Vector3(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent,
+                    m_Start.z + m_Delta.z * inPercent);
+                Vector3 current;
+                if ((m_Axis & Axis.XYZ) == Axis.XYZ)
+                {
+                    current = final;
+                }
+                else
+                {
+                    current = m_Spline.GetVertex(m_Index);
+                    VectorUtil.CopyFrom(ref current, final, m_Axis);
+                }
+
+                m_Spline.SetVertex(m_Index, current);
+            }
+
+            public override string ToString()
+            {
+                return "Spline: Vertex Position";
+            }
+        }
+
+        private sealed class TweenData_SplineControl_Position : ITweenData
+        {
+            private ISpline m_Spline;
+            private int m_Index;
+            private Vector3 m_Target;
+            private Axis m_Axis;
+
+            private Vector3 m_Start;
+            private Vector3 m_Delta;
+
+            public TweenData_SplineControl_Position(ISpline inSpline, int inIndex, Vector3 inTarget, Axis inAxis)
+            {
+                m_Spline = inSpline;
+                m_Index = inIndex;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Spline.GetControlPoint(m_Index);
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector3 final = new Vector3(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent,
+                    m_Start.z + m_Delta.z * inPercent);
+                Vector3 current;
+                if ((m_Axis & Axis.XYZ) == Axis.XYZ)
+                {
+                    current = final;
+                }
+                else
+                {
+                    current = m_Spline.GetControlPoint(m_Index);
+                    VectorUtil.CopyFrom(ref current, final, m_Axis);
+                }
+
+                m_Spline.SetControlPoint(m_Index, current);
+            }
+
+            public override string ToString()
+            {
+                return "Spline: Control Position";
+            }
+        }
+
+        /// <summary>
+        /// Tweens a spline vertex position to the given position over time.
+        /// </summary>
+        static public Tween VertexPosTo(this ISpline inSpline, int inIndex, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_SplineVertex_Position(inSpline, inIndex, inTarget, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Tweens a spline vertex position to the given position over time.
+        /// </summary>
+        static public Tween VertexPosTo(this ISpline inSpline, int inIndex, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_SplineVertex_Position(inSpline, inIndex, inTarget, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Tweens a spline control position to the given position over time.
+        /// </summary>
+        static public Tween ControlPosTo(this ISpline inSpline, int inIndex, Vector3 inTarget, float inTime, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_SplineControl_Position(inSpline, inIndex, inTarget, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Tweens a spline control position to the given position over time.
+        /// </summary>
+        static public Tween ControlPosTo(this ISpline inSpline, int inIndex, Vector3 inTarget, TweenSettings inSettings, Axis inAxis = Axis.XYZ)
+        {
+            return Tween.Create(new TweenData_SplineControl_Position(inSpline, inIndex, inTarget, inAxis), inSettings);
+        }
+
+        #endregion // Spline Vertices
     }
 }

@@ -15,16 +15,24 @@ namespace BeauRoutine.Splines
     /// </summary>
     public enum SplineLerp : byte
     {
-        // Each segment takes an amount of time
-        // proportional to the number of vertices
+        /// <summary>
+        /// The duration of each segment is equal.
+        /// Interpolation is evaluated in time space.
+        /// </summary>
         Vertex,
 
-        // Each segment takes an amount of time
-        // proportional to the direct distance between vertices
+        /// <summary>
+        /// The duration of each segment is proportional
+        /// to its direct distance relative to the total direct distance.
+        /// Interpolation is evaluated in vertex distance space.
+        /// </summary>
         Direct,
 
-        // Each segments takes an amount of time
-        // proportional to the precise distance between vertices
+        /// <summary>
+        /// The duration of each segment is proportional
+        /// to its precise distance relative to the total precise distance.
+        /// Interpolation is evaluated in an estimated arc-length space.
+        /// </summary>
         Precise
     }
 }

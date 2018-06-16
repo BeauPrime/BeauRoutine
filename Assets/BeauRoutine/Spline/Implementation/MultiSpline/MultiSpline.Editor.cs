@@ -133,16 +133,10 @@ namespace BeauRoutine.Splines
                             ConvertTo(ms, GenType.CSpline);
                             s_CurrentlyEditing = ms;
                         }
-                        if (GUILayout.Button("Cardinal", ms.m_Type == GenType.Cardinal ? s_ActivatedButton : EditorStyles.miniButton))
+                        if (GUILayout.Button("Catmull-Rom / Cardinal", ms.m_Type == GenType.Cardinal ? s_ActivatedButton : EditorStyles.miniButton))
                         {
                             MarkDirty("Converted to Cardinal");
                             ConvertTo(ms, GenType.Cardinal);
-                            s_CurrentlyEditing = ms;
-                        }
-                        if (GUILayout.Button("KB-Spline", ms.m_Type == GenType.KBSpline ? s_ActivatedButton : EditorStyles.miniButton))
-                        {
-                            MarkDirty("Converted to KB Spline");
-                            ConvertTo(ms, GenType.KBSpline);
                             s_CurrentlyEditing = ms;
                         }
                     }
@@ -169,10 +163,6 @@ namespace BeauRoutine.Splines
                             case GenType.Cardinal:
                                 InspectorGUI_Cardinal(ms);
                                 break;
-
-                            case GenType.KBSpline:
-                                InspectorGUI_KBSpline(ms);
-                                break;
                         }
 
                         GUILayout.Space(8);
@@ -194,9 +184,9 @@ namespace BeauRoutine.Splines
             {
                 HeaderText("Simple Spline");
 
-                Vector3Field("Start Position", ref inSpline.m_Vertices[0]);
-                Vector3Field("End Position", ref inSpline.m_Vertices[1]);
-                Vector3Field("Control", ref inSpline.m_Vertices[2]);
+                Vector3Field("Start Position", ref inSpline.m_Vertices[0].Point);
+                Vector3Field("End Position", ref inSpline.m_Vertices[1].Point);
+                Vector3Field("Control", ref inSpline.m_ControlPointA);
             }
 
             private void InspectorGUI_Linear(MultiSpline inSpline)
@@ -208,51 +198,18 @@ namespace BeauRoutine.Splines
 
             private void InspectorGUI_CSpline(MultiSpline inSpline)
             {
-                HeaderText("C-Spline");
+                HeaderText("C-Spline", 80);
 
                 ToggleField("Looped", ref inSpline.m_Looped);
             }
 
             private void InspectorGUI_Cardinal(MultiSpline inSpline)
             {
-                HeaderText("Cardinal Spline");
+                HeaderText("Catmull-Rom / Cardinal Spline", 200);
 
-                if (inSpline.m_Looped && inSpline.m_Vertices.Length < 4)
-                {
-                    using (new EnableGUI(false))
-                    {
-                        ToggleField("Looped", ref inSpline.m_Looped);
-                    }
-                    EditorGUILayout.HelpBox("Must have at least four points to disable looping for a Cardinal Spline.", MessageType.Warning);
-                }
-                else
-                {
-                    ToggleField("Looped", ref inSpline.m_Looped);
-                }
+                ToggleField("Looped", ref inSpline.m_Looped);
 
-                SliderField("Tension", ref inSpline.m_CRTension, 0, 1);
-            }
-
-            private void InspectorGUI_KBSpline(MultiSpline inSpline)
-            {
-                HeaderText("Kochanek-Bartels Spline", 180);
-
-                if (inSpline.m_Looped && inSpline.m_Vertices.Length < 4)
-                {
-                    using (new EnableGUI(false))
-                    {
-                        ToggleField("Looped", ref inSpline.m_Looped);
-                    }
-                    EditorGUILayout.HelpBox("Must have at least four points to disable looping for a Kochanek-Bartels Spline.", MessageType.Warning);
-                }
-                else
-                {
-                    ToggleField("Looped", ref inSpline.m_Looped);
-                }
-
-                SliderField("Tension", ref inSpline.m_KBTension, -1, 1);
-                SliderField("Bias", ref inSpline.m_KBBias, -1, 1);
-                SliderField("Continuity", ref inSpline.m_KBContinuity, -1, 1);
+                SliderField("Tension", ref inSpline.m_CRTension, -3, 1);
             }
 
             #endregion // Per-Spline Inspectors
@@ -320,6 +277,10 @@ namespace BeauRoutine.Splines
                     case GenType.CSpline:
                         SceneGUI_CSpline(ms);
                         break;
+
+                    case GenType.Cardinal:
+                        SceneGUI_Cardinal(ms);
+                        break;
                 }
             }
 
@@ -333,12 +294,12 @@ namespace BeauRoutine.Splines
                     {
                         EditorGUI.BeginChangeCheck();
                         Vector3 newStartPos = Handles.PositionHandle(
-                            tr.TransformPoint(inSpline.m_Vertices[0]),
+                            tr.TransformPoint(inSpline.m_Vertices[0].Point),
                             Quaternion.identity);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MarkDirty("Changed starting position");
-                            inSpline.m_Vertices[0] = tr.InverseTransformPoint(newStartPos);
+                            inSpline.m_Vertices[0].Point = tr.InverseTransformPoint(newStartPos);
                         }
                     }
 
@@ -346,12 +307,12 @@ namespace BeauRoutine.Splines
                     {
                         EditorGUI.BeginChangeCheck();
                         Vector3 newEndPos = Handles.PositionHandle(
-                            tr.TransformPoint(inSpline.m_Vertices[1]),
+                            tr.TransformPoint(inSpline.m_Vertices[1].Point),
                             Quaternion.identity);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MarkDirty("Changed ending position");
-                            inSpline.m_Vertices[1] = tr.InverseTransformPoint(newEndPos);
+                            inSpline.m_Vertices[1].Point = tr.InverseTransformPoint(newEndPos);
                         }
                     }
 
@@ -359,12 +320,12 @@ namespace BeauRoutine.Splines
                     {
                         EditorGUI.BeginChangeCheck();
                         Vector3 newControlPos = Handles.PositionHandle(
-                            tr.TransformPoint(inSpline.m_Vertices[2]),
+                            tr.TransformPoint(inSpline.m_ControlPointA),
                             Quaternion.identity);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MarkDirty("Changed control position");
-                            inSpline.m_Vertices[2] = tr.InverseTransformPoint(newControlPos);
+                            inSpline.m_ControlPointA = tr.InverseTransformPoint(newControlPos);
                         }
                     }
                 }
@@ -380,12 +341,12 @@ namespace BeauRoutine.Splines
                     {
                         EditorGUI.BeginChangeCheck();
                         Vector3 pos = Handles.PositionHandle(
-                            tr.TransformPoint(inSpline.m_Vertices[i]),
+                            tr.TransformPoint(inSpline.m_Vertices[i].Point),
                             Quaternion.identity);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MarkDirty("Changed node position");
-                            inSpline.m_Vertices[i] = tr.InverseTransformPoint(pos);
+                            inSpline.m_Vertices[i].Point = tr.InverseTransformPoint(pos);
                         }
                     }
                 }
@@ -397,16 +358,66 @@ namespace BeauRoutine.Splines
 
                 if (Tools.current == Tool.Move)
                 {
-                    for (int i = 0; i < inSpline.m_CSplineVertices.Length; ++i)
+                    for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
                     {
                         EditorGUI.BeginChangeCheck();
                         Vector3 pos = Handles.PositionHandle(
-                            tr.TransformPoint(inSpline.m_CSplineVertices[i].Point),
+                            tr.TransformPoint(inSpline.m_Vertices[i].Point),
                             Quaternion.identity);
                         if (EditorGUI.EndChangeCheck())
                         {
                             MarkDirty("Changed node position");
-                            inSpline.m_CSplineVertices[i].Point = tr.InverseTransformPoint(pos);
+                            inSpline.m_Vertices[i].Point = tr.InverseTransformPoint(pos);
+                        }
+                    }
+                }
+            }
+
+            private void SceneGUI_Cardinal(MultiSpline inSpline)
+            {
+                Transform tr = inSpline.transform;
+
+                if (Tools.current == Tool.Move)
+                {
+                    for (int i = 0; i < inSpline.m_Vertices.Length; ++i)
+                    {
+                        EditorGUI.BeginChangeCheck();
+                        Vector3 pos = Handles.PositionHandle(
+                            tr.TransformPoint(inSpline.m_Vertices[i].Point),
+                            Quaternion.identity);
+                        if (EditorGUI.EndChangeCheck())
+                        {
+                            MarkDirty("Changed node position");
+                            inSpline.m_Vertices[i].Point = tr.InverseTransformPoint(pos);
+                        }
+                    }
+
+                    if (!inSpline.m_Looped)
+                    {
+                        // Control point A
+                        {
+                            EditorGUI.BeginChangeCheck();
+                            Vector3 pos = Handles.PositionHandle(
+                                tr.TransformPoint(inSpline.m_ControlPointA),
+                                Quaternion.identity);
+                            if (EditorGUI.EndChangeCheck())
+                            {
+                                MarkDirty("Changed control point");
+                                inSpline.m_ControlPointA = tr.InverseTransformPoint(pos);
+                            }
+                        }
+
+                        // Control point B
+                        {
+                            EditorGUI.BeginChangeCheck();
+                            Vector3 pos = Handles.PositionHandle(
+                                tr.TransformPoint(inSpline.m_ControlPointB),
+                                Quaternion.identity);
+                            if (EditorGUI.EndChangeCheck())
+                            {
+                                MarkDirty("Changed control point");
+                                inSpline.m_ControlPointB = tr.InverseTransformPoint(pos);
+                            }
                         }
                     }
                 }

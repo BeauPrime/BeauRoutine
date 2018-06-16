@@ -22,6 +22,30 @@ namespace BeauRoutine.Splines
         public Vector3 InTangent;
         public Vector3 OutTangent;
 
+        public CSplineVertex(Vector3 inPoint)
+        {
+            Point = inPoint;
+            InTangent = OutTangent = s_Zero;
+        }
+
+        public CSplineVertex(Vector2 inPoint)
+        {
+            Point = inPoint;
+            InTangent = OutTangent = s_Zero;
+        }
+
+        public CSplineVertex(Vector3 inPoint, Vector3 inTangent)
+        {
+            Point = inPoint;
+            InTangent = OutTangent = inTangent;
+        }
+
+        public CSplineVertex(Vector2 inPoint, Vector2 inTangent)
+        {
+            Point = inPoint;
+            InTangent = OutTangent = inTangent;
+        }
+
         public CSplineVertex(Vector3 inPoint, Vector3 inTangentIn, Vector3 inTangentOut)
         {
             Point = inPoint;
@@ -35,5 +59,7 @@ namespace BeauRoutine.Splines
             InTangent = inTangentIn;
             OutTangent = inTangentOut;
         }
+
+        static private readonly Vector3 s_Zero = new Vector3(0, 0, 0);
     }
 }

@@ -14,13 +14,24 @@ namespace BeauRoutine.Splines
     /// </summary>
     public enum SplineType
     {
-        // Simple spline. Two points, one control point.
+        /// <summary>
+        /// Quadratic bezier. Two points, one control point.
+        /// </summary>
         SimpleSpline,
 
-        // Polygonal "spline". Multiple points, no controls.
+        /// <summary>
+        /// Polygonal spline. Multiple points, no controls.
+        /// </summary>
         LinearSpline,
 
-        // Cubic spline. Multiple points w/ tangents.
-        CSpline
+        /// <summary>
+        /// Cubic hermite spline. Multiple points with tangents.
+        /// </summary>
+        CSpline,
+
+        /// <summary>
+        /// Catmull-Rom/Cardinal spline. Multiple points, with tension parameter and optional control points for non-looped splines.
+        /// </summary>
+        Cardinal
     }
 }

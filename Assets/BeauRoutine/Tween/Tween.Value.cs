@@ -128,6 +128,11 @@ namespace BeauRoutine
             {
                 m_Setter(m_Curve.Evaluate(inPercent * m_CurveDuration));
             }
+
+            public override string ToString()
+            {
+                return "Float (AnimationCurve)";
+            }
         }
 
         /// <summary>
@@ -468,6 +473,11 @@ namespace BeauRoutine
             public void ApplyTween(float inPercent)
             {
                 m_Setter(m_Gradient.Evaluate(inPercent));
+            }
+
+            public override string ToString()
+            {
+                return "Color (Gradient)";
             }
         }
 

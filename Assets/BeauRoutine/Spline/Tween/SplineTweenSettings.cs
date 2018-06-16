@@ -30,6 +30,11 @@ namespace BeauRoutine.Splines
         /// </summary>
         public Curve SegmentEase = Curve.Linear;
 
+        /// <summary>
+        /// Callback for detailed info on progress through a spline tween.
+        /// </summary>
+        public SplineUpdateDelegate UpdateCallback = null;
+
         #endregion // Interpolation
 
         #region Position
@@ -75,6 +80,7 @@ namespace BeauRoutine.Splines
         {
             LerpMethod = inSource.LerpMethod;
             SegmentEase = inSource.SegmentEase;
+            UpdateCallback = inSource.UpdateCallback;
 
             Offset = inSource.Offset;
 

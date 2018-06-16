@@ -19,7 +19,7 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Number of increments per segment for distance calculations.
         /// </summary>
-        static public float DistancePrecision = 8;
+        static public int DistancePrecision = 16;
 
         /// <summary>
         /// Look-ahead percent to use for direction calculations.
