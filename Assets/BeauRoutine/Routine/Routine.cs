@@ -367,6 +367,26 @@ namespace BeauRoutine
             return false;
         }
 
+        /// <summary>
+        /// Gets a lock on the routine.
+        /// Locked routines will not execute while locked.
+        /// Dispose or release the RoutineLock to unlock.
+        /// </summary>
+        public RoutineLock GetLock()
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+            {
+                Fiber fiber = m.Fibers[this];
+                if (fiber != null)
+                {
+                    fiber.AddLock();
+                    return new RoutineLock(this);
+                }
+            }
+            return default(RoutineLock);
+        }
+
         #endregion
 
         #region Replace

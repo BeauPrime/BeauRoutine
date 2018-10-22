@@ -334,6 +334,17 @@ namespace BeauRoutine.Editor
         {
             if (!inbNested)
             {
+                // Render id
+                EditorGUILayout.BeginHorizontal();
+                {
+                    EditorGUILayout.LabelField("ID/", GUILayout.Width(FIELD_NAME_WIDTH));
+                    uint handleID = (uint)inStats.Handle;
+                    uint index = handleID & Table.INDEX_MASK;
+                    uint counter = (handleID & Table.COUNTER_MASK) >> Table.COUNTER_SHIFT;
+                    EditorGUILayout.LabelField(index.ToString() + " (" + counter.ToString("X2") + ")", GUILayout.ExpandWidth(true));
+                }
+                EditorGUILayout.EndHorizontal();
+
                 // Render name
                 EditorGUILayout.BeginHorizontal();
                 {
@@ -365,7 +376,7 @@ namespace BeauRoutine.Editor
             EditorGUILayout.BeginHorizontal();
             {
                 EditorGUILayout.LabelField("STATUS/", GUILayout.Width(FIELD_NAME_WIDTH));
-                EditorGUILayout.LabelField(inStats.State.ToString(), GUILayout.ExpandWidth(true));
+                EditorGUILayout.LabelField(inStats.State, GUILayout.ExpandWidth(true));
             }
             EditorGUILayout.EndHorizontal();
 

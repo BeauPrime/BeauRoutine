@@ -1,4 +1,6 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 using BeauRoutine;
 using BeauRoutine.Splines;
 using UnityEngine;
@@ -23,30 +25,19 @@ namespace BeauRoutine.Examples
             // Routine.Start(this, Executing("CustomUpdate: ")).SetPhase(RoutinePhase.CustomUpdate);
 
             // PerSecondRoutine.Start(this, Executing("PerSecond: "), 5);
-            // Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
+            var f = Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
             //Routine.Start(this, Routine.PerSecond(started, 5f));
 
-            // Routine.Start(this, SquashStretch());
-
-            // Routine.Start(this, Camera.main.BackgroundColorTo(Color.black, 0.5f).YoyoLoop());
-
-            // transform.SetPosition(transform.position + Random.onUnitSphere * 10);
-
-            // SplineArgs.Process();
-
-            SplineTween.Orient = SplineOrientation.Custom;
-            SplineTween.OrientCallback = (t, r, s) =>
+            Stack<RoutineLock> locks = new Stack<RoutineLock>(8);
+            Action loopedInput = () =>
             {
-                Debug.Log("Direction: " + r);
-                float y = 0;
-                float z = Mathf.Atan2(r.y, r.x) * Mathf.Rad2Deg;
-                if (z < 0)
-                    z += 360f;
+                if (Input.GetKeyDown(KeyCode.L))
+                    locks.Push(f.GetLock());
+                else if (Input.GetKeyDown(KeyCode.U) && locks.Count > 0)
+                    locks.Pop().Release();
+            };
 
-                if (z > 90 && z < 270)
-                {
-                    y = -180;
-                    z = 180 - z;
+            Routine.StartLoop(this, loopedInput);
                 }
 
                 t.SetRotation(new Vector3(0, y, z), Axis.YZ, s);
