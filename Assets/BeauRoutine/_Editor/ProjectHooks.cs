@@ -7,6 +7,8 @@
  * Purpose: Contains project-level settings and hooks.
 */
 
+#if UNITY_EDITOR
+
 using System;
 using BeauRoutine.Internal;
 using UnityEditor;
@@ -39,3 +41,5 @@ namespace BeauRoutine.Editor
         }
     }
 }
+
+#endif // UNITY_EDITOR

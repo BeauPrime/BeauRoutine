@@ -8,6 +8,8 @@
  *          Routines in editor.
 */
 
+#if UNITY_EDITOR
+
 #if UNITY_5_3 || UNITY_5_3_OR_NEWER
     #define SUPPORTS_DELAYEDFIELDS
 #endif
@@ -485,3 +487,5 @@ namespace BeauRoutine.Editor
         #endregion
     }
 }
+
+#endif // UNITY_EDITOR

@@ -143,12 +143,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b260f2101ed9604f9174de52fea2a11, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Spline:
-    m_Points:
-    - {x: 0, y: 0, z: 0}
-    - {x: 4, y: 0, z: 0}
-    - {x: 2, y: 2, z: 0}
-    m_Closed: 0
 --- !u!23 &1162206864
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -262,6 +256,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Capacity: 16384
+  m_TweenPool: 32
   m_DebugMode: 0
   m_Profiling: 0
   m_Snapshots: 0

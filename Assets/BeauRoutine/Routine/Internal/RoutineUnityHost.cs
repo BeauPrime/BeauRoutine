@@ -13,7 +13,7 @@ using UnityEngine;
 namespace BeauRoutine.Internal
 {
     [AddComponentMenu("")]
-    public sealed class RoutineUnityHost : MonoBehaviour
+    internal sealed class RoutineUnityHost : MonoBehaviour
     {
         static private WaitForFixedUpdate s_CachedWaitForFixedUpdate = Routine.WaitForFixedUpdate();
         static private WaitForEndOfFrame s_CachedWaitForEndOfFrame = Routine.WaitForEndOfFrame();

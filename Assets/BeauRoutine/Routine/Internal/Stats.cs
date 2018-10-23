@@ -14,7 +14,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// State of a Routine.
     /// </summary>
-    public struct RoutineStats
+    internal struct RoutineStats
     {
         public Routine Handle;
         public MonoBehaviour Host;
@@ -31,7 +31,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Current status of a Routine.
     /// </summary>
-    public enum RoutineState : byte
+    internal enum RoutineState : byte
     {
         Running,
         Disposing,
@@ -49,7 +49,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// State of the BeauRoutine engine.
     /// </summary>
-    public struct GlobalStats
+    internal struct GlobalStats
     {
         public int Running;
         public int Max;

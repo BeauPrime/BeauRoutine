@@ -113,7 +113,7 @@ namespace BeauRoutine
 
             public override string ToString()
             {
-                return "Light: Spotlight Angle";
+                return "Light: Spot Angle";
             }
         }
 
@@ -218,54 +218,17 @@ namespace BeauRoutine
 
         #region Colors
 
-        private sealed class TweenData_Light_Alpha : ITweenData
-        {
-            private Light m_Light;
-            private float m_Target;
-
-            private float m_Start;
-            private float m_Delta;
-
-            public TweenData_Light_Alpha(Light inLight, float inTarget)
-            {
-                m_Light = inLight;
-                m_Target = inTarget;
-            }
-
-            public void OnTweenStart()
-            {
-                m_Start = m_Light.color.a;
-                m_Delta = m_Target - m_Start;
-            }
-
-            public void OnTweenEnd() { }
-
-            public void ApplyTween(float inPercent)
-            {
-                Color final = m_Light.color;
-                final.a = m_Start + m_Delta * inPercent;
-                m_Light.color = final;
-            }
-
-            public override string ToString()
-            {
-                return "Light: Alpha";
-            }
-        }
-
         private sealed class TweenData_Light_Color : ITweenData
         {
             private Light m_Light;
             private Color m_Target;
-            private ColorUpdate m_Update;
 
             private Color m_Start;
 
-            public TweenData_Light_Color(Light inLight, Color inTarget, ColorUpdate inUpdate)
+            public TweenData_Light_Color(Light inLight, Color inTarget)
             {
                 m_Light = inLight;
                 m_Target = inTarget;
-                m_Update = inUpdate;
             }
 
             public void OnTweenStart()
@@ -277,10 +240,7 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Color final = UnityEngine.Color.LerpUnclamped(m_Start, m_Target, inPercent);
-                if (m_Update == ColorUpdate.PreserveAlpha)
-                    final.a = m_Light.color.a;
-                m_Light.color = final;
+                m_Light.color = UnityEngine.Color.LerpUnclamped(m_Start, m_Target, inPercent);
             }
 
             public override string ToString()
@@ -293,21 +253,16 @@ namespace BeauRoutine
         {
             private Light m_Light;
             private Gradient m_Gradient;
-            private ColorUpdate m_Update;
 
-            public TweenData_Light_Gradient(Light inLight, Gradient inTarget, ColorUpdate inUpdate)
+            public TweenData_Light_Gradient(Light inLight, Gradient inTarget)
             {
                 m_Light = inLight;
                 m_Gradient = inTarget;
-                m_Update = inUpdate;
             }
 
             public void ApplyTween(float inPercent)
             {
-                Color final = m_Gradient.Evaluate(inPercent);
-                if (m_Update == ColorUpdate.PreserveAlpha)
-                    final.a = m_Light.color.a;
-                m_Light.color = final;
+                m_Light.color = m_Gradient.Evaluate(inPercent);
             }
 
             public void OnTweenStart() { }
@@ -320,51 +275,35 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Fades the Light to another alpha over time.
+        /// Fades the Light to another color over time.
         /// </summary>
-        static public Tween FadeTo(this Light inLight, float inAlpha, float inTime)
+        static public Tween ColorTo(this Light inLight, Color inTarget, float inTime)
         {
-            return Tween.Create(new TweenData_Light_Alpha(inLight, inAlpha), inTime);
-        }
-
-        /// <summary>
-        /// Fades the Light to another alpha over time.
-        /// </summary>
-        static public Tween FadeTo(this Light inLight, float inAlpha, TweenSettings inSettings)
-        {
-            return Tween.Create(new TweenData_Light_Alpha(inLight, inAlpha), inSettings);
+            return Tween.Create(new TweenData_Light_Color(inLight, inTarget), inTime);
         }
 
         /// <summary>
         /// Fades the Light to another color over time.
         /// </summary>
-        static public Tween ColorTo(this Light inLight, Color inTarget, float inTime, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween ColorTo(this Light inLight, Color inTarget, TweenSettings inSettings)
         {
-            return Tween.Create(new TweenData_Light_Color(inLight, inTarget, inUpdate), inTime);
-        }
-
-        /// <summary>
-        /// Fades the Light to another color over time.
-        /// </summary>
-        static public Tween ColorTo(this Light inLight, Color inTarget, TweenSettings inSettings, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
-        {
-            return Tween.Create(new TweenData_Light_Color(inLight, inTarget, inUpdate), inSettings);
+            return Tween.Create(new TweenData_Light_Color(inLight, inTarget), inSettings);
         }
 
         /// <summary>
         /// Applies a gradient of colors to the Light over time.
         /// </summary>
-        static public Tween Gradient(this Light inLight, Gradient inGradient, float inTime, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween Gradient(this Light inLight, Gradient inGradient, float inTime)
         {
-            return Tween.Create(new TweenData_Light_Gradient(inLight, inGradient, inUpdate), inTime);
+            return Tween.Create(new TweenData_Light_Gradient(inLight, inGradient), inTime);
         }
 
         /// <summary>
         /// Applies a gradient of colors to the Light over time.
         /// </summary>
-        static public Tween Gradient(this Light inLight, Gradient inGradient, TweenSettings inSettings, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween Gradient(this Light inLight, Gradient inGradient, TweenSettings inSettings)
         {
-            return Tween.Create(new TweenData_Light_Gradient(inLight, inGradient, inUpdate), inSettings);
+            return Tween.Create(new TweenData_Light_Gradient(inLight, inGradient), inSettings);
         }
 
         #endregion // Colors

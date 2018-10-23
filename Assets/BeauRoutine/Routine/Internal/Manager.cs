@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace BeauRoutine.Internal
 {
-    public sealed class Manager
+    internal sealed class Manager
     {
         public const int DEFAULT_CAPACITY = 32;
         public const float DEFAULT_THINKUPDATE_INTERVAL = 1f / 10f;

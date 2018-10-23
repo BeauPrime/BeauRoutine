@@ -24,7 +24,7 @@ using UnityEngine;
 
 namespace BeauRoutine.Internal
 {
-    public sealed class Fiber
+    internal sealed class Fiber
     {
         public const string RESERVED_NAME_PREFIX = "[BeauRoutine]__";
 

@@ -1,6 +1,6 @@
 ﻿using System.Collections;
 using BeauRoutine;
-using BeauRoutine.Splines;
+// using BeauRoutine.Splines;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -8,7 +8,7 @@ namespace BeauRoutine.Examples
 {
     public class Example8_Script : MonoBehaviour
     {
-        public VertexSpline Spline;
+        // public VertexSpline Spline;
 
         private IEnumerator Start()
         {
@@ -22,11 +22,11 @@ namespace BeauRoutine.Examples
 
             Routine.Start(this, SquashStretch());
 
-            // Routine.Start(this, Camera.main.BackgroundColorTo(Color.black, 0.5f).YoyoLoop());
+            // // Routine.Start(this, Camera.main.BackgroundColorTo(Color.black, 0.5f).YoyoLoop());
 
-            transform.SetPosition(transform.position + Random.onUnitSphere * 10);
+            // transform.SetPosition(transform.position + Random.onUnitSphere * 10);
 
-            Routine.Start(this, transform.MoveAlong(Spline, 3, Axis.XYZ, Space.Self, SplinePositioning.Absolute).Loop().Randomize());
+            // Routine.Start(this, transform.MoveAlong(Spline, 3, Axis.XYZ, Space.Self, SplinePositioning.Absolute).Loop().Randomize());
         }
 
         private IEnumerator Executing(string inPrefix)

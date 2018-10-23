@@ -154,6 +154,7 @@ namespace BeauRoutine
 
         /// <summary>
         /// Moves the Transform to another position with the given average speed.
+        /// Note: Duration is calculated at call time, not when the tween starts.
         /// </summary>
         static public Tween MoveToWithSpeed(this Transform inTransform, Vector3 inTarget, float inSpeed, Axis inAxis = Axis.XYZ, Space inSpace = Space.World)
         {

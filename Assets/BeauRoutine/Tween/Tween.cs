@@ -8,11 +8,11 @@
  *          interface for modifying the timing, easing, and looping.
  *          
  * Notes:   Tweens must be run inside a Routine to be evaluated.
-*/
+ */
 
-using BeauRoutine.Internal;
 using System;
 using System.Collections;
+using BeauRoutine.Internal;
 using UnityEngine;
 
 namespace BeauRoutine
@@ -601,7 +601,7 @@ namespace BeauRoutine
 
                     // Inlined Update
                     m_CurrentPercent += deltaTime * m_PercentIncrement;
-                    int numCycles = (int)m_CurrentPercent;
+                    int numCycles = (int) m_CurrentPercent;
                     float basePercent = m_CurrentPercent;
                     m_CurrentPercent = m_CurrentPercent % 1;
 
@@ -676,6 +676,7 @@ namespace BeauRoutine
             m_Cancel = CancelMode.Nothing;
             m_Mode = LoopMode.Single;
             m_Curve = Curve.Linear;
+            m_AnimCurve = null;
             m_WaveFunc = default(Wave);
             m_NumLoops = 0;
             m_OnStart = null;

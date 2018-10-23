@@ -12,7 +12,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Container for nested fibers.
     /// </summary>
-    public interface INestedFiberContainer
+    internal interface INestedFiberContainer
     {
         void RemoveFiber(Fiber inFiber);
         void SetParentFiber(Fiber inFiber);

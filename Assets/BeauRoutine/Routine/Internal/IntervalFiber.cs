@@ -15,7 +15,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Runs a fiber periodically.
     /// </summary>
-    public sealed class IntervalFiber : IEnumerator, IDisposable, INestedFiberContainer
+    internal sealed class IntervalFiber : IEnumerator, IDisposable, INestedFiberContainer
     {
         private Manager m_Manager;
         private IEnumerator m_Enumerator;
@@ -35,7 +35,7 @@ namespace BeauRoutine.Internal
             m_Accumulation = 0;
         }
 
-        public void RemoveFiber(Fiber inFiber)
+        void INestedFiberContainer.RemoveFiber(Fiber inFiber)
         {
             if (!m_Iterating && m_Fiber == inFiber)
             {
@@ -43,12 +43,12 @@ namespace BeauRoutine.Internal
             }
         }
 
-        public void SetParentFiber(Fiber inFiber)
+        void INestedFiberContainer.SetParentFiber(Fiber inFiber)
         {
             m_ParentFiber = inFiber;
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             if (m_Enumerator != null)
             {
@@ -66,12 +66,12 @@ namespace BeauRoutine.Internal
             m_ParentFiber = null;
         }
 
-        public object Current
+        object IEnumerator.Current
         {
             get { return null; }
         }
 
-        public bool MoveNext()
+        bool IEnumerator.MoveNext()
         {
             if (m_Enumerator != null)
             {
@@ -123,7 +123,7 @@ namespace BeauRoutine.Internal
             return false;
         }
 
-        public void Reset()
+        void IEnumerator.Reset()
         {
             throw new NotSupportedException();
         }
