@@ -229,7 +229,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent)
         {
-            return (float)(1.0f - Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod));
+            return (float)(1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod));
         }
 
         /// <summary>
@@ -239,7 +239,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent, float inPeriod)
         {
-            return (float)(1.0f - Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / inPeriod));
+            return (float)(1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod));
         }
 
         /// <summary>
@@ -249,7 +249,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent, float inPeriod, float inDeltaTime)
         {
-            return (float)(1.0f - Math.Pow(Math.E, -inPercent * inDeltaTime / inPeriod));
+            return (float)(1.0f - Math.Exp(-inPercent * inDeltaTime / inPeriod));
         }
 
         /// <summary>
@@ -259,7 +259,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent)
         {
-            return (float)Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod);
+            return (float)Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod);
         }
 
         /// <summary>
@@ -269,7 +269,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent, float inPeriod)
         {
-            return (float)Math.Pow(Math.E, -inPercent * BeauRoutine.Routine.DeltaTime / inPeriod);
+            return (float)Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod);
         }
 
         /// <summary>
@@ -279,7 +279,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent, float inPeriod, float inDeltaTime)
         {
-            return (float)(Math.Pow(Math.E, -inPercent * inDeltaTime / inPeriod));
+            return (float)(Math.Exp(-inPercent * inDeltaTime / inPeriod));
         }
 
         #endregion

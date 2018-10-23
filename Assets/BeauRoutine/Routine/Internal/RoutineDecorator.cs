@@ -13,12 +13,12 @@ using System.Collections;
 namespace BeauRoutine.Internal
 {
     [Flags]
-    public enum RoutineDecoratorFlag
+    internal enum RoutineDecoratorFlag
     {
         Inline   = 0x001
     }
 
-    public struct RoutineDecorator : IEnumerator, IDisposable
+    internal struct RoutineDecorator : IEnumerator, IDisposable
     {
         public IEnumerator Enumerator;
         public RoutineDecoratorFlag Flags;

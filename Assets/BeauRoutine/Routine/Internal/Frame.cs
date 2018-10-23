@@ -14,7 +14,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Contains settings for an individual frame.
     /// </summary>
-    public struct Frame
+    internal struct Frame
     {
         /// <summary>
         /// Current delta time.

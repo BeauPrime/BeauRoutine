@@ -20,7 +20,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Collection of Fibers.
     /// </summary>
-    public sealed partial class Table
+    internal sealed partial class Table
     {
         public const uint INDEX_MASK = 0x00FFFFFF;
         public const uint COUNTER_MASK = 0xFF000000;

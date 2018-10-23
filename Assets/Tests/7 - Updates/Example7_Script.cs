@@ -42,7 +42,7 @@ namespace BeauRoutine.Examples
                 Vector3 screenPoint = Input.mousePosition;
                 screenPoint.z = 10;
                 Vector3 mousePoint = Camera.main.ScreenToWorldPoint(screenPoint);
-                transform.position = Vector3.LerpUnclamped(transform.position, mousePoint, TweenUtil.Lerp(0.25f));
+                transform.position = Vector3.LerpUnclamped(transform.position, mousePoint, TweenUtil.Lerp(0.1f));
 
                 if (Input.GetKeyDown(KeyCode.Alpha1))
                 {

@@ -125,54 +125,17 @@ namespace BeauRoutine
     
         #region Background Color
 
-        private sealed class TweenData_Camera_Alpha : ITweenData
-        {
-            private Camera m_Renderer;
-            private float m_Target;
-
-            private float m_Start;
-            private float m_Delta;
-
-            public TweenData_Camera_Alpha(Camera inRenderer, float inTarget)
-            {
-                m_Renderer = inRenderer;
-                m_Target = inTarget;
-            }
-
-            public void OnTweenStart()
-            {
-                m_Start = m_Renderer.backgroundColor.a;
-                m_Delta = m_Target - m_Start;
-            }
-
-            public void OnTweenEnd() { }
-
-            public void ApplyTween(float inPercent)
-            {
-                Color final = m_Renderer.backgroundColor;
-                final.a = m_Start + m_Delta * inPercent;
-                m_Renderer.backgroundColor = final;
-            }
-
-            public override string ToString()
-            {
-                return "Camera: Background Color Alpha";
-            }
-        }
-
         private sealed class TweenData_Camera_Color : ITweenData
         {
             private Camera m_Renderer;
             private Color m_Target;
-            private ColorUpdate m_Update;
 
             private Color m_Start;
 
-            public TweenData_Camera_Color(Camera inRenderer, Color inTarget, ColorUpdate inUpdate)
+            public TweenData_Camera_Color(Camera inRenderer, Color inTarget)
             {
                 m_Renderer = inRenderer;
                 m_Target = inTarget;
-                m_Update = inUpdate;
             }
 
             public void OnTweenStart()
@@ -184,10 +147,7 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Color final = UnityEngine.Color.LerpUnclamped(m_Start, m_Target, inPercent);
-                if (m_Update == ColorUpdate.PreserveAlpha)
-                    final.a = m_Renderer.backgroundColor.a;
-                m_Renderer.backgroundColor = final;
+                m_Renderer.backgroundColor = UnityEngine.Color.LerpUnclamped(m_Start, m_Target, inPercent);
             }
 
             public override string ToString()
@@ -200,13 +160,11 @@ namespace BeauRoutine
         {
             private Camera m_Renderer;
             private Gradient m_Gradient;
-            private ColorUpdate m_Update;
 
-            public TweenData_Camera_Gradient(Camera inRenderer, Gradient inTarget, ColorUpdate inUpdate)
+            public TweenData_Camera_Gradient(Camera inRenderer, Gradient inTarget)
             {
                 m_Renderer = inRenderer;
                 m_Gradient = inTarget;
-                m_Update = inUpdate;
             }
 
             public void OnTweenStart() { }
@@ -214,10 +172,7 @@ namespace BeauRoutine
 
             public void ApplyTween(float inPercent)
             {
-                Color final = m_Gradient.Evaluate(inPercent);
-                if (m_Update == ColorUpdate.PreserveAlpha)
-                    final.a = m_Renderer.backgroundColor.a;
-                m_Renderer.backgroundColor = final;
+                m_Renderer.backgroundColor = m_Gradient.Evaluate(inPercent);
             }
 
             public override string ToString()
@@ -227,51 +182,35 @@ namespace BeauRoutine
         }
 
         /// <summary>
-        /// Fades the Camera to another alpha over time.
+        /// Fades the Camera to another color over time.
         /// </summary>
-        static public Tween BackgroundFadeTo(this Camera inRenderer, float inAlpha, float inTime)
+        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, float inTime)
         {
-            return Tween.Create(new TweenData_Camera_Alpha(inRenderer, inAlpha), inTime);
-        }
-
-        /// <summary>
-        /// Fades the Camera to another alpha over time.
-        /// </summary>
-        static public Tween BackgroundFadeTo(this Camera inRenderer, float inAlpha, TweenSettings inSettings)
-        {
-            return Tween.Create(new TweenData_Camera_Alpha(inRenderer, inAlpha), inSettings);
+            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget), inTime);
         }
 
         /// <summary>
         /// Fades the Camera to another color over time.
         /// </summary>
-        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, float inTime, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, TweenSettings inSettings)
         {
-            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget, inUpdate), inTime);
-        }
-
-        /// <summary>
-        /// Fades the Camera to another color over time.
-        /// </summary>
-        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, TweenSettings inSettings, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
-        {
-            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget, inUpdate), inSettings);
+            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget), inSettings);
         }
 
         /// <summary>
         /// Applies a gradient of colors to the Camera over time.
         /// </summary>
-        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, float inTime, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, float inTime)
         {
-            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient, inUpdate), inTime);
+            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient), inTime);
         }
 
         /// <summary>
         /// Applies a gradient of colors to the Camera over time.
         /// </summary>
-        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, TweenSettings inSettings, ColorUpdate inUpdate = ColorUpdate.PreserveAlpha)
+        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, TweenSettings inSettings)
         {
-            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient, inUpdate), inSettings);
+            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient), inSettings);
         }
 
         #endregion // Background Color

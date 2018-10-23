@@ -12,7 +12,7 @@ using UnityEngine;
 namespace BeauRoutine.Internal
 {
     // Waits until after LateUpdate
-    public class WaitForLateUpdate : CustomYieldInstruction
+    internal class WaitForLateUpdate : CustomYieldInstruction
     {
         public override bool keepWaiting
         {
@@ -24,7 +24,7 @@ namespace BeauRoutine.Internal
     }
 
     // Waits until after Update
-    public class WaitForUpdate : CustomYieldInstruction
+    internal class WaitForUpdate : CustomYieldInstruction
     {
         public override bool keepWaiting
         {
@@ -36,7 +36,7 @@ namespace BeauRoutine.Internal
     }
 
     // Waits until after ThinkUpdate
-    public class WaitForThinkUpdate : CustomYieldInstruction
+    internal class WaitForThinkUpdate : CustomYieldInstruction
     {
         public override bool keepWaiting
         {
@@ -48,7 +48,7 @@ namespace BeauRoutine.Internal
     }
 
     // Waits until after CustomUpdate
-    public class WaitForCustomUpdate : CustomYieldInstruction
+    internal class WaitForCustomUpdate : CustomYieldInstruction
     {
         public override bool keepWaiting
         {

@@ -3,9 +3,9 @@
  * Author:  Alex Beauchesne
  * Date:    8 May 2018
  * 
- * File:    TweenShortcuts.UI.cs
+ * File:    TweenShortcuts.Canvas.cs
  * Purpose: Extension methods for creating Tweens affecting
- *          properties on Canvas renderers.
+ *          properties on Canvas renderers and UI elements.
 */
 
 using UnityEngine;
@@ -538,5 +538,292 @@ namespace BeauRoutine
         }
 
         #endregion
+    
+        #region ScrollRect
+
+        private sealed class TweenData_ScrollRect_NormalizedPos : ITweenData
+        {
+            private ScrollRect m_ScrollRect;
+            private Vector2 m_Target;
+            private Axis m_Axis;
+
+            private Vector2 m_Start;
+            private Vector2 m_Delta;
+
+            public TweenData_ScrollRect_NormalizedPos(ScrollRect inScrollRect, Vector2 inTarget, Axis inAxis)
+            {
+                m_ScrollRect = inScrollRect;
+                m_Target = inTarget;
+                m_Axis = inAxis;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_ScrollRect.normalizedPosition;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                Vector2 final = new Vector2(
+                    m_Start.x + m_Delta.x * inPercent,
+                    m_Start.y + m_Delta.y * inPercent);
+                if ((m_Axis & Axis.XY) != Axis.XY)
+                {
+                    Vector2 current = m_ScrollRect.normalizedPosition;
+                    if ((m_Axis & Axis.X) == 0)
+                        final.x = current.x;
+                    if ((m_Axis & Axis.Y) == 0)
+                        final.y = current.y;
+                }
+
+                m_ScrollRect.normalizedPosition = final;;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "ScrollRect: Normalized Position";
+            }
+        }
+
+        /// <summary>
+        /// Changes the ScrollRect's normalized position to another value over time.
+        /// </summary>
+        static public Tween NormalizedPosTo(this ScrollRect inScrollRect, Vector2 inPosition, float inTime, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_ScrollRect_NormalizedPos(inScrollRect, inPosition, inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Changes the ScrollRect's normalized position to another value over time.
+        /// </summary>
+        static public Tween NormalizedPosTo(this ScrollRect inScrollRect, Vector2 inPosition, TweenSettings inSettings, Axis inAxis = Axis.XY)
+        {
+            return Tween.Create(new TweenData_ScrollRect_NormalizedPos(inScrollRect, inPosition, inAxis), inSettings);
+        }
+
+        /// <summary>
+        /// Changes the ScrollRect's normalized position to another value over time.
+        /// </summary>
+        static public Tween NormalizedPosTo(this ScrollRect inScrollRect, float inPositionAxis, float inTime, Axis inAxis)
+        {
+            return Tween.Create(new TweenData_ScrollRect_NormalizedPos(inScrollRect, new Vector2(inPositionAxis, inPositionAxis), inAxis), inTime);
+        }
+
+        /// <summary>
+        /// Changes the ScrollRect's normalized position to another value over time.
+        /// </summary>
+        static public Tween NormalizedPosTo(this ScrollRect inScrollRect, float inPositionAxis, TweenSettings inSettings, Axis inAxis)
+        {
+            return Tween.Create(new TweenData_ScrollRect_NormalizedPos(inScrollRect, new Vector2(inPositionAxis, inPositionAxis), inAxis), inSettings);
+        }
+
+        #endregion // ScrollRect
+
+        #region Slider
+
+        private sealed class TweenData_Slider_Value : ITweenData
+        {
+            private Slider m_Slider;
+            private float m_Target;
+
+            private float m_Start;
+            private float m_Delta;
+
+            public TweenData_Slider_Value(Slider inSlider, float inTarget)
+            {
+                m_Slider = inSlider;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Slider.value;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Slider.value = m_Start + m_Delta * inPercent;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "Slider: Value";
+            }
+        }
+
+        private sealed class TweenData_Slider_NormalizedValue : ITweenData
+        {
+            private Slider m_Slider;
+            private float m_Target;
+
+            private float m_Start;
+            private float m_Delta;
+
+            public TweenData_Slider_NormalizedValue(Slider inSlider, float inTarget)
+            {
+                m_Slider = inSlider;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Slider.normalizedValue;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Slider.normalizedValue = m_Start + m_Delta * inPercent;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "Slider: Normalized Value";
+            }
+        }
+
+        /// <summary>
+        /// Changes the Slider's value to another value over time.
+        /// </summary>
+        static public Tween ValueTo(this Slider inSlider, float inValue, float inTime)
+        {
+            return Tween.Create(new TweenData_Slider_Value(inSlider, inValue), inTime);
+        }
+
+        /// <summary>
+        /// Changes the Slider's value to another value over time.
+        /// </summary>
+        static public Tween ValueTo(this Slider inSlider, float inValue, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Slider_Value(inSlider, inValue), inSettings);
+        }
+
+        /// <summary>
+        /// Changes the Slider's normalized value to another value over time.
+        /// </summary>
+        static public Tween NormalizedValueTo(this Slider inSlider, float inNormalizedValue, float inTime)
+        {
+            return Tween.Create(new TweenData_Slider_NormalizedValue(inSlider, inNormalizedValue), inTime);
+        }
+
+        /// <summary>
+        /// Changes the Slider's normalized value to another value over time.
+        /// </summary>
+        static public Tween NormalizedValueTo(this Slider inSlider, float inNormalizedValue, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Slider_NormalizedValue(inSlider, inNormalizedValue), inSettings);
+        }
+
+        #endregion // Slider
+
+        #region Scrollbar
+
+        private sealed class TweenData_Scrollbar_Value : ITweenData
+        {
+            private Scrollbar m_Scrollbar;
+            private float m_Target;
+
+            private float m_Start;
+            private float m_Delta;
+
+            public TweenData_Scrollbar_Value(Scrollbar inScrollbar, float inTarget)
+            {
+                m_Scrollbar = inScrollbar;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Scrollbar.value;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Scrollbar.value = m_Start + m_Delta * inPercent;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "Scrollbar: Value";
+            }
+        }
+
+        private sealed class TweenData_Scrollbar_Size : ITweenData
+        {
+            private Scrollbar m_Scrollbar;
+            private float m_Target;
+
+            private float m_Start;
+            private float m_Delta;
+
+            public TweenData_Scrollbar_Size(Scrollbar inScrollbar, float inTarget)
+            {
+                m_Scrollbar = inScrollbar;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Scrollbar.size;
+                m_Delta = m_Target - m_Start;
+            }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Scrollbar.size = m_Start + m_Delta * inPercent;
+            }
+
+            public void OnTweenEnd() { }
+
+            public override string ToString()
+            {
+                return "Scrollbar: Size";
+            }
+        }
+
+        /// <summary>
+        /// Changes the Scrollbar's value to another value over time.
+        /// </summary>
+        static public Tween ValueTo(this Scrollbar inScrollbar, float inValue, float inTime)
+        {
+            return Tween.Create(new TweenData_Scrollbar_Value(inScrollbar, inValue), inTime);
+        }
+
+        /// <summary>
+        /// Changes the Scrollbar's value to another value over time.
+        /// </summary>
+        static public Tween ValueTo(this Scrollbar inScrollbar, float inValue, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Scrollbar_Value(inScrollbar, inValue), inSettings);
+        }
+
+        /// <summary>
+        /// Changes the Scrollbar's size to another size over time.
+        /// </summary>
+        static public Tween SizeTo(this Scrollbar inScrollbar, float inSize, float inTime)
+        {
+            return Tween.Create(new TweenData_Scrollbar_Size(inScrollbar, inSize), inTime);
+        }
+
+        /// <summary>
+        /// Changes the Scrollbar's size to another size over time.
+        /// </summary>
+        static public Tween SizeTo(this Scrollbar inScrollbar, float inSize, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Scrollbar_Size(inScrollbar, inSize), inSettings);
+        }
+
+        #endregion // Scrollbar
     }
 }

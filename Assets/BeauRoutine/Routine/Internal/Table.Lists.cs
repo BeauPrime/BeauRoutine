@@ -12,7 +12,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Collection of Fibers.
     /// </summary>
-    public sealed partial class Table
+    internal sealed partial class Table
     {
         #region Main List
 

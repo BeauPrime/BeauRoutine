@@ -25,32 +25,32 @@ namespace BeauRoutine.Examples
             // Routine.Start(this, Executing("CustomUpdate: ")).SetPhase(RoutinePhase.CustomUpdate);
 
             // PerSecondRoutine.Start(this, Executing("PerSecond: "), 5);
-            var f = Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
+            // var f = Routine.Start(this, Routine.PerSecond(Executing("PerSecond: "), 5));
             //Routine.Start(this, Routine.PerSecond(started, 5f));
 
-            Stack<RoutineLock> locks = new Stack<RoutineLock>(8);
-            Action loopedInput = () =>
-            {
-                if (Input.GetKeyDown(KeyCode.L))
-                    locks.Push(f.GetLock());
-                else if (Input.GetKeyDown(KeyCode.U) && locks.Count > 0)
-                    locks.Pop().Release();
-            };
+            // Stack<RoutineLock> locks = new Stack<RoutineLock>(8);
+            // Action loopedInput = () =>
+            // {
+            //     if (Input.GetKeyDown(KeyCode.L))
+            //         locks.Push(f.GetLock());
+            //     else if (Input.GetKeyDown(KeyCode.U) && locks.Count > 0)
+            //         locks.Pop().Release();
+            // };
 
-            Routine.StartLoop(this, loopedInput);
-                }
+            // Routine.StartLoop(this, loopedInput);
+            //     }
 
-                t.SetRotation(new Vector3(0, y, z), Axis.YZ, s);
-            };
+            //     t.SetRotation(new Vector3(0, y, z), Axis.YZ, s);
+            // };
 
-            Routine.Start(this, Tween.Spline(
-                SplineArgs, OnSplineUpdate, 8f, SplineTween
-            ).Loop().Randomize()).SetPhase(RoutinePhase.FixedUpdate);
+            // Routine.Start(this, Tween.Spline(
+            //     SplineArgs, OnSplineUpdate, 8f, SplineTween
+            // ).Loop().Randomize()).SetPhase(RoutinePhase.FixedUpdate);
 
-            for (int i = 0; i < SplineArgs.GetVertexCount(); ++i)
-            {
-                SplineArgs.SetVertexUserData(i, new Color(Random.value, Random.value, Random.value));
-            }
+            // for (int i = 0; i < SplineArgs.GetVertexCount(); ++i)
+            // {
+            //     SplineArgs.SetVertexUserData(i, new Color(Random.value, Random.value, Random.value));
+            // }
         }
 
         private void OnSplineUpdate(SplineUpdateInfo inInfo)
