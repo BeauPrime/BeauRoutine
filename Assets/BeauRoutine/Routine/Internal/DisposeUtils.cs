@@ -16,7 +16,7 @@ using System.Collections;
 
 namespace BeauRoutine.Internal
 {
-    static public class DisposeUtils
+    static internal class DisposeUtils
     {
         /// <summary>
         /// Disposes of an object if it is an IDisposable

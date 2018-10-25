@@ -14,7 +14,7 @@ namespace BeauRoutine.Splines
     /// <summary>
     /// How a spline should affect transform orientation.
     /// </summary>
-    public enum SplineOrientation : byte
+    public enum SplineOrientationMode : byte
     {
         /// <summary>
         /// Ignore rotation changes

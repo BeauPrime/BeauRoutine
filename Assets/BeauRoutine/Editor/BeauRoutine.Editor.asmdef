@@ -1,0 +1,14 @@
+{
+    "name": "BeauRoutine.Editor",
+    "references": [
+        "BeauRoutine"
+    ],
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false
+}

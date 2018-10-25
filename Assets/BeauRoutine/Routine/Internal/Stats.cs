@@ -43,6 +43,7 @@ namespace BeauRoutine.Internal
         public const string WaitUpdate = "Wait (Update)";
         public const string WaitThinkUpdate = "Wait (ThinkUpdate)";
         public const string WaitCustomUpdate = "Wait (CustomUpdate)";
+        public const string WaitRealtimeUpdate = "Wait (RealtimeUpdate)";
         public const string Locked = "Locked";
         public const string Paused = "Paused";
     }

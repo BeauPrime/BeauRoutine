@@ -21,6 +21,7 @@ namespace BeauRoutine.Internal
         WaitForLateUpdate,
         WaitForUpdate,
         WaitForThinkUpdate,
-        WaitForCustomUpdate
+        WaitForCustomUpdate,
+        WaitForRealtimeUpdate
     }
 }

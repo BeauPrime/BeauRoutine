@@ -5,7 +5,7 @@
  * 
  * File:    SplineTweenShortcuts.cs
  * Purpose: Contains shortcuts for splines.
-*/
+ */
 
 using System;
 using UnityEngine;
@@ -56,53 +56,11 @@ namespace BeauRoutine.Splines
                 info.Point.z += m_Start.z;
 
                 m_Transform.SetPosition(info.Point, m_Axis, m_Space);
-                ApplyRotation(ref info);
+                m_SplineSettings.Orient.Apply(ref info, m_Transform, m_Space);
 
                 if (m_SplineSettings.UpdateCallback != null)
                 {
                     m_SplineSettings.UpdateCallback(info);
-                }
-            }
-
-            private void ApplyRotation(ref SplineUpdateInfo inInfo)
-            {
-                if (m_SplineSettings.Orient != SplineOrientation.Ignore)
-                {
-                    Axis maskedAxis = m_SplineSettings.OrientAxis & Axis.XYZ;
-                    if (maskedAxis != 0)
-                    {
-                        Vector3 direction = inInfo.Direction;
-                        if (maskedAxis != Axis.XYZ)
-                        {
-                            if ((m_SplineSettings.OrientAxis & Axis.X) == 0)
-                                direction.x = 0;
-                            if ((m_SplineSettings.OrientAxis & Axis.Y) == 0)
-                                direction.y = 0;
-                            if ((m_SplineSettings.OrientAxis & Axis.Z) == 0)
-                                direction.z = 0;
-                        }
-
-                        if (m_SplineSettings.Orient == SplineOrientation.ThreeD)
-                        {
-                            Quaternion dirRot = Quaternion.LookRotation(direction, m_SplineSettings.OrientUp);
-                            if (m_Space == Space.Self)
-                                m_Transform.localRotation = dirRot;
-                            else
-                                m_Transform.rotation = dirRot;
-                        }
-                        else if (m_SplineSettings.Orient == SplineOrientation.TwoD)
-                        {
-                            float dir = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                            if (dir < -180)
-                                dir += 360f;
-
-                            m_Transform.SetRotation(dir, Axis.Z, m_Space);
-                        }
-                        else if (m_SplineSettings.OrientCallback != null)
-                        {
-                            m_SplineSettings.OrientCallback(m_Transform, direction, m_Space);
-                        }
-                    }
                 }
             }
 
@@ -158,7 +116,7 @@ namespace BeauRoutine.Splines
         static public Tween MoveAlongWithSpeed(this Transform inTransform, ISpline inSpline, float inSpeed, Axis inAxis, Space inSpace, SplineTweenSettings inSplineSettings)
         {
             float time;
-            switch(inSplineSettings.LerpMethod)
+            switch (inSplineSettings.LerpMethod)
             {
                 case SplineLerp.Direct:
                 case SplineLerp.Vertex:
@@ -175,7 +133,7 @@ namespace BeauRoutine.Splines
         }
 
         #endregion // Transform
-    
+
         #region RectTransform
 
         private sealed class TweenData_RectTransform_AnchorPosSpline : ITweenData
@@ -212,50 +170,11 @@ namespace BeauRoutine.Splines
                 info.Point.y += m_Start.y;
 
                 m_RectTransform.SetAnchorPos(info.Point, m_Axis);
-                ApplyRotation(ref info);
+                m_SplineSettings.Orient.Apply(ref info, m_RectTransform, Space.Self);
 
                 if (m_SplineSettings.UpdateCallback != null)
                 {
                     m_SplineSettings.UpdateCallback(info);
-                }
-            }
-
-            private void ApplyRotation(ref SplineUpdateInfo inInfo)
-            {
-                if (m_SplineSettings.Orient != SplineOrientation.Ignore)
-                {
-                    Axis maskedAxis = m_SplineSettings.OrientAxis & Axis.XYZ;
-                    if (maskedAxis != 0)
-                    {
-                        Vector3 direction = inInfo.Direction;
-                        if (maskedAxis != Axis.XYZ)
-                        {
-                            if ((m_SplineSettings.OrientAxis & Axis.X) == 0)
-                                direction.x = 0;
-                            if ((m_SplineSettings.OrientAxis & Axis.Y) == 0)
-                                direction.y = 0;
-                            if ((m_SplineSettings.OrientAxis & Axis.Z) == 0)
-                                direction.z = 0;
-                        }
-
-                        if (m_SplineSettings.Orient == SplineOrientation.ThreeD)
-                        {
-                            Quaternion dirRot = Quaternion.LookRotation(direction, m_SplineSettings.OrientUp);
-                            m_RectTransform.localRotation = dirRot;
-                        }
-                        else if (m_SplineSettings.Orient == SplineOrientation.TwoD)
-                        {
-                            float dir = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg;
-                            if (dir < -180)
-                                dir += 360f;
-
-                            m_RectTransform.SetRotation(dir, Axis.Z, Space.Self);
-                        }
-                        else if (m_SplineSettings.OrientCallback != null)
-                        {
-                            m_SplineSettings.OrientCallback(m_RectTransform, direction, Space.Self);
-                        }
-                    }
                 }
             }
 
@@ -311,7 +230,7 @@ namespace BeauRoutine.Splines
         static public Tween AnchorPosAlongWithSpeed(this RectTransform inRectTransform, ISpline inSpline, float inSpeed, Axis inAxis, SplineTweenSettings inSplineSettings)
         {
             float time;
-            switch(inSplineSettings.LerpMethod)
+            switch (inSplineSettings.LerpMethod)
             {
                 case SplineLerp.Direct:
                 case SplineLerp.Vertex:

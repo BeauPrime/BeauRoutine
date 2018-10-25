@@ -33,7 +33,7 @@ namespace BeauRoutine.Internal
             m_Fibers = new List<Fiber>(m_Enumerators.Count);
         }
 
-        public void RemoveFiber(Fiber inFiber)
+        void INestedFiberContainer.RemoveFiber(Fiber inFiber)
         {
             // This will only get called during Fiber.Dispose
             // If we're executing we don't have to remove from the list
@@ -44,7 +44,7 @@ namespace BeauRoutine.Internal
             }
         }
 
-        public void SetParentFiber(Fiber inFiber)
+        void INestedFiberContainer.SetParentFiber(Fiber inFiber)
         {
             m_ParentFiber = inFiber;
         }

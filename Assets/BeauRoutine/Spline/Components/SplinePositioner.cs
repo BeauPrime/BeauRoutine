@@ -5,7 +5,7 @@
  * 
  * File:    SplineRenderer.cs
  * Purpose: Spline line renderer.
-*/
+ */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
@@ -32,7 +32,10 @@ namespace BeauRoutine.Splines
         private Axis m_PositionAxis = Axis.XYZ;
 
         [SerializeField]
-        private SplineLerp m_LerpSpace = SplineLerp.Precise;
+        private SplineLerp m_Precision = SplineLerp.Vertex;
+
+        [SerializeField]
+        private SplineOrientationSettings m_Settings = default(SplineOrientationSettings);
 
         [SerializeField]
         private MultiSpline m_EditorSpline = null;
@@ -47,13 +50,12 @@ namespace BeauRoutine.Splines
 
         private void Refresh()
         {
-            Spline.Sample(m_EditorSpline, s_CachedPoints, 0, 1, 0, m_Objects.Length, m_LerpSpace);
+            SplineUpdateInfo info;
             for (int i = 0; i < m_Objects.Length; ++i)
             {
-                m_Objects[i].SetPosition(s_CachedPoints[i], m_PositionAxis, m_PositionSpace);
+                float amt = (float) (i + 0.5) / (m_Objects.Length);
+                Spline.Align(m_EditorSpline, m_Objects[i], amt, m_PositionAxis, m_PositionSpace, m_Precision, Curve.Linear, m_Settings);
             }
         }
-
-        static private Vector3[] s_CachedPoints = new Vector3[512];
     }
 }

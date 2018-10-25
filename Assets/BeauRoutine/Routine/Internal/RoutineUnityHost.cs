@@ -5,7 +5,7 @@
  * 
  * File:    UnityHost.cs
  * Purpose: Host behavior. Contains hooks for executing BeauRoutines.
-*/
+ */
 
 using System.Collections;
 using UnityEngine;
@@ -64,6 +64,7 @@ namespace BeauRoutine.Internal
 
             if (m != null)
             {
+                // lateupdate
                 m.Update(deltaTime, RoutinePhase.LateUpdate);
                 if (m.Fibers.GetYieldCount(YieldPhase.WaitForLateUpdate) > 0)
                     m.UpdateYield(deltaTime, YieldPhase.WaitForLateUpdate);
@@ -78,10 +79,12 @@ namespace BeauRoutine.Internal
 
             if (m != null)
             {
+                // update phase
                 m.Update(deltaTime, RoutinePhase.Update);
                 if (m.Fibers.GetYieldCount(YieldPhase.WaitForUpdate) > 0)
                     m.UpdateYield(deltaTime, YieldPhase.WaitForUpdate);
 
+                // thinkupdate
                 float thinkCustomDelta;
                 if (m.AdvanceThinkUpdate(deltaTime, timestamp, out thinkCustomDelta))
                 {
@@ -90,12 +93,19 @@ namespace BeauRoutine.Internal
                         m.UpdateYield(thinkCustomDelta, YieldPhase.WaitForThinkUpdate);
                 }
 
+                // customupdate
                 if (m.AdvanceCustomUpdate(deltaTime, timestamp, out thinkCustomDelta))
                 {
                     m.Update(thinkCustomDelta, RoutinePhase.CustomUpdate);
                     if (m.Fibers.GetYieldCount(YieldPhase.WaitForCustomUpdate) > 0)
                         m.UpdateYield(thinkCustomDelta, YieldPhase.WaitForCustomUpdate);
                 }
+
+                // realtimeupdate
+                float realDeltaTime = Time.unscaledDeltaTime;
+                m.Update(realDeltaTime, RoutinePhase.RealtimeUpdate);
+                if (m.Fibers.GetYieldCount(YieldPhase.WaitForRealtimeUpdate) > 0)
+                    m.UpdateYield(realDeltaTime, YieldPhase.WaitForRealtimeUpdate);
             }
         }
 
@@ -103,6 +113,7 @@ namespace BeauRoutine.Internal
         {
             if (m_Manager != null)
             {
+                // fixedupate
                 m_Manager.Update(Time.deltaTime, RoutinePhase.FixedUpdate);
             }
         }
@@ -125,7 +136,7 @@ namespace BeauRoutine.Internal
 
         private IEnumerator ApplyWaitForFixedUpdate()
         {
-            while(m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
+            while (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
             {
                 yield return s_CachedWaitForFixedUpdate;
                 m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForFixedUpdate);
@@ -135,7 +146,7 @@ namespace BeauRoutine.Internal
 
         private IEnumerator ApplyWaitForEndOfFrame()
         {
-            while(m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
+            while (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
             {
                 yield return s_CachedWaitForEndOfFrame;
                 m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);

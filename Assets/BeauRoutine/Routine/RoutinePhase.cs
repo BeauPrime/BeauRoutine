@@ -43,5 +43,10 @@ namespace BeauRoutine
         /// Routines will be updated at a configurable rate.
         /// </summary>
         CustomUpdate,
+
+        /// <summary>
+        /// Routines will be updated during Update and ignore Time.timeScale
+        /// </summary>
+        RealtimeUpdate
     }
 }

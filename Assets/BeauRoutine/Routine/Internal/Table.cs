@@ -6,10 +6,10 @@
  * File:    Table.cs
  * Purpose: Stores all existing Fibers in a table and
  *          provides methods for iterating over active Fibers.
-*/
+ */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    #define DEVELOPMENT
+#define DEVELOPMENT
 #endif
 
 using System;
@@ -37,7 +37,7 @@ namespace BeauRoutine.Internal
         }
 
         #region Types
-        
+
         private struct Entry
         {
             public Fiber Fiber;
@@ -119,7 +119,7 @@ namespace BeauRoutine.Internal
 
             public void Start(YieldPhase inYield, ref YieldList inList)
             {
-                Phase = (RoutinePhase)(-1);
+                Phase = (RoutinePhase) (-1);
                 Yield = inYield;
 
                 Next = inList.Head;
@@ -146,7 +146,7 @@ namespace BeauRoutine.Internal
 
             public void Clear()
             {
-                Phase = (RoutinePhase)(-1);
+                Phase = (RoutinePhase) (-1);
                 Yield = YieldPhase.None;
                 Next = -1;
                 Counter = -1;
@@ -169,6 +169,7 @@ namespace BeauRoutine.Internal
             m_ManualUpdateList.Create();
             m_CustomUpdateList.Create();
             m_ThinkUpdateList.Create();
+            m_RealtimeUpdateList.Create();
 
             m_YieldFixedUpdateList.Create();
             m_YieldEndOfFrameList.Create();
@@ -176,6 +177,7 @@ namespace BeauRoutine.Internal
             m_YieldUpdateList.Create();
             m_YieldCustomUpdateList.Create();
             m_YieldThinkUpdateList.Create();
+            m_YieldRealtimeUpdateList.Create();
         }
 
         private Manager m_Manager;
@@ -190,6 +192,7 @@ namespace BeauRoutine.Internal
         private UpdateList m_ManualUpdateList;
         private UpdateList m_CustomUpdateList;
         private UpdateList m_ThinkUpdateList;
+        private UpdateList m_RealtimeUpdateList;
 
         private YieldList m_YieldFixedUpdateList;
         private YieldList m_YieldEndOfFrameList;
@@ -197,6 +200,7 @@ namespace BeauRoutine.Internal
         private YieldList m_YieldUpdateList;
         private YieldList m_YieldCustomUpdateList;
         private YieldList m_YieldThinkUpdateList;
+        private YieldList m_YieldRealtimeUpdateList;
 
         private UpdateStackFrame m_MainUpdate;
         private UpdateStackFrame m_NestedUpdate;
@@ -208,11 +212,11 @@ namespace BeauRoutine.Internal
         {
             get
             {
-                uint val = (uint)inRoutine;
+                uint val = (uint) inRoutine;
                 if (val == 0)
                     return null;
 
-                Fiber fiber = m_Entries[(int)(val & Table.INDEX_MASK)].Fiber;
+                Fiber fiber = m_Entries[(int) (val & Table.INDEX_MASK)].Fiber;
                 return (fiber.HasHandle(inRoutine) ? fiber : null);
             }
         }
@@ -364,13 +368,12 @@ namespace BeauRoutine.Internal
 
             for (int i = currentCount; i < inDesiredAmount; ++i)
             {
-                Fiber fiber = new Fiber(m_Manager, (uint)i);
+                Fiber fiber = new Fiber(m_Manager, (uint) i);
                 m_Entries[i].Fiber = fiber;
                 m_Entries[i].MainPrev = i - 1;
                 m_Entries[i].MainNext = i + 1;
 
-                m_Entries[i].UpdateNext = m_Entries[i].UpdatePrev
-                = m_Entries[i].YieldNext = m_Entries[i].YieldPrev = -1;
+                m_Entries[i].UpdateNext = m_Entries[i].UpdatePrev = m_Entries[i].YieldNext = m_Entries[i].YieldPrev = -1;
             }
 
             bool bStartingNew = m_FreeList.Head == -1;
@@ -439,12 +442,12 @@ namespace BeauRoutine.Internal
 
         #region Update Lists
 
-         /// <summary>
+        /// <summary>
         /// Updates all fibers in the given list.
         /// </summary>
         public void RunUpdate(RoutinePhase inUpdateMode)
         {
-            switch(inUpdateMode)
+            switch (inUpdateMode)
             {
                 case RoutinePhase.FixedUpdate:
                     RunUpdate(RoutinePhase.FixedUpdate, ref m_FixedUpdateList);
@@ -464,6 +467,10 @@ namespace BeauRoutine.Internal
 
                 case RoutinePhase.ThinkUpdate:
                     RunUpdate(RoutinePhase.ThinkUpdate, ref m_ThinkUpdateList);
+                    break;
+
+                case RoutinePhase.RealtimeUpdate:
+                    RunUpdate(RoutinePhase.RealtimeUpdate, ref m_RealtimeUpdateList);
                     break;
 
                 case RoutinePhase.Manual:
@@ -534,7 +541,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void SetUpdateListDirty(RoutinePhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case RoutinePhase.FixedUpdate:
                     m_FixedUpdateList.Dirty = true;
@@ -556,6 +563,10 @@ namespace BeauRoutine.Internal
                     m_ThinkUpdateList.Dirty = true;
                     break;
 
+                case RoutinePhase.RealtimeUpdate:
+                    m_RealtimeUpdateList.Dirty = true;
+                    break;
+
                 case RoutinePhase.Manual:
                     m_ManualUpdateList.Dirty = true;
                     break;
@@ -567,7 +578,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public int GetUpdateCount(RoutinePhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case RoutinePhase.FixedUpdate:
                     return m_FixedUpdateList.Count;
@@ -587,6 +598,9 @@ namespace BeauRoutine.Internal
                 case RoutinePhase.ThinkUpdate:
                     return m_ThinkUpdateList.Count;
 
+                case RoutinePhase.RealtimeUpdate:
+                    return m_RealtimeUpdateList.Count;
+
                 default:
                     return 0;
             }
@@ -597,7 +611,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public bool GetIsUpdating(RoutinePhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case RoutinePhase.FixedUpdate:
                     return m_FixedUpdateList.Updating;
@@ -617,6 +631,9 @@ namespace BeauRoutine.Internal
                 case RoutinePhase.ThinkUpdate:
                     return m_ThinkUpdateList.Updating;
 
+                case RoutinePhase.RealtimeUpdate:
+                    return m_RealtimeUpdateList.Updating;
+
                 default:
                     return false;
             }
@@ -627,7 +644,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void AddFiberToUpdateList(Fiber inFiber, RoutinePhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case RoutinePhase.FixedUpdate:
                     AddLast(inFiber, ref m_FixedUpdateList);
@@ -654,6 +671,11 @@ namespace BeauRoutine.Internal
                     m_ThinkUpdateList.Dirty = true;
                     break;
 
+                case RoutinePhase.RealtimeUpdate:
+                    AddLast(inFiber, ref m_RealtimeUpdateList);
+                    m_RealtimeUpdateList.Dirty = true;
+                    break;
+
                 case RoutinePhase.Manual:
                     AddLast(inFiber, ref m_ManualUpdateList);
                     m_ManualUpdateList.Dirty = true;
@@ -668,7 +690,7 @@ namespace BeauRoutine.Internal
         {
             m_MainUpdate.RemoveFromUpdate(this, inUpdate, inFiber);
 
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case RoutinePhase.FixedUpdate:
                     RemoveEntry(inFiber, ref m_FixedUpdateList);
@@ -690,6 +712,10 @@ namespace BeauRoutine.Internal
                     RemoveEntry(inFiber, ref m_ThinkUpdateList);
                     break;
 
+                case RoutinePhase.RealtimeUpdate:
+                    RemoveEntry(inFiber, ref m_RealtimeUpdateList);
+                    break;
+
                 case RoutinePhase.Manual:
                     // Nested list is only involved in a manual update
                     m_NestedUpdate.RemoveFromUpdate(this, inUpdate, inFiber);
@@ -700,7 +726,7 @@ namespace BeauRoutine.Internal
         }
 
         #endregion
-    
+
         #region Updating a Fiber manually
 
         /// <summary>
@@ -720,7 +746,7 @@ namespace BeauRoutine.Internal
 
         public void RunYieldUpdate(YieldPhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     RunYieldUpdate(YieldPhase.WaitForEndOfFrame, ref m_YieldEndOfFrameList);
@@ -745,6 +771,10 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForThinkUpdate:
                     RunYieldUpdate(YieldPhase.WaitForThinkUpdate, ref m_YieldThinkUpdateList);
                     break;
+
+                case YieldPhase.WaitForRealtimeUpdate:
+                    RunYieldUpdate(YieldPhase.WaitForRealtimeUpdate, ref m_YieldRealtimeUpdateList);
+                    break;
             }
         }
 
@@ -760,7 +790,7 @@ namespace BeauRoutine.Internal
 
             ioList.Updating = true;
             {
-                while(m_MainUpdate.Next != -1 && m_MainUpdate.Counter-- > 0)
+                while (m_MainUpdate.Next != -1 && m_MainUpdate.Counter-- > 0)
                 {
                     Entry e = m_Entries[m_MainUpdate.Next];
                     m_MainUpdate.Next = e.YieldNext;
@@ -774,7 +804,7 @@ namespace BeauRoutine.Internal
 
         public void SetYieldListDirty(YieldPhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     m_YieldEndOfFrameList.Dirty = true;
@@ -799,12 +829,16 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForThinkUpdate:
                     m_YieldThinkUpdateList.Dirty = true;
                     break;
+
+                case YieldPhase.WaitForRealtimeUpdate:
+                    m_YieldRealtimeUpdateList.Dirty = true;
+                    break;
             }
         }
 
         public int GetYieldCount(YieldPhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     return m_YieldEndOfFrameList.Count;
@@ -824,6 +858,9 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForThinkUpdate:
                     return m_YieldThinkUpdateList.Count;
 
+                case YieldPhase.WaitForRealtimeUpdate:
+                    return m_YieldRealtimeUpdateList.Count;
+
                 default:
                     return 0;
             }
@@ -831,7 +868,7 @@ namespace BeauRoutine.Internal
 
         public bool GetIsUpdatingYield(YieldPhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     return m_YieldEndOfFrameList.Updating;
@@ -851,6 +888,9 @@ namespace BeauRoutine.Internal
                 case YieldPhase.WaitForThinkUpdate:
                     return m_YieldThinkUpdateList.Updating;
 
+                case YieldPhase.WaitForRealtimeUpdate:
+                    return m_YieldRealtimeUpdateList.Updating;
+
                 default:
                     return false;
             }
@@ -858,7 +898,7 @@ namespace BeauRoutine.Internal
 
         public void AddFiberToYieldList(Fiber inFiber, YieldPhase inUpdate)
         {
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     AddLast(inFiber, ref m_YieldEndOfFrameList);
@@ -889,6 +929,11 @@ namespace BeauRoutine.Internal
                     AddLast(inFiber, ref m_YieldThinkUpdateList);
                     m_YieldThinkUpdateList.Dirty = true;
                     break;
+
+                case YieldPhase.WaitForRealtimeUpdate:
+                    AddLast(inFiber, ref m_YieldRealtimeUpdateList);
+                    m_YieldRealtimeUpdateList.Dirty = true;
+                    break;
             }
         }
 
@@ -899,7 +944,7 @@ namespace BeauRoutine.Internal
             // No need to check nested list, since the nested list will never be running a yield update
             // m_NestedUpdate.RemoveFromYield(this, inUpdate, inFiber);
 
-            switch(inUpdate)
+            switch (inUpdate)
             {
                 case YieldPhase.WaitForEndOfFrame:
                     RemoveEntry(inFiber, ref m_YieldEndOfFrameList);
@@ -923,6 +968,10 @@ namespace BeauRoutine.Internal
 
                 case YieldPhase.WaitForThinkUpdate:
                     RemoveEntry(inFiber, ref m_YieldThinkUpdateList);
+                    break;
+
+                case YieldPhase.WaitForRealtimeUpdate:
+                    RemoveEntry(inFiber, ref m_RealtimeUpdateList);
                     break;
             }
         }

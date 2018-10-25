@@ -5,7 +5,7 @@
  * 
  * File:    Spline.cs
  * Purpose: Defines a common interface for splines, along with factory methods.
-*/
+ */
 
 using System;
 using System.Collections.Generic;
@@ -356,7 +356,7 @@ namespace BeauRoutine.Splines
             float delta = inEnd - inStart;
             for (int i = 0; i < inNumSamples; ++i)
             {
-                float t = (float)i / (inNumSamples - 1);
+                float t = (float) i / (inNumSamples - 1);
                 outPoints[inStartIdx + i] = inSpline.GetPoint(inSpline.TransformPercent(inStart + t * delta, inLerp));
             }
 
@@ -373,7 +373,7 @@ namespace BeauRoutine.Splines
             float delta = inEnd - inStart;
             for (int i = 0; i < inNumSamples; ++i)
             {
-                float t = (float)i / (inNumSamples - 1);
+                float t = (float) i / (inNumSamples - 1);
                 outPoints[inStartIdx + i] = inSpline.GetPoint(inSpline.TransformPercent(inStart + t * delta, inLerp));
             }
 
@@ -388,7 +388,7 @@ namespace BeauRoutine.Splines
             float delta = inEnd - inStart;
             for (int i = 0; i < inNumSamples; ++i)
             {
-                float t = (float)i / (inNumSamples - 1);
+                float t = (float) i / (inNumSamples - 1);
                 outPoints.Add(inSpline.GetPoint(inSpline.TransformPercent(inStart + t * delta, inLerp)));
             }
         }
@@ -401,7 +401,7 @@ namespace BeauRoutine.Splines
             float delta = inEnd - inStart;
             for (int i = 0; i < inNumSamples; ++i)
             {
-                float t = (float)i / (inNumSamples - 1);
+                float t = (float) i / (inNumSamples - 1);
                 outPoints.Add(inSpline.GetPoint(inSpline.TransformPercent(inStart + t * delta, inLerp)));
             }
         }
@@ -411,7 +411,7 @@ namespace BeauRoutine.Splines
         /// </summary>
         static public int Sample(this ISpline inSpline, Vector3[] outPoints, float inStart, float inEnd, int inStartIdx, SplineLerp inLerp = SplineLerp.Vertex)
         {
-            return inSpline.Sample(outPoints, inStart, inEnd, inStartIdx, outPoints.Length - inStartIdx, inLerp);
+            return Sample(inSpline, outPoints, inStart, inEnd, inStartIdx, outPoints.Length - inStartIdx, inLerp);
         }
 
         /// <summary>
@@ -419,7 +419,7 @@ namespace BeauRoutine.Splines
         /// </summary>
         static public int Sample(this ISpline inSpline, Vector2[] outPoints, float inStart, float inEnd, int inStartIdx, SplineLerp inLerp = SplineLerp.Vertex)
         {
-            return inSpline.Sample(outPoints, inStart, inEnd, inStartIdx, outPoints.Length - inStartIdx, inLerp);
+            return Sample(inSpline, outPoints, inStart, inEnd, inStartIdx, outPoints.Length - inStartIdx, inLerp);
         }
 
         /// <summary>
@@ -427,7 +427,7 @@ namespace BeauRoutine.Splines
         /// </summary>
         static public int Sample(this ISpline inSpline, Vector3[] outPoints, float inStart, float inEnd, SplineLerp inLerp = SplineLerp.Vertex)
         {
-            return inSpline.Sample(outPoints, inStart, inEnd, 0, outPoints.Length, inLerp);
+            return Sample(inSpline, outPoints, inStart, inEnd, 0, outPoints.Length, inLerp);
         }
 
         /// <summary>
@@ -435,7 +435,7 @@ namespace BeauRoutine.Splines
         /// </summary>
         static public int Sample(this ISpline inSpline, Vector2[] outPoints, float inStart, float inEnd, SplineLerp inLerp = SplineLerp.Vertex)
         {
-            return inSpline.Sample(outPoints, inStart, inEnd, 0, outPoints.Length, inLerp);
+            return Sample(inSpline, outPoints, inStart, inEnd, 0, outPoints.Length, inLerp);
         }
 
         /// <summary>
@@ -459,14 +459,70 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// Generates info about an interpolation along the given spline.
         /// </summary>
-        static public void GetUpdateInfo(ISpline inSpline, float inPercent, SplineTweenSettings inTweenSettings, out SplineUpdateInfo outInfo)
+        static public void GetUpdateInfo(this ISpline inSpline, float inPercent, SplineTweenSettings inTweenSettings, out SplineUpdateInfo outInfo)
+        {
+            GetUpdateInfo(inSpline, inPercent, inTweenSettings.LerpMethod, inTweenSettings.SegmentEase, out outInfo);
+        }
+
+        /// <summary>
+        /// Generates info about an interpolation along the given spline.
+        /// </summary>
+        static public void GetUpdateInfo(this ISpline inSpline, float inPercent, SplineLerp inLerp, out SplineUpdateInfo outInfo)
+        {
+            GetUpdateInfo(inSpline, inPercent, inLerp, Curve.Linear, out outInfo);
+        }
+
+        /// <summary>
+        /// Generates info about an interpolation along the given spline.
+        /// </summary>
+        static public void GetUpdateInfo(this ISpline inSpline, float inPercent, out SplineUpdateInfo outInfo)
+        {
+            GetUpdateInfo(inSpline, inPercent, SplineLerp.Vertex, Curve.Linear, out outInfo);
+        }
+
+        /// <summary>
+        /// Generates info about an interpolation along the given spline.
+        /// </summary>
+        static public void GetUpdateInfo(this ISpline inSpline, float inPercent, SplineLerp inLerpMethod, Curve inSegmentEase, out SplineUpdateInfo outInfo)
         {
             outInfo.Spline = inSpline;
-            outInfo.Percent = inSpline.TransformPercent(inPercent, inTweenSettings.LerpMethod);
-            outInfo.Point = inSpline.GetPoint(outInfo.Percent, inTweenSettings.SegmentEase);
-            outInfo.Direction = inSpline.GetDirection(outInfo.Percent, inTweenSettings.SegmentEase);
+            outInfo.Percent = inSpline.TransformPercent(inPercent, inLerpMethod);
+            outInfo.Point = inSpline.GetPoint(outInfo.Percent, inSegmentEase);
+            outInfo.Direction = inSpline.GetDirection(outInfo.Percent, inSegmentEase);
         }
 
         #endregion // Extension Methods
+
+        #region Alignment
+
+        /// <summary>
+        /// Aligns a Transform to a point along the spline, using either localPosition or position.
+        /// </summary>
+        static public void Align(ISpline inSpline, Transform inTransform, float inPercent, Axis inAxis, Space inSpace, SplineLerp inLerpMethod, Curve inSegmentEase, SplineOrientationSettings inOrientation)
+        {
+            SplineUpdateInfo info;
+            GetUpdateInfo(inSpline, inPercent, inLerpMethod, inSegmentEase, out info);
+            inTransform.SetPosition(info.Point, inAxis, inSpace);
+            if (inOrientation != null)
+            {
+                inOrientation.Apply(ref info, inTransform, inSpace);
+            }
+        }
+
+        /// <summary>
+        /// Aligns a RectTransform to a point along the spline, using anchoredPosition.
+        /// </summary>
+        static public void AlignAnchorPos(ISpline inSpline, RectTransform inTransform, float inPercent, Axis inAxis, SplineLerp inLerpMethod, Curve inSegmentEase, SplineOrientationSettings inOrientation)
+        {
+            SplineUpdateInfo info;
+            GetUpdateInfo(inSpline, inPercent, inLerpMethod, inSegmentEase, out info);
+            inTransform.SetAnchorPos(info.Point, inAxis);
+            if (inOrientation != null)
+            {
+                inOrientation.Apply(ref info, inTransform, Space.Self);
+            }
+        }
+
+        #endregion // Alignment
     }
 }

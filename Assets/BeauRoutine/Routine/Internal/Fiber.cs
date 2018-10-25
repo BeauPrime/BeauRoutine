@@ -5,15 +5,15 @@
  * 
  * File:    Fiber.cs
  * Purpose: Substrate on which Routines are executed.
-*/
+ */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    #define DEVELOPMENT
+#define DEVELOPMENT
 #endif
 
 // CustomYieldInstructions were not introduced until 5.3
 #if UNITY_5_3 || UNITY_5_3_OR_NEWER
-    #define SUPPORTS_CUSTOMYIELDINSTRUCTION
+#define SUPPORTS_CUSTOMYIELDINSTRUCTION
 #endif
 
 using System;
@@ -40,6 +40,7 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_WAITFORLATEUPDATE = typeof(WaitForLateUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORCUSTOMUPDATE = typeof(WaitForCustomUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORTHINKUPDATE = typeof(WaitForThinkUpdate).TypeHandle.Value;
+        static private readonly IntPtr TYPEHANDLE_WAITFORREALTIMEUPDATE = typeof(WaitForRealtimeUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORUPDATE = typeof(WaitForUpdate).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_ROUTINEPHASE = typeof(RoutinePhase).TypeHandle.Value;
 
@@ -117,14 +118,14 @@ namespace BeauRoutine.Internal
         /// </summary>
         public Routine Initialize(MonoBehaviour inHost, IEnumerator inStart, bool inChained)
         {
-#if DEVELOPMENT
+            #if DEVELOPMENT
             if (Manager.DebugMode && !(inStart is IDisposable))
                 throw new ArgumentException("IEnumerators must also implement IDisposable.");
-#endif // DEVELOPMENT
+            #endif // DEVELOPMENT
 
-            m_Counter = (byte)(m_Counter == byte.MaxValue ? 1 : m_Counter + 1);
+            m_Counter = (byte) (m_Counter == byte.MaxValue ? 1 : m_Counter + 1);
 
-            m_Handle = (Routine)Table.GenerateID(Index, m_Counter);
+            m_Handle = (Routine) Table.GenerateID(Index, m_Counter);
             m_Host = inHost;
 
             m_HostIdentity = RoutineIdentity.Find(m_Host.gameObject);
@@ -167,7 +168,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void Dispose()
         {
-            if ((uint)m_Handle == 0)
+            if ((uint) m_Handle == 0)
                 return;
 
             if (m_UnityWait != null)
@@ -191,9 +192,7 @@ namespace BeauRoutine.Internal
                 m_Container.RemoveFiber(this);
             }
 
-            m_Chained = m_Disposing = m_HasIdentity
-            = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager
-            = m_IgnoreObjectActive = m_Executing = false;
+            m_Chained = m_Disposing = m_HasIdentity = m_Paused = m_IgnoreObjectTimescale = m_HostedByManager = m_IgnoreObjectActive = m_Executing = false;
 
             m_WaitTime = 0;
             m_LockCount = 0;
@@ -249,7 +248,7 @@ namespace BeauRoutine.Internal
 
                 // All auto-generated coroutines are also IDisposable
                 // in order to handle "using" and "try...finally" blocks.
-                ((IDisposable)enumerator).Dispose();
+                ((IDisposable) enumerator).Dispose();
             }
             m_RootFunction = null;
         }
@@ -302,7 +301,7 @@ namespace BeauRoutine.Internal
         {
             if (m_Chained)
                 return;
-                
+
             m_Paused = true;
         }
 
@@ -455,9 +454,9 @@ namespace BeauRoutine.Internal
         {
             if (m_LockCount == 0)
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 Debug.LogWarning("[BeauRoutine] Mismatched lock count for fiber: " + Name);
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 return;
             }
             --m_LockCount;
@@ -475,13 +474,13 @@ namespace BeauRoutine.Internal
             }
             set
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 if (!string.IsNullOrEmpty(value) && value.StartsWith(RESERVED_NAME_PREFIX, StringComparison.Ordinal))
                 {
                     Debug.LogWarning("[BeauRoutine] Cannot set name of BeauRoutine: contains reserved prefix '" + RESERVED_NAME_PREFIX + "'!");
                     return;
                 }
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 m_Name = value;
             }
         }
@@ -591,10 +590,10 @@ namespace BeauRoutine.Internal
             while (bExecuteStack)
             {
                 bExecuteStack = false;
-                
+
                 // Set this flag to prevent updating this routine mid-execution
                 m_Executing = true;
-                
+
                 IEnumerator current = m_Stack[m_StackPosition];
                 bool bMovedNext = false;
 
@@ -617,7 +616,7 @@ namespace BeauRoutine.Internal
 
                         if (exceptionHandler != null)
                             exceptionHandler(e);
-                        
+
                         m_Disposing = true;
                     }
                 }
@@ -649,25 +648,25 @@ namespace BeauRoutine.Internal
 
                     if (resultType == TYPEHANDLE_INT)
                     {
-                        m_WaitTime = (int)result;
+                        m_WaitTime = (int) result;
                         return true;
                     }
 
                     if (resultType == TYPEHANDLE_FLOAT)
                     {
-                        m_WaitTime = (float)result;
+                        m_WaitTime = (float) result;
                         return true;
                     }
 
                     if (resultType == TYPEHANDLE_DOUBLE)
                     {
-                        m_WaitTime = (float)(double)result;
+                        m_WaitTime = (float) (double) result;
                         return true;
                     }
 
                     if (resultType == TYPEHANDLE_ROUTINE)
                     {
-                        IEnumerator waitSequence = ((Routine)result).Wait();
+                        IEnumerator waitSequence = ((Routine) result).Wait();
                         if (waitSequence != null)
                         {
                             if (m_StackPosition == m_StackSize - 1)
@@ -679,13 +678,13 @@ namespace BeauRoutine.Internal
 
                     if (resultType == TYPEHANDLE_WWW)
                     {
-                        m_UnityWait = Manager.Host.StartCoroutine(UnityWait((WWW)result));
+                        m_UnityWait = Manager.Host.StartCoroutine(UnityWait((WWW) result));
                         return true;
                     }
 
                     if (resultType == TYPEHANDLE_COMMAND)
                     {
-                        Routine.Command c = (Routine.Command)result;
+                        Routine.Command c = (Routine.Command) result;
                         switch (c)
                         {
                             case Routine.Command.Pause:
@@ -697,7 +696,7 @@ namespace BeauRoutine.Internal
                                 return false;
                             case Routine.Command.BreakAndResume:
                                 m_Stack[m_StackPosition--] = null;
-                                ((IDisposable)current).Dispose();
+                                ((IDisposable) current).Dispose();
                                 if (m_StackPosition < 0)
                                 {
                                     Dispose();
@@ -715,7 +714,7 @@ namespace BeauRoutine.Internal
 
                     if (resultType == TYPEHANDLE_DECORATOR)
                     {
-                        RoutineDecorator decorator = (RoutineDecorator)result;
+                        RoutineDecorator decorator = (RoutineDecorator) result;
                         IEnumerator decoratedEnumerator = decorator.Enumerator;
                         bExecuteStack = (decorator.Flags & RoutineDecoratorFlag.Inline) != 0;
 
@@ -743,7 +742,7 @@ namespace BeauRoutine.Internal
 
                         if (resultType == TYPEHANDLE_ROUTINEPHASE)
                         {
-                            RoutinePhase phase = (RoutinePhase)result;
+                            RoutinePhase phase = (RoutinePhase) result;
 
                             switch (phase)
                             {
@@ -760,7 +759,7 @@ namespace BeauRoutine.Internal
                                     {
                                         Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForLateUpdate);
                                         m_YieldPhase = YieldPhase.WaitForLateUpdate;
-                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.LateUpdate && Manager.IsUpdating(RoutinePhase.LateUpdate)? 1 : 0;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.LateUpdate && Manager.IsUpdating(RoutinePhase.LateUpdate) ? 1 : 0;
                                         return true;
                                     }
 
@@ -784,7 +783,15 @@ namespace BeauRoutine.Internal
                                     {
                                         Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForThinkUpdate);
                                         m_YieldPhase = YieldPhase.WaitForThinkUpdate;
-                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.CustomUpdate && Manager.IsUpdating(RoutinePhase.ThinkUpdate) ? 1 : 0;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.ThinkUpdate && Manager.IsUpdating(RoutinePhase.ThinkUpdate) ? 1 : 0;
+                                        return true;
+                                    }
+
+                                case RoutinePhase.RealtimeUpdate:
+                                    {
+                                        Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForRealtimeUpdate);
+                                        m_YieldPhase = YieldPhase.WaitForRealtimeUpdate;
+                                        m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.RealtimeUpdate && Manager.IsUpdating(RoutinePhase.RealtimeUpdate) ? 1 : 0;
                                         return true;
                                     }
 
@@ -846,11 +853,19 @@ namespace BeauRoutine.Internal
                             m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.ThinkUpdate && Manager.IsUpdating(RoutinePhase.ThinkUpdate) ? 1 : 0;
                             return true;
                         }
+
+                        if (resultType == TYPEHANDLE_WAITFORREALTIMEUPDATE)
+                        {
+                            Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForRealtimeUpdate);
+                            m_YieldPhase = YieldPhase.WaitForRealtimeUpdate;
+                            m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.RealtimeUpdate && Manager.IsUpdating(RoutinePhase.RealtimeUpdate) ? 1 : 0;
+                            return true;
+                        }
                     }
 
                     if (WAITFORSECONDS_BYPASS && resultType == TYPEHANDLE_WAITFORSECONDS)
                     {
-                        m_WaitTime = (float)FIELD_WAITFORSECONDS_SECONDS.GetValue(result);
+                        m_WaitTime = (float) FIELD_WAITFORSECONDS_SECONDS.GetValue(result);
                         return true;
                     }
 
@@ -895,7 +910,7 @@ namespace BeauRoutine.Internal
                     {
                         // Check if we need to resize the stack
                         if (m_StackPosition == m_StackSize - 1)
-                            Array.Resize(ref m_Stack, m_StackSize *= 2);
+                        Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
                         CheckForNesting(enumerator);
@@ -905,9 +920,9 @@ namespace BeauRoutine.Internal
                 }
                 else
                 {
-                    bExecuteStack = current is RoutineDecorator && (((RoutineDecorator)current).Flags & RoutineDecoratorFlag.Inline) != 0;
+                    bExecuteStack = current is RoutineDecorator && (((RoutineDecorator) current).Flags & RoutineDecoratorFlag.Inline) != 0;
                     m_Stack[m_StackPosition--] = null;
-                    ((IDisposable)current).Dispose();
+                    ((IDisposable) current).Dispose();
                     if (m_StackPosition < 0)
                     {
                         Dispose();
@@ -995,14 +1010,14 @@ namespace BeauRoutine.Internal
                 return true;
             if (m_HostedByManager)
                 return false;
-            return (m_HasIdentity && (m_HostIdentity.Paused || (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0))
-                || (!m_IgnoreObjectActive && !m_Host.isActiveAndEnabled);
+            return (m_HasIdentity && (m_HostIdentity.Paused || (Manager.Frame.PauseMask & (1 << m_HostIdentity.Group)) != 0)) ||
+                (!m_IgnoreObjectActive && !m_Host.isActiveAndEnabled);
         }
 
         // Returns if this fiber is running.
         public bool IsRunning()
         {
-            return (uint)m_Handle > 0;
+            return (uint) m_Handle > 0;
         }
 
         public bool IsWaiting(YieldPhase inYieldUpdate)
@@ -1030,7 +1045,7 @@ namespace BeauRoutine.Internal
             public WaitEnumerator(Fiber inFiber)
             {
                 m_Fiber = inFiber;
-                m_Current = (uint)m_Fiber.m_Handle;
+                m_Current = (uint) m_Fiber.m_Handle;
             }
 
             public void Dispose()
@@ -1046,7 +1061,7 @@ namespace BeauRoutine.Internal
 
             public bool MoveNext()
             {
-                return m_Current > 0 && (uint)m_Fiber.m_Handle == m_Current;
+                return m_Current > 0 && (uint) m_Fiber.m_Handle == m_Current;
             }
 
             public void Reset()
@@ -1247,6 +1262,8 @@ namespace BeauRoutine.Internal
                 stats.State = RoutineState.WaitCustomUpdate;
             else if (m_YieldPhase == YieldPhase.WaitForThinkUpdate)
                 stats.State = RoutineState.WaitThinkUpdate;
+            else if (m_YieldPhase == YieldPhase.WaitForRealtimeUpdate)
+                stats.State = RoutineState.WaitRealtimeUpdate;
             else
                 stats.State = RoutineState.Running;
 

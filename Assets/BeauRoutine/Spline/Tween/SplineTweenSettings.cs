@@ -5,7 +5,7 @@
  * 
  * File:    SplineTweenSettings.cs
  * Purpose: Settings for a spline tween.
-*/
+ */
 
 using System;
 using UnityEngine;
@@ -55,22 +55,7 @@ namespace BeauRoutine.Splines
         /// <summary>
         /// How a Spline tween influences orientation.
         /// </summary>
-        public SplineOrientation Orient = SplineOrientation.Ignore;
-
-        /// <summary>
-        /// Axis to use for rotation calculations.
-        /// </summary>
-        public Axis OrientAxis = Axis.XYZ;
-
-        /// <summary>
-        /// Up vector for rotations.
-        /// </summary>
-        public Vector3 OrientUp = Vector3.up;
-
-        /// <summary>
-        /// Callback for modifying orientation.
-        /// </summary>
-        public SplineOrientationCallback OrientCallback = null;
+        public SplineOrientationSettings Orient = new SplineOrientationSettings();
 
         #endregion // Orientation
 
@@ -84,28 +69,25 @@ namespace BeauRoutine.Splines
 
             Offset = inSource.Offset;
 
-            Orient = inSource.Orient;
-            OrientAxis = inSource.OrientAxis;
-            OrientUp = inSource.OrientUp;
-            OrientCallback = inSource.OrientCallback;
+            Orient = new SplineOrientationSettings(inSource.Orient);
         }
 
         #region Building
 
-        public SplineTweenSettings WithOrientation(SplineOrientation inOrientation, Axis inAxis = Axis.XYZ)
+        public SplineTweenSettings WithOrientation(SplineOrientationMode inOrientation, Axis inAxis = Axis.XYZ)
         {
-            Orient = inOrientation;
-            OrientAxis = inAxis;
-            OrientUp = Vector3.up;
+            Orient.Mode = inOrientation;
+            Orient.DirectionMask = inAxis;
+            Orient.UpVector = Vector3.up;
 
             return this;
         }
 
-        public SplineTweenSettings WithOrientation(SplineOrientation inOrientation, Axis inAxis, Vector3 inUp)
+        public SplineTweenSettings WithOrientation(SplineOrientationMode inOrientation, Axis inAxis, Vector3 inUp)
         {
-            Orient = inOrientation;
-            OrientAxis = inAxis;
-            OrientUp = inUp;
+            Orient.Mode = inOrientation;
+            Orient.DirectionMask = inAxis;
+            Orient.UpVector = inUp;
 
             return this;
         }

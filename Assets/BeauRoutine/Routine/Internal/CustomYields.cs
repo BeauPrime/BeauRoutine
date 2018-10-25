@@ -58,4 +58,16 @@ namespace BeauRoutine.Internal
             }
         }
     }
+
+    // Waits until after RealtimeUpdate
+    internal class WaitForRealtimeUpdate : CustomYieldInstruction
+    {
+        public override bool keepWaiting
+        {
+            get
+            {
+                return false;
+            }
+        }
+    }
 }
