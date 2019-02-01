@@ -6,7 +6,7 @@
  * File:    TweenUtil.cs
  * Purpose: Easing and interpolation functions for dealing with
  *          Tweens, curves, and interpolation over delta time.
-*/
+ */
 
 // Easing functions ported from Robert Penner's easing functions.
 // http://robertpenner.com/easing
@@ -58,7 +58,7 @@ namespace BeauRoutine
         /// <param name="t">Percent from 0 - 1 to evaluate.</param>
         static public float Evaluate(this Curve inCurve, float t)
         {
-            switch(inCurve)
+            switch (inCurve)
             {
                 case Curve.Smooth:
                     return t * t * (3 - 2 * t);
@@ -95,7 +95,6 @@ namespace BeauRoutine
                 case Curve.QuintInOut:
                     return EvaluateCombined(Curve.QuintIn, Curve.QuintOut, t);
 
-                // Some magic numbers ahead
                 case Curve.BackIn:
                     return t * t * (BACK_MULTIPLIER * t - BACK_SUBTRACT);
                 case Curve.BackOut:
@@ -105,41 +104,40 @@ namespace BeauRoutine
                     return EvaluateCombined(Curve.BackIn, Curve.BackOut, t);
 
                 case Curve.SineIn:
-                    return -(float)Math.Cos(Math.PI * t * 0.5) + 1;
+                    return -(float) Math.Cos(Math.PI * t * 0.5) + 1;
                 case Curve.SineOut:
-                    return (float)Math.Sin(Math.PI * t * 0.5);
+                    return (float) Math.Sin(Math.PI * t * 0.5);
                 case Curve.SineInOut:
-                    return -(float)Math.Cos(Math.PI * t) * 0.5f + 0.5f;
+                    return -(float) Math.Cos(Math.PI * t) * 0.5f + 0.5f;
 
                 case Curve.CircleIn:
-                    return 1 - (float)Math.Sqrt(1 - (t * t));
+                    return 1 - (float) Math.Sqrt(1 - (t * t));
                 case Curve.CircleOut:
-                    return (float)Math.Sqrt((2 - t) * t);
+                    return (float) Math.Sqrt((2 - t) * t);
                 case Curve.CircleInOut:
                     return EvaluateCombined(Curve.CircleIn, Curve.CircleOut, t);
 
-                // So many magic numbers
                 case Curve.BounceIn:
                     {
                         double tt = (1 - t);
                         if (tt < 1 / 2.75f)
                         {
-                            return (float)(1 - (7.5625 * tt * tt));
+                            return (float) (1 - (7.5625 * tt * tt));
                         }
                         else if (tt < 2 / 2.75)
                         {
                             tt -= (1.5 / 2.75);
-                            return (float)(1 - (7.5625 * (tt * tt) + 0.75));
+                            return (float) (1 - (7.5625 * (tt * tt) + 0.75));
                         }
                         else if (tt < 2.5 / 2.75)
                         {
                             tt -= (2.25 / 2.75);
-                            return (float)(1 - (7.5625 * (tt * tt) + 0.9375));
+                            return (float) (1 - (7.5625 * (tt * tt) + 0.9375));
                         }
                         else
                         {
                             tt -= (2.625 / 2.75);
-                            return (float)(1 - (7.5625 * (tt * tt) + 0.984375));
+                            return (float) (1 - (7.5625 * (tt * tt) + 0.984375));
                         }
                     }
                 case Curve.BounceOut:
@@ -147,39 +145,38 @@ namespace BeauRoutine
                         double tt = t;
                         if (tt < 1 / 2.75)
                         {
-                            return (float)(7.5625 * tt * tt);
+                            return (float) (7.5625 * tt * tt);
                         }
                         else if (tt < 2 / 2.75)
                         {
                             tt -= (1.5 / 2.75);
-                            return (float)(7.5625f * (tt * tt) + 0.75f);
+                            return (float) (7.5625f * (tt * tt) + 0.75f);
                         }
                         else if (tt < 2.5 / 2.75f)
                         {
                             tt -= (2.25 / 2.75);
-                            return (float)(7.5625 * (tt * tt) + 0.9375);
+                            return (float) (7.5625 * (tt * tt) + 0.9375);
                         }
                         else
                         {
                             tt -= (2.625 / 2.75);
-                            return (float)(7.5625 * (tt * tt) + 0.984375);
+                            return (float) (7.5625 * (tt * tt) + 0.984375);
                         }
                     }
                 case Curve.BounceInOut:
                     return EvaluateCombined(Curve.BounceIn, Curve.BounceOut, t);
 
-                // What is even happening
                 case Curve.ElasticIn:
                     if (t <= 0 || t >= 1)
                         return t;
 
                     float inverse = t - 1;
-                    return (float)(-1 * Math.Pow(2, 10 * inverse) * Math.Sin((inverse - ELASTIC_SUBTRACT) * (2 * Math.PI) / ELASTIC_DIVIDER));
+                    return (float) (-1 * Math.Pow(2, 10 * inverse) * Math.Sin((inverse - ELASTIC_SUBTRACT) * (2 * Math.PI) / ELASTIC_DIVIDER));
                 case Curve.ElasticOut:
                     if (t <= 0 || t >= 1)
                         return t;
 
-                    return (float)(1 * Math.Pow(2, -10 * t) * Math.Sin((t - ELASTIC_SUBTRACT) * (2 * Math.PI) / ELASTIC_DIVIDER)) + 1;
+                    return (float) (1 * Math.Pow(2, -10 * t) * Math.Sin((t - ELASTIC_SUBTRACT) * (2 * Math.PI) / ELASTIC_DIVIDER)) + 1;
                 case Curve.ElasticInOut:
                     return EvaluateCombined(Curve.ElasticIn, Curve.ElasticOut, t);
 
@@ -192,13 +189,13 @@ namespace BeauRoutine
         // Evaluates two curves, switching between them halfway through
         static public float EvaluateCombined(Curve inA, Curve inB, float t)
         {
-            return (t <= 0.5f
-                ? 0.5f * Evaluate(inA, t * 2)
-                : 0.5f + 0.5f * Evaluate(inB, t * 2 - 1)
-                );
+            return (t <= 0.5f ?
+                0.5f * Evaluate(inA, t * 2) :
+                0.5f + 0.5f * Evaluate(inB, t * 2 - 1)
+            );
         }
 
-        #endregion
+        #endregion // Curves
 
         #region Time-Independent Lerp
 
@@ -229,7 +226,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent)
         {
-            return (float)(1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod));
+            return (float) (1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod));
         }
 
         /// <summary>
@@ -239,7 +236,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent, float inPeriod)
         {
-            return (float)(1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod));
+            return (float) (1.0f - Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod));
         }
 
         /// <summary>
@@ -249,7 +246,7 @@ namespace BeauRoutine
         /// </summary>
         static public float Lerp(float inPercent, float inPeriod, float inDeltaTime)
         {
-            return (float)(1.0f - Math.Exp(-inPercent * inDeltaTime / inPeriod));
+            return (float) (1.0f - Math.Exp(-inPercent * inDeltaTime / inPeriod));
         }
 
         /// <summary>
@@ -259,7 +256,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent)
         {
-            return (float)Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod);
+            return (float) Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / s_DefaultLerpPeriod);
         }
 
         /// <summary>
@@ -269,7 +266,7 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent, float inPeriod)
         {
-            return (float)Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod);
+            return (float) Math.Exp(-inPercent * BeauRoutine.Routine.DeltaTime / inPeriod);
         }
 
         /// <summary>
@@ -279,9 +276,29 @@ namespace BeauRoutine
         /// </summary>
         static public float LerpDecay(float inPercent, float inPeriod, float inDeltaTime)
         {
-            return (float)(Math.Exp(-inPercent * inDeltaTime / inPeriod));
+            return (float) (Math.Exp(-inPercent * inDeltaTime / inPeriod));
         }
 
-        #endregion
+        #endregion // Time-Independent Lerp
+
+        #region Shortcuts
+
+        /// <summary>
+        /// Starts a Tween as a Routine.
+        /// </summary>
+        static public Routine Play(this Tween inTween)
+        {
+            return Routine.Start(inTween);
+        }
+
+        /// <summary>
+        /// Starts a Tween as a Routine, hosted by the given host.
+        /// </summary>
+        static public Routine Play(this Tween inTween, UnityEngine.MonoBehaviour inHost)
+        {
+            return Routine.Start(inHost, inTween);
+        }
+
+        #endregion // Shortcuts
     }
 }

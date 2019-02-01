@@ -342,6 +342,9 @@ Routine.Start( this, tween );
 
 // Or combine it into one line.
 Routine.Start( this, Tween.Float(...) );
+
+// Or use the .Play extension method!
+Tween.Float(...).Play( this );
 ```
 
 ### Modifying a Tween
@@ -538,9 +541,11 @@ You can calculate the total time scale that will be applied to BeauRoutines on a
 
 ### Update Phase
 
-By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of six times: ``LateUpdate``, ``Update``, ``FixedUpdate``, ``ThinkUpdate``, ``CustomUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
+By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of six times: ``LateUpdate``, ``Update``, ``FixedUpdate``, ``ThinkUpdate``, ``CustomUpdate``, ``RealtimeUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
 
 FixedUpdate routines work off of a consistent delta time.
+
+RealtimeUpdate routines work off of unscaled delta time - they aren't affected by ``Time.timeScale``. This allows you to use Unity's timeScale to slow or stop other systems (physics, for example), while leaving other routines unaffected.
 
 ThinkUpdate and CustomUpdate routines execute at custom intervals, after the Update phase. This evaluates as an Update, followed by a possible ThinkUpdate, followed by a possible CustomUpdate. The intervals at which they are executed can be changed by setting the ``Routine.Settings.ThinkUpdateInterval`` and ``Routine.Settings.CustomUpdateInterval`` properties. By default, these are set to 1/10th of a second for ThinkUpdate and 1/8th of a second for CustomUpdate.
 
@@ -1413,6 +1418,8 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``RevertOnCancel`` | Tween will revert back to starting value if cancelled mid-execution. |
 | ``ForceOnCancel`` | Tween will skip to its end value if cancelled mid-execution. |
 | ``KeepOnCancel`` | [Default] Tween will keep its current value if cancelled mid-execution. |
+| **Playing** | |
+| ``Play`` | Starts a Routine to play the Tween. Shortcut for ``Routine.Start( tween )`` or ``Routine.Start( host, tween )``. |
 
 ### Utilities
 

@@ -1,0 +1,14 @@
+{
+    "name": "BeauRoutine-Extensions",
+    "references": [
+        "BeauRoutine"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}

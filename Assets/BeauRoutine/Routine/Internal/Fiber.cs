@@ -32,7 +32,6 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_FLOAT = typeof(float).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_DOUBLE = typeof(double).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_ROUTINE = typeof(Routine).TypeHandle.Value;
-        static private readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_COMMAND = typeof(Routine.Command).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
         static private readonly IntPtr TYPEHANDLE_WAITFORFIXEDUPDATE = typeof(WaitForFixedUpdate).TypeHandle.Value;
@@ -47,6 +46,14 @@ namespace BeauRoutine.Internal
         static private readonly IntPtr TYPEHANDLE_WAITFORSECONDS = typeof(WaitForSeconds).TypeHandle.Value;
         static private readonly FieldInfo FIELD_WAITFORSECONDS_SECONDS = typeof(WaitForSeconds).GetField("m_Seconds", BindingFlags.Instance | BindingFlags.NonPublic);
         static private readonly bool WAITFORSECONDS_BYPASS = FIELD_WAITFORSECONDS_SECONDS != null;
+
+        // Disable obsolete WWW warning
+        #pragma warning disable 612, 618
+
+        static private readonly IntPtr TYPEHANDLE_WWW = typeof(WWW).TypeHandle.Value;
+
+        // Restore obsolete WWW warning
+        #pragma warning restore 612, 618
 
         private bool m_Paused;
         private bool m_Disposing;
@@ -678,8 +685,14 @@ namespace BeauRoutine.Internal
 
                     if (resultType == TYPEHANDLE_WWW)
                     {
+                        // Disable obsolete WWW warning
+                        #pragma warning disable 612, 618
+
                         m_UnityWait = Manager.Host.StartCoroutine(UnityWait((WWW) result));
                         return true;
+
+                        // Restore obsolete WWW warning
+                        #pragma warning restore 612, 618
                     }
 
                     if (resultType == TYPEHANDLE_COMMAND)
@@ -1126,12 +1139,18 @@ namespace BeauRoutine.Internal
 
         #endif
 
+        // Disable obsolete WWW warning
+        #pragma warning disable 612, 618
+
         // Waits for the WWW to finish loading
         private IEnumerator UnityWait(WWW inWWW)
         {
             yield return inWWW;
             m_UnityWait = null;
         }
+
+        // Restore obsolete WWW warning
+        #pragma warning restore 612, 618
 
         #endregion
 
