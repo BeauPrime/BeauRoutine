@@ -27,7 +27,6 @@ using UnityEngine;
 using UnityEngine.Events;
 
 #if !DISABLE_THREADING
-using System.Collections.Generic;
 using System.Threading;
 #endif // DISABLE_THREADING
 
@@ -237,7 +236,7 @@ namespace BeauRoutine
                 {
                     m_Event.RemoveListener(OnInvoke);
                     if (m_Listener != null)
-                        m_Event.AddListener(m_Listener);
+                        m_Event.RemoveListener(m_Listener);
                 }
 
                 m_Phase = 0;
@@ -318,7 +317,7 @@ namespace BeauRoutine
                 {
                     m_Event.RemoveListener(OnInvoke);
                     if (m_Listener != null)
-                        m_Event.AddListener(m_Listener);
+                        m_Event.RemoveListener(m_Listener);
                 }
 
                 m_Phase = 0;
@@ -399,7 +398,7 @@ namespace BeauRoutine
                 {
                     m_Event.RemoveListener(OnInvoke);
                     if (m_Listener != null)
-                        m_Event.AddListener(m_Listener);
+                        m_Event.RemoveListener(m_Listener);
                 }
 
                 m_Phase = 0;
@@ -480,7 +479,7 @@ namespace BeauRoutine
                 {
                     m_Event.RemoveListener(OnInvoke);
                     if (m_Listener != null)
-                        m_Event.AddListener(m_Listener);
+                        m_Event.RemoveListener(m_Listener);
                 }
 
                 m_Phase = 0;
@@ -561,7 +560,7 @@ namespace BeauRoutine
                 {
                     m_Event.RemoveListener(OnInvoke);
                     if (m_Listener != null)
-                        m_Event.AddListener(m_Listener);
+                        m_Event.RemoveListener(m_Listener);
                 }
 
                 m_Phase = 0;

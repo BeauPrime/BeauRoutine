@@ -466,11 +466,19 @@ namespace BeauRoutine
         }
 
         // Runs all the given IEnumerators
-        static private IEnumerator CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
+        static private ParallelFibers CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
         {
             Manager m = Manager.Get();
             if (m != null)
                 return new ParallelFibers(m, inEnumerators, inbRace);
+            return null;
+        }
+
+        static private ParallelFibers CreateEmptyParallel(bool inbRace)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+                return new ParallelFibers(m, new List<IEnumerator>(), inbRace);
             return null;
         }
 
@@ -833,58 +841,144 @@ namespace BeauRoutine
         #region For Each
 
         /// <summary>
-        /// Executes, in order, an enumerator function for every element in the given list.
+        /// Executes, in order, an enumerator function for every element in the given enumerable.
         /// </summary>
-        static public IEnumerator ForEach<T>(IList<T> inList, Func<T, IEnumerator> inOperation)
+        static public IEnumerator ForEach<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation)
         {
-            if (inList != null && inOperation != null)
+            if (inEnumerable != null && inOperation != null)
             {
-                foreach (var obj in inList)
+                foreach (var obj in inEnumerable)
                     yield return inOperation(obj);
             }
         }
 
         /// <summary>
-        /// Executes, in parallel, an enumerator function for every element in the given list.
+        /// Executes, in order, an enumerator function for every element in the given enumerable.
         /// </summary>
-        static public IEnumerator ForEachParallel<T>(IList<T> inList, Func<T, IEnumerator> inOperation)
+        static public IEnumerator ForEach<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation)
         {
-            int count = 0;
-            if (inList != null && inOperation != null && (count = inList.Count) > 0)
+            if (inEnumerable != null && inOperation != null)
             {
-                IEnumerator[] enumerators = new IEnumerator[count];
-                for (int i = 0; i < count; ++i)
-                    enumerators[i] = inOperation(inList[i]);
-                yield return Routine.Inline(
-                    Routine.Combine(enumerators)
-                );
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                    yield return inOperation(idx++, obj);
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                ParallelFibers combine = CreateEmptyParallel(false);
+                foreach (var obj in inEnumerable)
+                {
+                    combine.AddEnumerator(inOperation(obj));
+                }
+                yield return Routine.Inline(combine);
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                ParallelFibers combine = CreateEmptyParallel(false);
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                {
+                    combine.AddEnumerator(inOperation(idx++, obj));
+                }
+                yield return Routine.Inline(combine);
             }
         }
 
         /// <summary>
         /// Executes, in parallel chunks, an enumerator function for every element in the given list.
         /// </summary>
-        static public IEnumerator ForEachParallel<T>(IList<T> inList, Func<T, IEnumerator> inOperation, int inChunkSize)
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation, int inChunkSize)
         {
-            int count = 0;
-            if (inList != null && inOperation != null && (count = inList.Count) > 0)
+            if (inEnumerable != null && inOperation != null)
             {
-            int chunkSize = Math.Min(inChunkSize, count);
-            int numItems = 0;
-            IEnumerator[] enumerators = new IEnumerator[chunkSize];
-            for (int i = 0; i < count; ++i)
-            {
-            enumerators[numItems++] = inOperation(inList[i]);
-            if (i == count - 1 || numItems == chunkSize)
-            {
-            yield return Routine.Inline(
-            Routine.Combine(enumerators)
-            );
+                IEnumerator[] block = new IEnumerator[inChunkSize];
+                int numItems = 0;
+                foreach (var obj in inEnumerable)
+                {
+                    IEnumerator operation = inOperation(obj);
+                    if (operation != null)
+                    {
+                        block[numItems++] = operation;
 
-            for (int j = 0; j < numItems; ++j)
-            enumerators[j] = null;
-            numItems = 0;
+                        if (numItems == inChunkSize)
+                        {
+                            yield return Routine.Inline(
+                                Routine.Combine(block)
+                            );
+
+                            for (int i = numItems - 1; i >= 0; --i)
+                                block[i] = null;
+                            numItems = 0;
+                        }
                     }
+                }
+
+                if (numItems > 0)
+                {
+                    yield return Routine.Inline(
+                        Routine.Combine(block)
+                    );
+
+                    for (int i = numItems - 1; i >= 0; --i)
+                        block[i] = null;
+                    numItems = 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel chunks, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation, int inChunkSize)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                IEnumerator[] block = new IEnumerator[inChunkSize];
+                int numItems = 0;
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                {
+                    IEnumerator operation = inOperation(idx++, obj);
+                    if (operation != null)
+                    {
+                        block[numItems++] = operation;
+
+                        if (numItems == inChunkSize)
+                        {
+                            yield return Routine.Inline(
+                                Routine.Combine(block)
+                            );
+
+                            for (int i = numItems - 1; i >= 0; --i)
+                                block[i] = null;
+                            numItems = 0;
+                        }
+                    }
+                }
+
+                if (numItems > 0)
+                {
+                    yield return Routine.Inline(
+                        Routine.Combine(block)
+                    );
+
+                    for (int i = numItems - 1; i >= 0; --i)
+                        block[i] = null;
+                    numItems = 0;
                 }
             }
         }
@@ -915,10 +1009,10 @@ namespace BeauRoutine
         static public IEnumerator Yield(params object[] inObjects)
         {
             if (inObjects == null || inObjects.Length == 0)
-            return null;
+                return null;
 
             if (inObjects.Length == 1)
-            return Yield(inObjects[0]);
+                return Yield(inObjects[0]);
 
             return Routine.Inline(new YieldableArray((object[]) inObjects.Clone()));
         }

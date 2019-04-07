@@ -8,7 +8,6 @@
 */
 
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeauRoutine
 {

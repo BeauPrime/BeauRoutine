@@ -9,7 +9,6 @@
  */
 
 using System;
-using UnityEngine;
 
 namespace BeauRoutine.Extensions
 {
@@ -18,11 +17,18 @@ namespace BeauRoutine.Extensions
     /// Starts with Base, adds random value between ModifierMin and ModifierMax.
     /// </summary>
     [Serializable]
-    public class FloatRange
+    public struct FloatRange
     {
         public float Base;
         public float ModifierMin;
         public float ModifierMax;
+
+        public FloatRange(float inBase, float inModMin = 0, float inModMax = 0)
+        {
+            Base = inBase;
+            ModifierMin = inModMin;
+            ModifierMax = inModMax;
+        }
 
         public float Generate()
         {

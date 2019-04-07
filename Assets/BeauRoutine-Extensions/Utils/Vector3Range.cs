@@ -18,11 +18,18 @@ namespace BeauRoutine.Extensions
     /// Starts with Base, adds random value between ModifierMin and ModifierMax.
     /// </summary>
     [Serializable]
-    public class Vector3Range
+    public struct Vector3Range
     {
         public Vector3 Base;
         public Vector3 ModifierMin;
         public Vector3 ModifierMax;
+
+        public Vector3Range(Vector3 inBase, Vector3 inModMin = default(Vector3), Vector3 inModMax =  default(Vector3))
+        {
+            Base = inBase;
+            ModifierMin = inModMin;
+            ModifierMax = inModMax;
+        }
 
         public Vector3 Generate()
         {

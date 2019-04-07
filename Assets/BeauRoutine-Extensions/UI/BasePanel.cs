@@ -9,7 +9,6 @@
 
 using System.Collections;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace BeauRoutine.Extensions
 {
@@ -41,8 +40,8 @@ namespace BeauRoutine.Extensions
 
         #endregion // Inspector
 
-        protected Routine m_ShowHideAnim;
-        protected bool m_Showing;
+        private Routine m_ShowHideAnim;
+        private bool m_Showing;
 
         private bool m_StateInitialized;
 
@@ -79,11 +78,26 @@ namespace BeauRoutine.Extensions
 
         #region Show/Hide
 
+        public bool IsShowing()
+        {
+            return m_Showing;
+        }
+
+        public bool IsTransitioning()
+        {
+            return m_ShowHideAnim;
+        }
+
         public IEnumerator Show(float inDelay = 0)
         {
-            if (!m_Showing || !m_StateInitialized)
+            if (!m_StateInitialized)
             {
-                m_StateInitialized = true;
+                InstantShow();
+                return null;
+            }
+
+            if (!m_Showing)
+            {
                 m_Showing = true;
                 m_ShowHideAnim.Replace(this, ShowImpl(inDelay)).ExecuteWhileDisabled();
             }
@@ -97,16 +111,23 @@ namespace BeauRoutine.Extensions
             m_Showing = true;
             m_StateInitialized = true;
 
+            OnShow(true);
             InstantTransitionToShow();
             SetInputState(true);
         }
 
         public IEnumerator Hide(float inDelay = 0)
         {
-            if (m_Showing || !m_StateInitialized)
+            if (!m_StateInitialized)
             {
-                m_StateInitialized = true;
+                InstantHide();
+                return null;
+            }
+
+            if (m_Showing)
+            {
                 m_Showing = false;
+                SetInputState(false);
                 m_ShowHideAnim.Replace(this, HideImpl(inDelay)).ExecuteWhileDisabled();
             }
 
@@ -119,6 +140,7 @@ namespace BeauRoutine.Extensions
             m_Showing = false;
             m_StateInitialized = true;
 
+            OnHide(true);
             InstantTransitionToHide();
             SetInputState(false);
 
@@ -137,6 +159,7 @@ namespace BeauRoutine.Extensions
             if (inDelay > 0)
                 yield return inDelay;
 
+            OnShow(false);
             yield return Routine.Inline(TransitionToShow());
             SetInputState(true);
         }
@@ -148,6 +171,7 @@ namespace BeauRoutine.Extensions
             if (inDelay > 0)
                 yield return inDelay;
 
+            OnHide(false);
             yield return Routine.Inline(TransitionToHide());
 
             if (m_RootTransform)
@@ -175,8 +199,11 @@ namespace BeauRoutine.Extensions
 
         #region Abstract
 
+        protected virtual void OnShow(bool inbInstant) { }
         protected abstract IEnumerator TransitionToShow();
         protected abstract void InstantTransitionToShow();
+
+        protected virtual void OnHide(bool inbInstant) { }
         protected abstract IEnumerator TransitionToHide();
         protected abstract void InstantTransitionToHide();
 

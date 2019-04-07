@@ -7,7 +7,6 @@
  * Purpose: Contains shortcuts for splines.
  */
 
-using System;
 using UnityEngine;
 
 namespace BeauRoutine.Splines

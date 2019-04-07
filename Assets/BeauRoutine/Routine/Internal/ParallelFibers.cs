@@ -5,7 +5,7 @@
  * 
  * File:    ParallelFibers.cs
  * Purpose: Iterator enabling pseudo-parallel execution of coroutines.
-*/
+ */
 
 using System;
 using System.Collections;
@@ -33,6 +33,12 @@ namespace BeauRoutine.Internal
             m_Fibers = new List<Fiber>(m_Enumerators.Count);
         }
 
+        internal void AddEnumerator(IEnumerator inEnumerator)
+        {
+            if (inEnumerator != null && m_Enumerators != null)
+                m_Enumerators.Add(inEnumerator);
+        }
+
         void INestedFiberContainer.RemoveFiber(Fiber inFiber)
         {
             // This will only get called during Fiber.Dispose
@@ -56,7 +62,7 @@ namespace BeauRoutine.Internal
                 for (int i = 0; i < m_Enumerators.Count; ++i)
                 {
                     if (m_Enumerators[i] != null)
-                        ((IDisposable)m_Enumerators[i]).Dispose();
+                        ((IDisposable) m_Enumerators[i]).Dispose();
                 }
                 m_Enumerators.Clear();
                 m_Enumerators = null;

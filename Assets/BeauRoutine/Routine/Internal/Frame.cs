@@ -7,8 +7,6 @@
  * Purpose: Data needed for an individual frame of routine execution.
 */
 
-using UnityEngine;
-
 namespace BeauRoutine.Internal
 {
     /// <summary>

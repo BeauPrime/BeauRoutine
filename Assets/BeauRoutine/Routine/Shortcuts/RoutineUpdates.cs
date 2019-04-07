@@ -5,11 +5,11 @@
  * 
  * File:    RoutineUpdates.cs
  * Purpose: Methods for setting update functions.
-*/
+ */
 
-using BeauRoutine.Internal;
 using System;
 using System.Collections;
+using BeauRoutine.Internal;
 using UnityEngine;
 
 namespace BeauRoutine
@@ -24,6 +24,7 @@ namespace BeauRoutine
         private const string ROUTINE_UPDATER_FIXEDUPDATE = Fiber.RESERVED_NAME_PREFIX + "FixedUpdate";
         private const string ROUTINE_UPDATER_THINKUPDATE = Fiber.RESERVED_NAME_PREFIX + "ThinkUpdate";
         private const string ROUTINE_UPDATER_CUSTOMUPDATE = Fiber.RESERVED_NAME_PREFIX + "CustomUpdate";
+        private const string ROUTINE_UPDATER_REALTIMEUPDATE = Fiber.RESERVED_NAME_PREFIX + "RealtimeUpdate";
         private const string ROUTINE_UPDATER_MANUAL = Fiber.RESERVED_NAME_PREFIX + "Manual";
 
         static private string GetPhaseUpdaterName(RoutinePhase inPhase)
@@ -47,6 +48,9 @@ namespace BeauRoutine
 
                 case RoutinePhase.ThinkUpdate:
                     return ROUTINE_UPDATER_THINKUPDATE;
+
+                case RoutinePhase.RealtimeUpdate:
+                    return ROUTINE_UPDATER_REALTIMEUPDATE;
 
                 default:
                     return string.Empty;

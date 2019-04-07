@@ -7,7 +7,6 @@
  * Purpose: Defines a common interface for splines, along with factory methods.
  */
 
-using System;
 using System.Collections.Generic;
 using UnityEngine;
 

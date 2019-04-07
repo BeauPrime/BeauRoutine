@@ -9,7 +9,6 @@
 */
 
 using BeauRoutine.Internal;
-using System;
 using UnityEngine;
 
 namespace BeauRoutine
