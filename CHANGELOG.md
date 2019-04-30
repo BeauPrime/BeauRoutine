@@ -1,3 +1,45 @@
+### Version 0.10.0
+**30 April 2019**
+
+
+
+#### Features
+
+* Added new tweens for
+** Camera
+** Material
+** Transform
+** SkinnedMeshRenderer
+** Scrollbar
+** Slider
+** ScrollRect
+** Light
+* Added two new packages: BeauRoutine-Extensions and BeauRoutine-Splines
+* Added ``GetLock`` to retrieve a lock on a BeauRoutine. A BeauRoutine will not execute if it is locked.
+* Added ``RealtimeUpdate`` phase. This executes at a consistent rate (``Time.unscaledTime``)
+* Added shortcut function ``Play`` to tweens
+* Added support for the Unity package manager
+
+#### Fixes
+
+* Fixed NullReferenceException when calling SetUpdateRoutine while application is closing
+* Fixed memory leak in ``Routine.Delay``
+* Fixed memory leak in ``UnityEvent.WaitForInvoke``
+* Fixed improper timing when yielding a ThinkUpdate during ThinkUpdate
+* Fixed ``TransformUtil.SetRotation`` only applying to local rotation
+
+#### Improvements
+
+* Tween instances are now pooled
+* Expanded allowed collection types for ``Routine.ForEach`` and ``Routine.ForEachParallel``
+* Added shortcut for common Future create-and-execute pattern
+* Resolved obsolete UnityEngine.WWW warnings
+* Added optional "up" parameter for ``Transform.LookAt`` tweens
+
+#### Breaking Changes
+
+#### Documentation
+
 ### Version 0.9.1
 **10 April 2018**
 
