@@ -15,7 +15,7 @@ using UnityEditor;
 
 namespace BeauRoutine.Editor
 {
-    static public class ProjectHooks
+    static internal class ProjectHooks
     {
         [InitializeOnLoadMethod]
         static private void ApplyScriptExecutionOrders()

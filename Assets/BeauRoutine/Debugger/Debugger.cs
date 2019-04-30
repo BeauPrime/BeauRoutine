@@ -21,7 +21,7 @@ using BeauRoutine.Internal;
 
 namespace BeauRoutine.Editor
 {
-    public class Debugger : EditorWindow
+    internal class Debugger : EditorWindow
     {
         private const float FIELD_NAME_WIDTH = 80;
         private const float BAR_HEIGHT = 16;
