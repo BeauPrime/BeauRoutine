@@ -1,7 +1,7 @@
 ### Version 0.10.0
 **30 April 2019**
 
-
+Added Unity package manager support. Introduced Extensions and Splines packages. New tween types, bug fixes, and shortcut methods.
 
 #### Features
 
@@ -35,10 +35,6 @@
 * Added shortcut for common Future create-and-execute pattern
 * Resolved obsolete UnityEngine.WWW warnings
 * Added optional "up" parameter for ``Transform.LookAt`` tweens
-
-#### Breaking Changes
-
-#### Documentation
 
 ### Version 0.9.1
 **10 April 2018**
