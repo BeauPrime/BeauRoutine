@@ -1,7 +1,7 @@
 # BeauRoutine
 
-**Current Version: 0.9.1**  
-Updated 10 April 2018 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
+**Current Version: 0.10.0**  
+Updated 30 April 2019 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
@@ -342,6 +342,9 @@ Routine.Start( this, tween );
 
 // Or combine it into one line.
 Routine.Start( this, Tween.Float(...) );
+
+// Or use the .Play extension method!
+Tween.Float(...).Play( this );
 ```
 
 ### Modifying a Tween
@@ -538,9 +541,11 @@ You can calculate the total time scale that will be applied to BeauRoutines on a
 
 ### Update Phase
 
-By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of six times: ``LateUpdate``, ``Update``, ``FixedUpdate``, ``ThinkUpdate``, ``CustomUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
+By default, BeauRoutines update during Unity's LateUpdate phase. This default can be changed, however, and BeauRoutines can be set to execute at one of six times: ``LateUpdate``, ``Update``, ``FixedUpdate``, ``ThinkUpdate``, ``CustomUpdate``, ``RealtimeUpdate``, and ``Manual``. Manual updates, as the name implies, are called manually and have several rules and restrictions, which are documented [here](#manual-updates).
 
 FixedUpdate routines work off of a consistent delta time.
+
+RealtimeUpdate routines work off of unscaled delta time - they aren't affected by ``Time.timeScale``. This allows you to use Unity's timeScale to slow or stop other systems (physics, for example), while leaving other routines unaffected.
 
 ThinkUpdate and CustomUpdate routines execute at custom intervals, after the Update phase. This evaluates as an Update, followed by a possible ThinkUpdate, followed by a possible CustomUpdate. The intervals at which they are executed can be changed by setting the ``Routine.Settings.ThinkUpdateInterval`` and ``Routine.Settings.CustomUpdateInterval`` properties. By default, these are set to 1/10th of a second for ThinkUpdate and 1/8th of a second for CustomUpdate.
 
@@ -560,7 +565,7 @@ Routine.Start( this, MyCoroutine() ).GetPhase(); // GetPhase will return FixedUp
 Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update ); // This will execute during Update
 ```
 
-Yielding a ``WaitForFixedUpdate``, ``WaitForEndOfFrame``, ``WaitForLateUpdate``, ``WaitForUpdate``, ``WaitForThinkUpdate``, ``WaitForCustomUpdate``, or any ``RoutinePhase`` will interrupt the normal timing of a BeauRoutine, and will instead execute it during those events. This does not apply for Manual updates, however; see the [Manual Updates](#manual-updates) section for more information. 
+Yielding a ``WaitForFixedUpdate``, ``WaitForEndOfFrame``, ``WaitForLateUpdate``, ``WaitForUpdate``, ``WaitForThinkUpdate``, ``WaitForCustomUpdate``, ``WaitForRealtimeUpdate``, or any ``RoutinePhase`` will interrupt the normal timing of a BeauRoutine, and will instead execute it during those events. This does not apply for Manual updates, however; see the [Manual Updates](#manual-updates) section for more information. 
 
 ```csharp
 Routine.Start( this, MyCoroutine() ).SetPhase( RoutinePhase.Update );
@@ -1147,6 +1152,7 @@ These functions can be called directly on a Routine handle.
 | ``Resume`` | Resumes the BeauRoutine. |
 | ``GetPaused`` | Returns if the BeauRoutine is paused. |
 | ``Delay`` | Delays the BeauRoutine by the given number of seconds. This is cumulative. |
+| ``GetLock`` | Locks the BeauRoutine and returns a handle to the lock. All locks must be released before the BeauRoutine will resume. |
 | **Stopping** | |
 | ``Stop`` | Stops the BeauRoutine. |
 | ``Replace`` | Stops the BeauRoutine and replaces it with another one. |
@@ -1208,6 +1214,9 @@ These functions can be called directly on a Routine handle.
 | ``Routine.WaitForEndOfFrame`` | Waits until rendering of the current frame completes. |
 | ``Routine.WaitForLateUpdate`` | Waits until LateUpdate completes. |
 | ``Routine.WaitForUpdate`` | Waits until Update completes. |
+| ``Routine.WaitForRealtimeUpdate`` | Waits until RealtimeUpdate completes. |
+| ``Routine.WaitForThinkUpdate`` | Waits until ThinkUpdate completes. |
+| ``Routine.WaitForCustomUpdate`` | Waits until CustomUpdate completes. |
 | **Execution** | |
 | ``Routine.Delay`` | Calls a function after the specified number of seconds. |
 | ``Routine.Call`` | Calls a function at the end of the frame. |
@@ -1228,8 +1237,8 @@ These functions can be called directly on a Routine handle.
 | **Misc** | |
 | ``Routine.Timer`` | Counts down for the given number of seconds, with a callback for time remaining. |
 | ``Routine.Accumulate`` | Counts up for the given number of seconds, with a callback for time accumulated. |
-| ``Routine.ForEach`` | Generates and executes, in sequence, a coroutine for every element in the given list. |
-| ``Routine.ForEachParallel`` | Generates and executes, in parallel, a coroutine for every element in the given list. |
+| ``Routine.ForEach`` | Generates and executes, in sequence, a coroutine for every element in the given collection. |
+| ``Routine.ForEachParallel`` | Generates and executes, in parallel, a coroutine for every element in the given collection. |
 
 ### Routine Extensions
 
@@ -1244,15 +1253,16 @@ BeauRoutine contains a few extension methods for generating coroutines.
 | | ``WaitToCompleteState`` | Waits until the Animator is playing and exits the given state. |
 | | ``WaitForState`` | Waits until the Animator is playing the given state. |
 | | ``WaitForNotState`` | Waits until the Animator is not playing the given state. |
-| UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked. |
+| UnityEvent | ``WaitForInvoke `` | Waits until the UnityEvent has been invoked, optionally invoking a callback. |
 
-BeauRoutine also provides a set of extension methods to set an Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine on a MonoBehaviour as a substitute for managing those routines inside the component itself.
+BeauRoutine also provides a set of extension methods to set an update phase routine on a MonoBehaviour as a substitute for managing those routines inside the component itself.
 
 | Type | Function | Description |
 | ---- | -------- | ----------- |
-| MonoBehaviour | ``SetUpdateRoutine`` | Sets a single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine for the MonoBehaviour. |
-| | ``SetUpdateRoutineGenerator`` | Sets a single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdate routine generator. |
-| | ``GetUpdateRoutine`` | Returns the single Update/FixedUpdate/LateUpdate/ThinkUpdate/CustomUpdatee routine for the MonoBehaviour. |
+| MonoBehaviour | ``SetUpdateRoutine`` | Sets a single update phase routine for the MonoBehaviour. |
+| | ``SetUpdateRoutineGenerator`` | Sets a single update phase routine generator. |
+| | ``GetUpdateRoutine`` | Returns the single update phase routine for the MonoBehaviour. |
+| | ``ClearUpdateRoutine`` | Clears the single update phase routine for the MonoBehaviour. |
 
 Note that these work with a reserved set of names. See [On Reserved Routine Names](#on-reserved-routine-names) for more information.
 
@@ -1323,6 +1333,8 @@ BeauRoutine contains methods for creating Futures for simple tasks.
 | **Function Calls** | |
 | ``Future.Call.Func<T>`` | T | Completes with the return value of the given function. |
 | ``Future.Call.Resolve<T>`` | T | Creates and passes a future into the given function for it to complete or fail. |
+| **Shortcuts** | |
+| ``Future.CreateLinked<T>`` | T | Creates a Future and starts a BeauRoutine with given IEnumerator function and the future as its first argument. |
 
 ### Tween Shortcuts
 
@@ -1349,7 +1361,7 @@ Tween extension methods currently exist for the following types:
 | Type | Property | Function |
 | ---- | -------- | -------- |
 | Transform | Position | ``MoveTo``, ``MoveToWithSpeed`` |
-| | Scale | ``ScaleTo`` |
+| | Scale | ``ScaleTo``, ``SquashStretchTo`` |
 | | Rotation | ``RotateTo``, ``LookAt`` |
 | | Transform | ``TransformTo`` |
 | RectTransform | Anchored Position | ``AnchorPosTo`` |
@@ -1362,16 +1374,30 @@ Tween extension methods currently exist for the following types:
 | | Pan | ``PanTo`` |
 | Camera | Orthographic Size | ``OrthoSizeTo`` |
 | | Field of View | ``FieldOfViewTo`` |
+| | Background Color | ``BackgroundColorTo``, ``BackgroundGradient`` |
 | **Rendering** | | |
 | SpriteRenderer | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
-| TextMesh | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
-| Material | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
+| TextMesh | Color/Alpha Property | ``ColorTo``, ``FadeTo``, ``Gradient`` |
+| Material | Color/Alpha Property | ``ColorTo``, ``FadeTo``, ``Gradient`` |
+| | Float Property | ``FloatTo`` |
+| | Vector4 Property | ``VectorTo`` |
+| Light | Range | ``RangeTo`` |
+| | Intensity | ``IntensityTo`` |
+| | Spotlight Angle | ``SpotAngleTo`` |
+| | Shadow Strength | ``ShadowStrengthTo`` |
+| | Color | ``ColorTo``, ``Gradient`` |
+| SkinnedMeshRenderer | Blend Shape Weight | ``BlendShapeTo`` |
 | **Canvas** | | |
 | CanvasGroup | Alpha | ``FadeTo`` |
 | CanvasRenderer | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | Graphic | Color/Alpha | ``ColorTo``, ``FadeTo``, ``Gradient`` |
 | Image | Fill Amount | ``FillTo`` |
 | RawImage | UV Rect | ``UVRectTo``, ``UVRectShift`` |
+| ScrollRect | Normalized Position | ``NormalizedPosTo`` |
+| Slider | Value | ``ValueTo`` |
+| | Normalized Value | ``NormalizedValueTo`` |
+| Scrollbar | Value | ``ValueTo`` |
+| | Size | ``SizeTo`` |
 | **Layout** | | |
 | LayoutElement | Min Width/Height| ``MinSizeTo``|
 | | Preferred Width/Height | ``PreferredSizeTo``| 
@@ -1413,6 +1439,8 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``RevertOnCancel`` | Tween will revert back to starting value if cancelled mid-execution. |
 | ``ForceOnCancel`` | Tween will skip to its end value if cancelled mid-execution. |
 | ``KeepOnCancel`` | [Default] Tween will keep its current value if cancelled mid-execution. |
+| **Playing** | |
+| ``Play`` | Starts a Routine to play the Tween. Shortcut for ``Routine.Start( tween )`` or ``Routine.Start( host, tween )``. |
 
 ### Utilities
 
@@ -1434,6 +1462,8 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 
 | Function | Extension Method? | Description |
 | -------- | ----------------- | ----------- |
+| **Tween** | | |
+| ``Tween.SetPooled`` | | Enables Tween pooling. This will reuse Tween instances when possible to reduce garbage generation. |
 | **TweenUtil** | | |
 | ``TweenUtil.Evaluate`` | ``Curve`` | Evaluates an easing function for a given percentage. |
 | ``TweenUtil.Lerp `` | | Returns an interpolation percentage, corrected for delta time. |

@@ -11,17 +11,17 @@ using UnityEngine;
 
 namespace BeauRoutine.Internal
 {
-    public interface ITableQuery
+    internal interface ITableQuery
     {
         bool Validate(Fiber inFiber);
     }
 
-    public struct NullQuery : ITableQuery
+    internal struct NullQuery : ITableQuery
     {
         public bool Validate(Fiber inFiber) { return true; }
     }
 
-    public struct NameQuery : ITableQuery
+    internal struct NameQuery : ITableQuery
     {
         public string Name;
 
@@ -31,7 +31,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct GroupQuery : ITableQuery
+    internal struct GroupQuery : ITableQuery
     {
         public int GroupMask;
 
@@ -41,7 +41,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct MonoBehaviourQuery : ITableQuery
+    internal struct MonoBehaviourQuery : ITableQuery
     {
         public MonoBehaviour Host;
 
@@ -51,7 +51,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct MonoBehaviourNameQuery : ITableQuery
+    internal struct MonoBehaviourNameQuery : ITableQuery
     {
         public MonoBehaviour Host;
         public string Name;
@@ -62,7 +62,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct MonoBehaviourGroupQuery : ITableQuery
+    internal struct MonoBehaviourGroupQuery : ITableQuery
     {
         public MonoBehaviour Host;
         public int GroupMask;
@@ -73,7 +73,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct GameObjectQuery : ITableQuery
+    internal struct GameObjectQuery : ITableQuery
     {
         public GameObject Host;
 
@@ -83,7 +83,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct GameObjectNameQuery : ITableQuery
+    internal struct GameObjectNameQuery : ITableQuery
     {
         public GameObject Host;
         public string Name;
@@ -94,7 +94,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct GameObjectGroupQuery : ITableQuery
+    internal struct GameObjectGroupQuery : ITableQuery
     {
         public GameObject Host;
         public int GroupMask;

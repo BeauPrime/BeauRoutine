@@ -12,7 +12,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Identifies Routine updates caused by a YieldInstruction.
     /// </summary>
-    public enum YieldPhase
+    internal enum YieldPhase
     {
         None,
 
@@ -21,6 +21,7 @@ namespace BeauRoutine.Internal
         WaitForLateUpdate,
         WaitForUpdate,
         WaitForThinkUpdate,
-        WaitForCustomUpdate
+        WaitForCustomUpdate,
+        WaitForRealtimeUpdate
     }
 }

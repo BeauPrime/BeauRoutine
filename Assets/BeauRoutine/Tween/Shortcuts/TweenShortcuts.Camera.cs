@@ -68,7 +68,7 @@ namespace BeauRoutine
             return Tween.Create(new TweenData_Camera_OrthographicSize(inCamera, inTarget), inSettings);
         }
 
-        #endregion
+        #endregion // Orthographic Size
 
         #region Field of View
 
@@ -121,6 +121,98 @@ namespace BeauRoutine
             return Tween.Create(new TweenData_Camera_FOV(inCamera, inTarget), inSettings);
         }
 
-        #endregion
+        #endregion // Field of view
+    
+        #region Background Color
+
+        private sealed class TweenData_Camera_Color : ITweenData
+        {
+            private Camera m_Renderer;
+            private Color m_Target;
+
+            private Color m_Start;
+
+            public TweenData_Camera_Color(Camera inRenderer, Color inTarget)
+            {
+                m_Renderer = inRenderer;
+                m_Target = inTarget;
+            }
+
+            public void OnTweenStart()
+            {
+                m_Start = m_Renderer.backgroundColor;
+            }
+
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Renderer.backgroundColor = UnityEngine.Color.LerpUnclamped(m_Start, m_Target, inPercent);
+            }
+
+            public override string ToString()
+            {
+                return "Camera: Background Color";
+            }
+        }
+
+        private sealed class TweenData_Camera_Gradient : ITweenData
+        {
+            private Camera m_Renderer;
+            private Gradient m_Gradient;
+
+            public TweenData_Camera_Gradient(Camera inRenderer, Gradient inTarget)
+            {
+                m_Renderer = inRenderer;
+                m_Gradient = inTarget;
+            }
+
+            public void OnTweenStart() { }
+            public void OnTweenEnd() { }
+
+            public void ApplyTween(float inPercent)
+            {
+                m_Renderer.backgroundColor = m_Gradient.Evaluate(inPercent);
+            }
+
+            public override string ToString()
+            {
+                return "Camera: Background Color Gradient";
+            }
+        }
+
+        /// <summary>
+        /// Fades the Camera to another color over time.
+        /// </summary>
+        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, float inTime)
+        {
+            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget), inTime);
+        }
+
+        /// <summary>
+        /// Fades the Camera to another color over time.
+        /// </summary>
+        static public Tween BackgroundColorTo(this Camera inRenderer, Color inTarget, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Camera_Color(inRenderer, inTarget), inSettings);
+        }
+
+        /// <summary>
+        /// Applies a gradient of colors to the Camera over time.
+        /// </summary>
+        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, float inTime)
+        {
+            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient), inTime);
+        }
+
+        /// <summary>
+        /// Applies a gradient of colors to the Camera over time.
+        /// </summary>
+        static public Tween BackgroundGradient(this Camera inRenderer, Gradient inGradient, TweenSettings inSettings)
+        {
+            return Tween.Create(new TweenData_Camera_Gradient(inRenderer, inGradient), inSettings);
+        }
+
+        #endregion // Background Color
     }
 }

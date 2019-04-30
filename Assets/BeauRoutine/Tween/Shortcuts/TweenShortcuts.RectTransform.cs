@@ -148,11 +148,12 @@ namespace BeauRoutine
 
         /// <summary>
         /// Moves the RectTransform to another anchor with the given average speed.
+        /// Note: Duration is calculated at call time, not when the tween starts.
         /// </summary>
         static public Tween AnchorPosToWithSpeed(this RectTransform inTransform, Vector2 inTarget, float inSpeed, Axis inAxis = Axis.XY)
         {
             float distance = (inTarget - inTransform.anchoredPosition).magnitude;
-            return Tween.Create(new TweenData_RectTransform_AnchorPosFixed(inTransform, inTarget, inAxis), distance / inSpeed);
+            return Tween.Create(new TweenData_RectTransform_AnchorPosFixed(inTransform, inTarget, inAxis), distance <= 0 ? 0 : distance / inSpeed);
         }
 
         #endregion

@@ -18,7 +18,7 @@ namespace BeauRoutine.Internal
     {
         public Routine Handle;
         public MonoBehaviour Host;
-        public RoutineState State;
+        public string State;
         public RoutinePhase Phase;
         public float TimeScale;
         public int Priority;
@@ -31,19 +31,21 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Current status of a Routine.
     /// </summary>
-    public enum RoutineState : byte
+    static public class RoutineState
     {
-        Running,
-        Disposing,
-        WaitTime,
-        WaitUnity,
-        WaitFixedUpdate,
-        WaitEndOfFrame,
-        WaitLateUpdate,
-        WaitUpdate,
-        WaitThinkUpdate,
-        WaitCustomUpdate,
-        Paused
+        public const string Running = "Running";
+        public const string Disposing = "Disposing";
+        public const string WaitTime = "Wait (Seconds)";
+        public const string WaitUnity = "Wait (Unity)";
+        public const string WaitFixedUpdate = "Wait (FixedUpdate)";
+        public const string WaitEndOfFrame = "Wait (EndOfFrame)";
+        public const string WaitLateUpdate = "Wait (LateUpdate)";
+        public const string WaitUpdate = "Wait (Update)";
+        public const string WaitThinkUpdate = "Wait (ThinkUpdate)";
+        public const string WaitCustomUpdate = "Wait (CustomUpdate)";
+        public const string WaitRealtimeUpdate = "Wait (RealtimeUpdate)";
+        public const string Locked = "Locked";
+        public const string Paused = "Paused";
     }
 
     /// <summary>

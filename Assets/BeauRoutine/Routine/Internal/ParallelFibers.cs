@@ -5,7 +5,7 @@
  * 
  * File:    ParallelFibers.cs
  * Purpose: Iterator enabling pseudo-parallel execution of coroutines.
-*/
+ */
 
 using System;
 using System.Collections;
@@ -16,7 +16,7 @@ namespace BeauRoutine.Internal
     /// <summary>
     /// Runs fibers in parallel.
     /// </summary>
-    public sealed class ParallelFibers : IEnumerator, IDisposable
+    internal sealed class ParallelFibers : IEnumerator, IDisposable, INestedFiberContainer
     {
         private Manager m_Manager;
         private List<IEnumerator> m_Enumerators;
@@ -33,7 +33,13 @@ namespace BeauRoutine.Internal
             m_Fibers = new List<Fiber>(m_Enumerators.Count);
         }
 
-        public void RemoveFiber(Fiber inFiber)
+        internal void AddEnumerator(IEnumerator inEnumerator)
+        {
+            if (inEnumerator != null && m_Enumerators != null)
+                m_Enumerators.Add(inEnumerator);
+        }
+
+        void INestedFiberContainer.RemoveFiber(Fiber inFiber)
         {
             // This will only get called during Fiber.Dispose
             // If we're executing we don't have to remove from the list
@@ -44,42 +50,45 @@ namespace BeauRoutine.Internal
             }
         }
 
-        public void SetParentFiber(Fiber inFiber)
+        void INestedFiberContainer.SetParentFiber(Fiber inFiber)
         {
             m_ParentFiber = inFiber;
         }
 
-        public void Dispose()
+        void IDisposable.Dispose()
         {
             if (m_Enumerators != null)
             {
                 for (int i = 0; i < m_Enumerators.Count; ++i)
                 {
                     if (m_Enumerators[i] != null)
-                        ((IDisposable)m_Enumerators[i]).Dispose();
+                        ((IDisposable) m_Enumerators[i]).Dispose();
                 }
                 m_Enumerators.Clear();
                 m_Enumerators = null;
             }
 
-            for (int i = 0; i < m_Fibers.Count; ++i)
+            if (m_Fibers != null)
             {
-                Fiber fiber = m_Fibers[i];
-                fiber.ClearParallelOwner();
-                fiber.Dispose();
+                for (int i = 0; i < m_Fibers.Count; ++i)
+                {
+                    Fiber fiber = m_Fibers[i];
+                    fiber.ClearNestedOwner();
+                    fiber.Dispose();
+                }
+                m_Fibers.Clear();
+                m_Fibers = null;
             }
-            m_Fibers.Clear();
-            m_Fibers = null;
 
             m_ParentFiber = null;
         }
 
-        public object Current
+        object IEnumerator.Current
         {
             get { return null; }
         }
 
-        public bool MoveNext()
+        bool IEnumerator.MoveNext()
         {
             if (m_Enumerators != null)
             {
@@ -88,7 +97,7 @@ namespace BeauRoutine.Internal
                     if (m_Enumerators[i] != null)
                     {
                         Fiber fiber = m_Manager.ChainFiber(m_Enumerators[i]);
-                        fiber.SetParallelOwner(this);
+                        fiber.SetNestedOwner(this);
                         fiber.SetParentFiber(m_ParentFiber);
                         m_Fibers.Add(fiber);
                     }
@@ -100,33 +109,38 @@ namespace BeauRoutine.Internal
                     return false;
             }
 
-            if (m_Fibers.Count > 0)
+            if (m_Fibers != null)
             {
-                bool prevIterating = m_Iterating;
-                m_Iterating = true;
+                if (m_Fibers.Count > 0)
                 {
-                    for (int i = 0; i < m_Fibers.Count; ++i)
+                    bool prevIterating = m_Iterating;
+                    m_Iterating = true;
                     {
-                        Fiber myFiber = m_Fibers[i];
-                        m_Manager.Frame.RefreshTimeScale();
-                        if (!myFiber.Update())
+                        for (int i = 0; i < m_Fibers.Count; ++i)
                         {
-                            m_Fibers.RemoveAt(i--);
-                            if (m_Race)
+                            Fiber myFiber = m_Fibers[i];
+                            m_Manager.Frame.RefreshTimeScale();
+                            if (!myFiber.Update())
                             {
-                                m_Iterating = false;
-                                return false;
+                                m_Fibers.RemoveAt(i--);
+                                if (m_Race)
+                                {
+                                    m_Iterating = false;
+                                    return false;
+                                }
                             }
                         }
                     }
+                    m_Iterating = prevIterating;
                 }
-                m_Iterating = prevIterating;
+
+                return m_Fibers.Count > 0;
             }
 
-            return m_Fibers.Count > 0;
+            return false;
         }
 
-        public void Reset()
+        void IEnumerator.Reset()
         {
             throw new NotSupportedException();
         }

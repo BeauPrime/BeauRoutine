@@ -19,7 +19,7 @@ using UnityEngine;
 
 namespace BeauRoutine.Internal
 {
-    public sealed class Manager
+    internal sealed class Manager
     {
         public const int DEFAULT_CAPACITY = 32;
         public const float DEFAULT_THINKUPDATE_INTERVAL = 1f / 10f;
@@ -500,6 +500,7 @@ namespace BeauRoutine.Internal
                 return;
 
             Fibers.ClearAll();
+            TweenPool.StopPooling();
 
             if (Host != null)
             {
@@ -659,6 +660,7 @@ namespace BeauRoutine.Internal
             Fiber fiber = Fibers.GetFreeFiber();
             outHandle = fiber.Initialize(inHost, inStart, inbChained);
 
+#if DEVELOPMENT
             if (DebugMode)
             {
                 int running = Fibers.TotalRunning;
@@ -668,6 +670,7 @@ namespace BeauRoutine.Internal
                     m_NeedsSnapshot = SnapshotEnabled;
                 }
             }
+#endif // DEVELOPMENT
 
             return fiber;
         }

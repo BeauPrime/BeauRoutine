@@ -6,12 +6,12 @@
  * File:    Routine.Utils.cs
  * Purpose: Set of utility functions for both running Routines
  *          and creating routine functions for common tasks.
-*/
+ */
 
-using BeauRoutine.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using BeauRoutine.Internal;
 using UnityEngine;
 
 namespace BeauRoutine
@@ -144,6 +144,7 @@ namespace BeauRoutine
         static private readonly WaitForUpdate s_CachedWaitForUpdate = new WaitForUpdate();
         static private readonly WaitForCustomUpdate s_CachedWaitForCustomUpdate = new WaitForCustomUpdate();
         static private readonly WaitForThinkUpdate s_CachedWaitForThinkUpdate = new WaitForThinkUpdate();
+        static private readonly WaitForRealtimeUpdate s_CachedWaitForRealtimeUpdate = new WaitForRealtimeUpdate();
 
         /// <summary>
         /// Waits for a FixedUpdate to occur.
@@ -194,6 +195,15 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Waits until after the RealtimeUpdate phase.
+        /// </summary>
+        /// <returns></returns>
+        static public IEnumerator WaitForRealtimeUpdate()
+        {
+            return s_CachedWaitForRealtimeUpdate;
+        }
+
+        /// <summary>
         /// Executes the enclosed coroutine immediately when yielded.
         /// Will resume its caller immediately once complete.
         /// </summary>
@@ -202,7 +212,7 @@ namespace BeauRoutine
             RoutineDecorator decorator;
             if (inEnumerator is RoutineDecorator)
             {
-                decorator = (RoutineDecorator)inEnumerator;
+                decorator = (RoutineDecorator) inEnumerator;
             }
             else
             {
@@ -250,7 +260,7 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator WaitCondition(Func<bool> inCondition, float inInterval = 0)
         {
-            object boxedTime = (inInterval > 0 ? (object)inInterval : null);
+            object boxedTime = (inInterval > 0 ? (object) inInterval : null);
             while (!inCondition())
                 yield return boxedTime;
         }
@@ -295,7 +305,7 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator Timer(float inSeconds, Action<float> inOnUpdate)
         {
-            while(true)
+            while (true)
             {
                 inSeconds -= Routine.DeltaTime;
                 if (inSeconds < 0)
@@ -316,7 +326,7 @@ namespace BeauRoutine
         static public IEnumerator Accumulate(float inSeconds, Action<float> inOnUpdate)
         {
             float acc = 0;
-            while(true)
+            while (true)
             {
                 acc += Routine.DeltaTime;
                 if (acc > inSeconds)
@@ -348,7 +358,7 @@ namespace BeauRoutine
 
             int nonNullCount = 0;
             int firstNonNull = -1;
-            for(int i = 0; i < inRoutines.Length; ++i)
+            for (int i = 0; i < inRoutines.Length; ++i)
             {
                 if (inRoutines[i] != null)
                 {
@@ -455,14 +465,20 @@ namespace BeauRoutine
             return CreateParallel(new List<IEnumerator>(inRoutines), true);
         }
 
-        /// <summary>
-        /// Runs all the given IEnumerators
-        /// </summary>
-        static private IEnumerator CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
+        // Runs all the given IEnumerators
+        static private ParallelFibers CreateParallel(List<IEnumerator> inEnumerators, bool inbRace)
         {
             Manager m = Manager.Get();
             if (m != null)
                 return new ParallelFibers(m, inEnumerators, inbRace);
+            return null;
+        }
+
+        static private ParallelFibers CreateEmptyParallel(bool inbRace)
+        {
+            Manager m = Manager.Get();
+            if (m != null)
+                return new ParallelFibers(m, new List<IEnumerator>(), inbRace);
             return null;
         }
 
@@ -543,9 +559,59 @@ namespace BeauRoutine
         /// </summary>
         static public IEnumerator Delay(IEnumerator inRoutine, float inSeconds)
         {
-            if (inSeconds > 0)
-                yield return inSeconds;
-            yield return Routine.Inline(inRoutine);
+            return new DelayedIEnumerator(inRoutine, inSeconds);
+        }
+
+        // Delays executing an IEnumerator by a certain amount of seconds
+        private class DelayedIEnumerator : IEnumerator, IDisposable
+        {
+            private IEnumerator m_Enumerator;
+            private float m_Delay;
+            private object m_Yielding = false;
+
+            public DelayedIEnumerator(IEnumerator inRoutine, float inSeconds)
+            {
+                m_Enumerator = inRoutine;
+                m_Delay = inSeconds;
+            }
+
+            public object Current
+            {
+                get { return m_Yielding; }
+            }
+
+            public void Dispose()
+            {
+                DisposeUtils.DisposeEnumerator(ref m_Enumerator);
+                m_Delay = 0;
+            }
+
+            public bool MoveNext()
+            {
+                if (m_Enumerator == null)
+                    return false;
+
+                if (m_Delay > 0)
+                {
+                    m_Yielding = m_Delay;
+                    m_Delay = 0;
+                    return true;
+                }
+
+                m_Yielding = Routine.Inline(m_Enumerator);
+                m_Enumerator = null;
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException();
+            }
+
+            public override string ToString()
+            {
+                return "Routine::Delay()";
+            }
         }
 
         #endregion
@@ -613,6 +679,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop(Action inAction)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inAction));
         }
 
@@ -621,6 +689,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop<T>(Action<T> inAction, T inArg)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inAction, inArg));
         }
 
@@ -629,6 +699,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoopRoutine(Func<IEnumerator> inEnumerator)
         {
+            if (inEnumerator == null)
+                return Routine.Null;
             return Start(LoopedRoutine(inEnumerator));
         }
 
@@ -637,6 +709,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop(MonoBehaviour inHost, Action inAction)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inAction));
         }
 
@@ -645,6 +719,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoop<T>(MonoBehaviour inHost, Action<T> inAction, T inArg)
         {
+            if (inAction == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inAction, inArg));
         }
 
@@ -653,6 +729,8 @@ namespace BeauRoutine
         /// </summary>
         static public Routine StartLoopRoutine(MonoBehaviour inHost, Func<IEnumerator> inEnumerator)
         {
+            if (inEnumerator == null)
+                return Routine.Null;
             return Start(inHost, LoopedRoutine(inEnumerator));
         }
 
@@ -678,7 +756,7 @@ namespace BeauRoutine
 
         static private IEnumerator LoopedRoutine(Func<IEnumerator> inRoutine)
         {
-            while(true)
+            while (true)
                 yield return Routine.Inline(inRoutine());
         }
 
@@ -697,10 +775,23 @@ namespace BeauRoutine
             while (true)
             {
                 accumulation += Routine.DeltaTime * inTimesPerSecond;
-                while (accumulation > 1)
+                if (accumulation >= 1)
                 {
-                    inAction();
-                    --accumulation;
+                    // Ensure DeltaTime reflects this interval
+                    Manager m = Manager.Get();
+                    float oldUnscaledDeltaTime = m.Frame.UnscaledDeltaTime;
+                    m.Frame.UnscaledDeltaTime = 1f / inTimesPerSecond;
+                    m.Frame.RefreshTimeScale();
+
+                    while (accumulation >= 1)
+                    {
+                        inAction();
+                        --accumulation;
+                    }
+
+                    // Reset DeltaTime
+                    m.Frame.UnscaledDeltaTime = oldUnscaledDeltaTime;
+                    m.Frame.RefreshTimeScale();
                 }
                 yield return null;
             }
@@ -715,72 +806,179 @@ namespace BeauRoutine
             while (true)
             {
                 accumulation += Routine.DeltaTime * inTimesPerSecond;
-                while (accumulation > 1)
+                if (accumulation >= 1)
                 {
-                    inAction(inArg);
-                    --accumulation;
+                    // Ensure DeltaTime reflects this interval
+                    Manager m = Manager.Get();
+                    float oldUnscaledDeltaTime = m.Frame.UnscaledDeltaTime;
+                    m.Frame.UnscaledDeltaTime = 1f / inTimesPerSecond;
+                    m.Frame.RefreshTimeScale();
+
+                    while (accumulation >= 1)
+                    {
+                        inAction(inArg);
+                        --accumulation;
+                    }
+
+                    // Reset DeltaTime
+                    m.Frame.UnscaledDeltaTime = oldUnscaledDeltaTime;
+                    m.Frame.RefreshTimeScale();
                 }
                 yield return null;
             }
         }
 
+        /// <summary>
+        /// Returns an IEnumerator that attempts to update the given routine a certain number of times per frame.
+        /// </summary>
+        static public IEnumerator PerSecond(IEnumerator inRoutine, float inTimesPerSecond)
+        {
+            return new IntervalFiber(Manager.Get(), inRoutine, 1f / inTimesPerSecond);
+        }
+
         #endregion
-    
+
         #region For Each
 
         /// <summary>
-        /// Executes, in order, an enumerator function for every element in the given list.
+        /// Executes, in order, an enumerator function for every element in the given enumerable.
         /// </summary>
-        static public IEnumerator ForEach<T>(IList<T> inList, Func<T, IEnumerator> inOperation)
+        static public IEnumerator ForEach<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation)
         {
-            if (inList != null && inOperation != null)
+            if (inEnumerable != null && inOperation != null)
             {
-                foreach (var obj in inList)
+                foreach (var obj in inEnumerable)
                     yield return inOperation(obj);
             }
         }
 
         /// <summary>
-        /// Executes, in parallel, an enumerator function for every element in the given list.
+        /// Executes, in order, an enumerator function for every element in the given enumerable.
         /// </summary>
-        static public IEnumerator ForEachParallel<T>(IList<T> inList, Func<T, IEnumerator> inOperation)
+        static public IEnumerator ForEach<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation)
         {
-            int count = 0;
-            if (inList != null && inOperation != null && (count = inList.Count) > 0)
+            if (inEnumerable != null && inOperation != null)
             {
-                IEnumerator[] enumerators = new IEnumerator[count];
-                for (int i = 0; i < count; ++i)
-                    enumerators[i] = inOperation(inList[i]);
-                yield return Routine.Inline(
-                    Routine.Combine(enumerators)
-                );
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                    yield return inOperation(idx++, obj);
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                ParallelFibers combine = CreateEmptyParallel(false);
+                foreach (var obj in inEnumerable)
+                {
+                    combine.AddEnumerator(inOperation(obj));
+                }
+                yield return Routine.Inline(combine);
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                ParallelFibers combine = CreateEmptyParallel(false);
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                {
+                    combine.AddEnumerator(inOperation(idx++, obj));
+                }
+                yield return Routine.Inline(combine);
             }
         }
 
         /// <summary>
         /// Executes, in parallel chunks, an enumerator function for every element in the given list.
         /// </summary>
-        static public IEnumerator ForEachParallel<T>(IList<T> inList, Func<T, IEnumerator> inOperation, int inChunkSize)
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<T, IEnumerator> inOperation, int inChunkSize)
         {
-            int count = 0;
-            if (inList != null && inOperation != null && (count = inList.Count) > 0)
+            if (inEnumerable != null && inOperation != null)
             {
-                int chunkSize = Math.Min(inChunkSize, count);
+                IEnumerator[] block = new IEnumerator[inChunkSize];
                 int numItems = 0;
-                IEnumerator[] enumerators = new IEnumerator[chunkSize];
-                for (int i = 0; i < count; ++i)
+                foreach (var obj in inEnumerable)
                 {
-                    enumerators[numItems++] = inOperation(inList[i]);
-                    if (i == count - 1 || numItems == chunkSize)
+                    IEnumerator operation = inOperation(obj);
+                    if (operation != null)
                     {
-                        yield return Routine.Inline(
-                            Routine.Combine(enumerators)
-                        );
+                        block[numItems++] = operation;
 
-                        for (int j = 0; j < numItems; ++j)
-                            enumerators[j] = null;
-                        numItems = 0;
+                        if (numItems == inChunkSize)
+                        {
+                            yield return Routine.Inline(
+                                Routine.Combine(block)
+                            );
+
+                            for (int i = numItems - 1; i >= 0; --i)
+                                block[i] = null;
+                            numItems = 0;
+                        }
                     }
+                }
+
+                if (numItems > 0)
+                {
+                    yield return Routine.Inline(
+                        Routine.Combine(block)
+                    );
+
+                    for (int i = numItems - 1; i >= 0; --i)
+                        block[i] = null;
+                    numItems = 0;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel chunks, an enumerator function for every element in the given enumerable.
+        /// </summary>
+        static public IEnumerator ForEachParallel<T>(IEnumerable<T> inEnumerable, Func<int, T, IEnumerator> inOperation, int inChunkSize)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                IEnumerator[] block = new IEnumerator[inChunkSize];
+                int numItems = 0;
+                int idx = 0;
+                foreach (var obj in inEnumerable)
+                {
+                    IEnumerator operation = inOperation(idx++, obj);
+                    if (operation != null)
+                    {
+                        block[numItems++] = operation;
+
+                        if (numItems == inChunkSize)
+                        {
+                            yield return Routine.Inline(
+                                Routine.Combine(block)
+                            );
+
+                            for (int i = numItems - 1; i >= 0; --i)
+                                block[i] = null;
+                            numItems = 0;
+                        }
+                    }
+                }
+
+                if (numItems > 0)
+                {
+                    yield return Routine.Inline(
+                        Routine.Combine(block)
+                    );
+
+                    for (int i = numItems - 1; i >= 0; --i)
+                        block[i] = null;
+                    numItems = 0;
                 }
             }
         }
@@ -797,7 +995,7 @@ namespace BeauRoutine
         {
             if (inObject == null)
                 return null;
-            
+
             IEnumerator enumerator = inObject as IEnumerator;
             if (enumerator != null)
                 return Routine.Inline(enumerator);
@@ -816,7 +1014,7 @@ namespace BeauRoutine
             if (inObjects.Length == 1)
                 return Yield(inObjects[0]);
 
-            return Routine.Inline(new YieldableArray((object[])inObjects.Clone()));
+            return Routine.Inline(new YieldableArray((object[]) inObjects.Clone()));
         }
 
         /// <summary>
@@ -852,7 +1050,7 @@ namespace BeauRoutine
 
             public void Dispose()
             {
-                m_Object = null;
+                DisposeUtils.DisposeObject(ref m_Object);
                 m_Finished = true;
             }
 
@@ -870,6 +1068,11 @@ namespace BeauRoutine
             public void Reset()
             {
                 throw new NotSupportedException();
+            }
+
+            public override string ToString()
+            {
+                return "Routine::Yield()";
             }
         }
 
@@ -891,7 +1094,7 @@ namespace BeauRoutine
                 if (m_Objects != null)
                 {
                     for (int i = m_Objects.Length - 1; i >= 0; --i)
-                        m_Objects[i] = null;
+                        DisposeUtils.DisposeObject(ref m_Objects[i]);
                     m_Objects = null;
                 }
 
@@ -906,6 +1109,11 @@ namespace BeauRoutine
             public void Reset()
             {
                 throw new NotSupportedException();
+            }
+
+            public override string ToString()
+            {
+                return "Routine::Yield()";
             }
         }
 

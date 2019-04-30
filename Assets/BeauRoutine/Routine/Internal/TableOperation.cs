@@ -9,17 +9,17 @@
 
 namespace BeauRoutine.Internal
 {
-    public interface ITableOperation
+    internal interface ITableOperation
     {
         void Execute(Fiber inFiber);
     }
 
-    public struct NullOperation : ITableOperation
+    internal struct NullOperation : ITableOperation
     {
         public void Execute(Fiber inFiber) { }
     }
 
-    public struct PauseOperation : ITableOperation
+    internal struct PauseOperation : ITableOperation
     {
         public void Execute(Fiber inFiber)
         {
@@ -27,7 +27,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct ResumeOperation : ITableOperation
+    internal struct ResumeOperation : ITableOperation
     {
         public void Execute(Fiber inFiber)
         {
@@ -35,7 +35,7 @@ namespace BeauRoutine.Internal
         }
     }
 
-    public struct StopOperation : ITableOperation
+    internal struct StopOperation : ITableOperation
     {
         public void Execute(Fiber inFiber)
         {

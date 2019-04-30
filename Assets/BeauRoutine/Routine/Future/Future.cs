@@ -10,6 +10,7 @@
 
 using System;
 using System.Collections;
+using UnityEngine;
 
 namespace BeauRoutine
 {
@@ -28,7 +29,7 @@ namespace BeauRoutine
 
         // Completion
         bool IsComplete();
-        
+
         // Failure
         bool IsFailed();
         Future.Failure GetFailure();
@@ -160,6 +161,76 @@ namespace BeauRoutine
             future.Fail(inType, inArg);
             return future;
         }
+
+        #region Linked
+
+        public delegate IEnumerator LinkedFutureDelegate<T>(Future<T> inFuture);
+        public delegate IEnumerator LinkedFutureDelegate<T, A1>(Future<T> inFuture, A1 inArg1);
+        public delegate IEnumerator LinkedFutureDelegate<T, A1, A2>(Future<T> inFuture, A1 inArg1, A2 inArg2);
+        public delegate IEnumerator LinkedFutureDelegate<T, A1, A2, A3>(Future<T> inFuture, A1 inArg1, A2 inArg2, A3 inArg3);
+        public delegate IEnumerator LinkedFutureDelegate<T, A1, A2, A3, A4>(Future<T> inFuture, A1 inArg1, A2 inArg2, A3 inArg3, A4 inArg4);
+
+        /// <summary>
+        /// Creates a future and runs a BeauRoutine with the future as its first argument.
+        /// </summary>
+        static public Future<T> CreateLinked<T>(LinkedFutureDelegate<T> inFunction, MonoBehaviour inHost = null)
+        {
+            var future = Future.Create<T>();
+            future.LinkTo(
+                Routine.Start(inHost, inFunction(future))
+            );
+            return future;
+        }
+
+        /// <summary>
+        /// Creates a future and runs a BeauRoutine with the future as its first argument.
+        /// </summary>
+        static public Future<T> CreateLinked<T, A1>(LinkedFutureDelegate<T, A1> inFunction, A1 inArg1, MonoBehaviour inHost = null)
+        {
+            var future = Future.Create<T>();
+            future.LinkTo(
+                Routine.Start(inHost, inFunction(future, inArg1))
+            );
+            return future;
+        }
+
+        /// <summary>
+        /// Creates a future and runs a BeauRoutine with the future as its first argument.
+        /// </summary>
+        static public Future<T> CreateLinked<T, A1, A2>(LinkedFutureDelegate<T, A1, A2> inFunction, A1 inArg1, A2 inArg2, MonoBehaviour inHost = null)
+        {
+            var future = Future.Create<T>();
+            future.LinkTo(
+                Routine.Start(inHost, inFunction(future, inArg1, inArg2))
+            );
+            return future;
+        }
+
+        /// <summary>
+        /// Creates a future and runs a BeauRoutine with the future as its first argument.
+        /// </summary>
+        static public Future<T> CreateLinked<T, A1, A2, A3>(LinkedFutureDelegate<T, A1, A2, A3> inFunction, A1 inArg1, A2 inArg2, A3 inArg3, MonoBehaviour inHost = null)
+        {
+            var future = Future.Create<T>();
+            future.LinkTo(
+                Routine.Start(inHost, inFunction(future, inArg1, inArg2, inArg3))
+            );
+            return future;
+        }
+
+        /// <summary>
+        /// Creates a future and runs a BeauRoutine with the future as its first argument.
+        /// </summary>
+        static public Future<T> CreateLinked<T, A1, A2, A3, A4>(LinkedFutureDelegate<T, A1, A2, A3, A4> inFunction, A1 inArg1, A2 inArg2, A3 inArg3, A4 inArg4, MonoBehaviour inHost = null)
+        {
+            var future = Future.Create<T>();
+            future.LinkTo(
+                Routine.Start(inHost, inFunction(future, inArg1, inArg2, inArg3, inArg4))
+            );
+            return future;
+        }
+
+        #endregion // Linked
     }
 
     /// <summary>
@@ -261,7 +332,7 @@ namespace BeauRoutine
         {
             if (m_State != State.InProgress)
                 return;
-            
+
             inProgress = inProgress < 0 ? 0 : (inProgress > 1 ? 1 : inProgress);
             if (m_Progress != inProgress)
             {
@@ -457,7 +528,7 @@ namespace BeauRoutine
         {
             if (m_State == State.Cancelled)
                 return;
-            
+
             if (m_State != State.InProgress)
                 throw new InvalidOperationException("Cannot fail Future<" + typeof(T).Name + "> once Future has completed or failed!");
             m_State = State.Failed;
@@ -579,7 +650,7 @@ namespace BeauRoutine
 
         private IEnumerator WaitInternal()
         {
-            while(m_State == State.InProgress)
+            while (m_State == State.InProgress)
                 yield return null;
         }
 

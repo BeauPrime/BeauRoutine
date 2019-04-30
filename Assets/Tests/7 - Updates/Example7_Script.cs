@@ -27,7 +27,7 @@ namespace BeauRoutine.Examples
             m_MasterUpdate = Routine.Start(this, CheckInputs()).SetPhase(RoutinePhase.Update);
             yield return null;
 
-            m_Update1 = Routine.Start(this, UpdateOnePhysics(m_PhysicsUpdater)).SetPhase(RoutinePhase.FixedUpdate).SetTimeScale(1).DelayBy(5);
+            m_Update1 = Routine.Start(this, UpdateOnePhysics(m_PhysicsUpdater)).SetPhase(RoutinePhase.RealtimeUpdate).SetTimeScale(1).DelayBy(5);
             m_Update2 = Routine.Start(this, UpdateOnePhysics(m_PhysicsUpdater2)).SetPhase(RoutinePhase.LateUpdate).OnException((e) => { Debug.Log("We caught an exception!"); });
 
             m_Update1.TryManuallyUpdate(5);
@@ -42,7 +42,7 @@ namespace BeauRoutine.Examples
                 Vector3 screenPoint = Input.mousePosition;
                 screenPoint.z = 10;
                 Vector3 mousePoint = Camera.main.ScreenToWorldPoint(screenPoint);
-                transform.position = Vector3.LerpUnclamped(transform.position, mousePoint, TweenUtil.Lerp(0.25f));
+                transform.position = Vector3.LerpUnclamped(transform.position, mousePoint, TweenUtil.Lerp(0.1f));
 
                 if (Input.GetKeyDown(KeyCode.Alpha1))
                 {

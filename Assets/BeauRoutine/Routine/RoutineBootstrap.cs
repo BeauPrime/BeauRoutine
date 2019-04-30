@@ -27,6 +27,9 @@ namespace BeauRoutine
         [SerializeField, Tooltip("The initial capacity for concurrent routines before more memory is allocated.")]
         private int m_Capacity = Manager.DEFAULT_CAPACITY;
 
+        [SerializeField, Tooltip("The initial capacity for pooled tweens.")]
+        private int m_TweenPool = Tween.DEFAULT_POOL_SIZE;
+
         [Header("Debug Settings")]
 
         [SerializeField, Tooltip("Enables type checks.")]
@@ -54,12 +57,16 @@ namespace BeauRoutine
 
         #endregion // Inspector
 
+#if UNITY_EDITOR
         [NonSerialized]
         private bool m_Awoken = false;
+#endif // UNITY_EDITOR
 
         private void Awake()
         {
+#if UNITY_EDITOR
             m_Awoken = true;
+#endif // UNITY_EDITOR
             Apply();
         }
 
@@ -70,6 +77,9 @@ namespace BeauRoutine
             Routine.Settings.SnapshotEnabled = m_Snapshots;
             Routine.Settings.HandleExceptions = m_HandleExceptions;
             Routine.Settings.SetCapacity(m_Capacity);
+
+            if (m_TweenPool > 0)
+                Tween.SetPooled(m_TweenPool);
 
             Routine.Initialize();
 
