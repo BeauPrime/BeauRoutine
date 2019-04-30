@@ -250,7 +250,7 @@ namespace BeauRoutine
                 if (inSpace == Space.Self)
                     inTransform.localEulerAngles = rotation;
                 else
-                    inTransform.localEulerAngles = rotation;
+                    inTransform.eulerAngles = rotation;
             }
         }
 
