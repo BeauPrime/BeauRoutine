@@ -1,0 +1,17 @@
+{
+    "name": "BeauRoutine.Editor",
+    "references": [
+        "BeauRoutine",
+        "BeauRoutine.Tween"
+    ],
+    "optionalUnityReferences": [],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": []
+}
