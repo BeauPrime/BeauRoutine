@@ -5,7 +5,7 @@
  * 
  * File:    RoutineDecorator.cs
  * Purpose: Decorator object for modifying routine execution.
-*/
+ */
 
 using System;
 using System.Collections;
@@ -15,10 +15,10 @@ namespace BeauRoutine.Internal
     [Flags]
     internal enum RoutineDecoratorFlag
     {
-        Inline   = 0x001
+        Inline = 0x001
     }
 
-    internal struct RoutineDecorator : IEnumerator, IDisposable
+    internal class RoutineDecorator : IEnumerator, IDisposable
     {
         public IEnumerator Enumerator;
         public RoutineDecoratorFlag Flags;
@@ -37,11 +37,7 @@ namespace BeauRoutine.Internal
 
         public void Dispose()
         {
-            if (Enumerator != null)
-            {
-                ((IDisposable)Enumerator).Dispose();
-                Enumerator = null;
-            }
+            DisposeUtils.DisposeEnumerator(ref Enumerator);
         }
 
         public override string ToString()

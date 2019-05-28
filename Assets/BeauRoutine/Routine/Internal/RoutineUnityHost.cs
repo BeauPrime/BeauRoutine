@@ -8,6 +8,7 @@
  */
 
 using System.Collections;
+using System.Diagnostics;
 using UnityEngine;
 
 namespace BeauRoutine.Internal
@@ -26,6 +27,9 @@ namespace BeauRoutine.Internal
         public void Initialize(Manager inManager)
         {
             m_Manager = inManager;
+
+            if (m_WaitForEndOfFrameRoutine == null)
+                m_WaitForEndOfFrameRoutine = StartCoroutine(ApplyWaitForEndOfFrame());
         }
 
         public void Shutdown()
@@ -73,6 +77,8 @@ namespace BeauRoutine.Internal
 
         private void Update()
         {
+            m_Manager.MarkFrameStart();
+
             Manager m = m_Manager;
             float deltaTime = Time.deltaTime;
             float timestamp = Time.unscaledTime;
@@ -111,6 +117,8 @@ namespace BeauRoutine.Internal
 
         private void FixedUpdate()
         {
+            m_Manager.MarkFrameStart();
+
             if (m_Manager != null)
             {
                 // fixedupate
@@ -128,12 +136,6 @@ namespace BeauRoutine.Internal
                 m_WaitForFixedUpdateRoutine = StartCoroutine(ApplyWaitForFixedUpdate());
         }
 
-        public void WaitForEndOfFrame()
-        {
-            if (m_WaitForEndOfFrameRoutine == null)
-                m_WaitForEndOfFrameRoutine = StartCoroutine(ApplyWaitForEndOfFrame());
-        }
-
         private IEnumerator ApplyWaitForFixedUpdate()
         {
             while (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
@@ -146,12 +148,15 @@ namespace BeauRoutine.Internal
 
         private IEnumerator ApplyWaitForEndOfFrame()
         {
-            while (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
+            while (true)
             {
                 yield return s_CachedWaitForEndOfFrame;
-                m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
+                if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
+                {
+                    m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
+                }
+                m_Manager.MarkFrameEnd();
             }
-            m_WaitForEndOfFrameRoutine = null;
         }
 
         private void StopYieldInstructions()

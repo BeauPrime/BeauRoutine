@@ -74,6 +74,20 @@ namespace BeauRoutine
         }
 
         /// <summary>
+        /// Returns the remaining milliseconds left in this frame's budget.
+        /// </summary>
+        static public double RemainingFrameBudgetMS
+        {
+            get
+            {
+                Manager m = Manager.Get();
+                if (m != null)
+                    return m.CalculateRemainingFrameBudgetMS();
+                return 0;
+            }
+        }
+
+        /// <summary>
         /// Calculates the time scale for the given object.
         /// </summary>
         static public float CalculateTimeScale(GameObject inObject)
@@ -984,6 +998,114 @@ namespace BeauRoutine
         }
 
         #endregion
+
+        #region Frame Budget
+
+        /// <summary>
+        /// Executes, in order, the set of provided functions.
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator Amortize(IEnumerable<Action> inActions, double inMaxMillisecsPerFrame)
+        {
+            double durationThisFrame = 0;
+            double lastRemainingBudget = RemainingFrameBudgetMS;
+            foreach (var action in inActions)
+            {
+                if (durationThisFrame >= inMaxMillisecsPerFrame)
+                {
+                    yield return null;
+                    durationThisFrame = 0;
+                    lastRemainingBudget = RemainingFrameBudgetMS;
+                }
+
+                action();
+
+                double currentRemainingBudget = RemainingFrameBudgetMS;
+                durationThisFrame += (lastRemainingBudget - currentRemainingBudget);
+                lastRemainingBudget = currentRemainingBudget;
+            }
+        }
+
+        /// <summary>
+        /// Executes, in order, the set of provided functions.
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator Amortize(double inMaxMillisecsPerFrame, params Action[] inActions)
+        {
+            return Amortize(inActions, inMaxMillisecsPerFrame);
+        }
+
+        /// <summary>
+        /// Executes, in order, a function for every element in the given enumerable.
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator ForEachAmortize<T>(IEnumerable<T> inEnumerable, Action<T> inOperation, double inMaxMillisecsPerFrame)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                double durationThisFrame = 0;
+                double lastRemainingBudget = RemainingFrameBudgetMS;
+                foreach (var obj in inEnumerable)
+                {
+                    if (durationThisFrame >= inMaxMillisecsPerFrame)
+                    {
+                        yield return null;
+                        durationThisFrame = 0;
+                        lastRemainingBudget = RemainingFrameBudgetMS;
+                    }
+
+                    inOperation(obj);
+
+                    double currentRemainingBudget = RemainingFrameBudgetMS;
+                    durationThisFrame += (lastRemainingBudget - currentRemainingBudget);
+                    lastRemainingBudget = currentRemainingBudget;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Executes, in order, a function for every element in the given enumerable.
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator ForEachAmortize<T>(IEnumerable<T> inEnumerable, Action<int, T> inOperation, double inMaxMillisecsPerFrame)
+        {
+            if (inEnumerable != null && inOperation != null)
+            {
+                int idx = 0;
+                double durationThisFrame = 0;
+                double lastRemainingBudget = RemainingFrameBudgetMS;
+                foreach (var obj in inEnumerable)
+                {
+                    if (durationThisFrame >= inMaxMillisecsPerFrame)
+                    {
+                        yield return null;
+                        durationThisFrame = 0;
+                        lastRemainingBudget = RemainingFrameBudgetMS;
+                    }
+
+                    inOperation(idx++, obj);
+
+                    double currentRemainingBudget = RemainingFrameBudgetMS;
+                    durationThisFrame += (lastRemainingBudget - currentRemainingBudget);
+                    lastRemainingBudget = currentRemainingBudget;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Waits for spare time at the end of a frame.
+        /// </summary>
+        static public IEnumerator WaitForSpareTime(double inDesiredRemainingMillisecs)
+        {
+            while (true)
+            {
+                yield return s_CachedWaitForEndOfFrame;
+                if (RemainingFrameBudgetMS >= inDesiredRemainingMillisecs)
+                    yield return Command.BreakAndResume;
+            }
+        }
+
+        #endregion // Frame Budget
 
         #region Yield
 

@@ -820,7 +820,6 @@ namespace BeauRoutine.Internal
                         if (resultType == TYPEHANDLE_WAITFORENDOFFRAME)
                         {
                             Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForEndOfFrame);
-                            Manager.Host.WaitForEndOfFrame();
                             m_YieldPhase = YieldPhase.WaitForEndOfFrame;
                             m_YieldFrameDelay = 0;
                             return true;
@@ -923,7 +922,7 @@ namespace BeauRoutine.Internal
                     {
                         // Check if we need to resize the stack
                         if (m_StackPosition == m_StackSize - 1)
-                        Array.Resize(ref m_Stack, m_StackSize *= 2);
+                            Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
                         CheckForNesting(enumerator);

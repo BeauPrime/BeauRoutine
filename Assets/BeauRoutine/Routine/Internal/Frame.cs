@@ -5,7 +5,7 @@
  * 
  * File:    Frame.cs
  * Purpose: Data needed for an individual frame of routine execution.
-*/
+ */
 
 namespace BeauRoutine.Internal
 {
@@ -18,7 +18,7 @@ namespace BeauRoutine.Internal
         /// Current delta time.
         /// </summary>
         public float DeltaTime;
-        
+
         /// <summary>
         /// Unscaled delta time.
         /// </summary>

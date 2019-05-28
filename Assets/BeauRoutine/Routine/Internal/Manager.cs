@@ -5,10 +5,10 @@
  * 
  * File:    Manager.cs
  * Purpose: Manages BeauRoutine lifecycle.
-*/
+ */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
-    #define DEVELOPMENT
+#define DEVELOPMENT
 #endif
 
 using System;
@@ -69,8 +69,15 @@ namespace BeauRoutine.Internal
         /// </summary>
         static public Manager Get()
         {
-            if (s_Instance == null && !s_AppQuitting)
-                throw new InvalidOperationException("BeauRoutine has been shutdown. Please call Initialize() before anything else.");
+            if (s_Instance == null)
+            {
+                #if DEVELOPMENT
+                if (!Application.isPlaying)
+                    return null;
+                #endif // DEVELOPMENT
+                if (!s_AppQuitting)
+                    throw new InvalidOperationException("BeauRoutine has been shutdown. Please call Initialize() before anything else.");
+            }
             return s_Instance;
         }
 
@@ -107,6 +114,9 @@ namespace BeauRoutine.Internal
         private float m_ThinkUpdateDeltaAccum = 0;
         private float m_LastCustomUpdateTime = 0;
         private float m_CustomUpdateDeltaAccum = 0;
+
+        // Frame timing
+        private Stopwatch m_FrameTimer;
 
         // Profiling
         private Stopwatch m_UpdateTimer;
@@ -187,13 +197,18 @@ namespace BeauRoutine.Internal
         public float ThinkUpdateInterval = DEFAULT_THINKUPDATE_INTERVAL;
 
         /// <summary>
+        /// Frame duration budget, in ticks.
+        /// </summary>
+        public long FrameDurationBudgetTicks;
+
+        /// <summary>
         /// Is the manager in the middle of updating routines right now?
         /// </summary>
         public bool IsUpdating()
         {
             return m_Updating;
         }
-        
+
         /// <summary>
         /// Is the manager in the middle of updating the given update list.
         /// </summary>
@@ -210,24 +225,26 @@ namespace BeauRoutine.Internal
 
             Fibers = new Table(this);
 
+            m_FrameTimer = new Stopwatch();
             m_UpdateTimer = new Stopwatch();
 
             Frame.ResetTime(Time.deltaTime, TimeScale);
+            FrameDurationBudgetTicks = CalculateDefaultFrameBudgetTicks();
 
             m_QueuedGroupTimescale = new float[Routine.MAX_GROUPS];
             Frame.GroupTimeScale = new float[Routine.MAX_GROUPS];
             for (int i = 0; i < Routine.MAX_GROUPS; ++i)
                 m_QueuedGroupTimescale[i] = Frame.GroupTimeScale[i] = 1.0f;
 
-#if DEVELOPMENT
-    #if UNITY_EDITOR
+            #if DEVELOPMENT
+            #if UNITY_EDITOR
             DebugMode = true;
-    #else
+            #else
             DebugMode = UnityEngine.Debug.isDebugBuild;
-    #endif // UNITY_EDITOR
-#else
+            #endif // UNITY_EDITOR
+            #else
             DebugMode = false;
-#endif // DEVELOPMENT
+            #endif // DEVELOPMENT
 
             HandleExceptions = DebugMode;
         }
@@ -243,7 +260,7 @@ namespace BeauRoutine.Internal
             GameObject hostGO = new GameObject("Routine::Manager");
             Host = hostGO.AddComponent<RoutineUnityHost>();
             Host.Initialize(this);
-            hostGO.hideFlags = HideFlags.HideAndDontSave;
+            hostGO.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor;
             GameObject.DontDestroyOnLoad(hostGO);
 
             Log("Initialize() -- Version " + VERSION.ToString());
@@ -272,7 +289,7 @@ namespace BeauRoutine.Internal
             bool bPrevUpdating = m_Updating;
             m_Updating = true;
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
@@ -317,7 +334,7 @@ namespace BeauRoutine.Internal
                     }
                 }
                 else
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 {
                     if (!Paused && !SystemPaused && Fibers.GetUpdateCount(inPhase) > 0)
                     {
@@ -356,7 +373,7 @@ namespace BeauRoutine.Internal
             {
                 // Copy this, so we have a consistent group time scale
                 // for any previous updates
-                oldFrame.GroupTimeScale = (float[])oldFrame.GroupTimeScale.Clone();
+                oldFrame.GroupTimeScale = (float[]) oldFrame.GroupTimeScale.Clone();
             }
 
             Frame.IncrementSerial();
@@ -366,14 +383,14 @@ namespace BeauRoutine.Internal
             {
                 if (!bPrevUpdating)
                     m_GroupTimescaleDirty = false;
-                
+
                 // This is only temporary, so we won't reset the dirty flag here
                 Array.Copy(m_QueuedGroupTimescale, Frame.GroupTimeScale, Routine.MAX_GROUPS);
             }
-            
+
             m_Updating = true;
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
@@ -396,7 +413,7 @@ namespace BeauRoutine.Internal
                     m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
                 }
                 else
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 {
                     if (Fibers.GetUpdateCount(RoutinePhase.Manual) > 0)
                     {
@@ -435,7 +452,7 @@ namespace BeauRoutine.Internal
             {
                 // Copy this, so we have a consistent group time scale
                 // for any previous updates
-                oldFrame.GroupTimeScale = (float[])oldFrame.GroupTimeScale.Clone();
+                oldFrame.GroupTimeScale = (float[]) oldFrame.GroupTimeScale.Clone();
             }
 
             Frame.IncrementSerial();
@@ -450,7 +467,7 @@ namespace BeauRoutine.Internal
 
             m_Updating = true;
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 if (DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
@@ -470,7 +487,7 @@ namespace BeauRoutine.Internal
                     m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
                 }
                 else
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 {
                     Fibers.RunManualUpdate(inFiber);
                     Frame.ResetTimeScale();
@@ -617,16 +634,16 @@ namespace BeauRoutine.Internal
             if (ReferenceEquals(inHost, null))
                 inHost = Host;
 
-#if DEVELOPMENT
+            #if DEVELOPMENT
             if (inStart.GetType().TypeHandle.Value == TYPEHANDLE_DECORATOR)
             {
-                RoutineDecorator decorator = (RoutineDecorator)inStart;
+                RoutineDecorator decorator = (RoutineDecorator) inStart;
                 if ((decorator.Flags & RoutineDecoratorFlag.Inline) != 0)
                 {
                     UnityEngine.Debug.LogWarning("[BeauRoutine] Starting a BeauRoutine with an Inlined coroutine. This is not supported, and the coroutine will not execute immediately.");
                 }
             }
-#endif // DEVELOPMENT
+            #endif // DEVELOPMENT
 
             Routine handle;
             Fiber fiber = CreateFiber(inHost, inStart, false, out handle);
@@ -660,7 +677,7 @@ namespace BeauRoutine.Internal
             Fiber fiber = Fibers.GetFreeFiber();
             outHandle = fiber.Initialize(inHost, inStart, inbChained);
 
-#if DEVELOPMENT
+            #if DEVELOPMENT
             if (DebugMode)
             {
                 int running = Fibers.TotalRunning;
@@ -670,7 +687,7 @@ namespace BeauRoutine.Internal
                     m_NeedsSnapshot = SnapshotEnabled;
                 }
             }
-#endif // DEVELOPMENT
+            #endif // DEVELOPMENT
 
             return fiber;
         }
@@ -692,7 +709,7 @@ namespace BeauRoutine.Internal
 
             m_Updating = true;
             {
-#if DEVELOPMENT
+                #if DEVELOPMENT
                 if (DebugMode && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
@@ -715,7 +732,7 @@ namespace BeauRoutine.Internal
                     m_TotalUpdateTime += m_UpdateTimer.ElapsedTicks;
                 }
                 else
-#endif // DEVELOPMENT
+                #endif // DEVELOPMENT
                 {
                     if (!Paused && !SystemPaused && Fibers.GetYieldCount(inYieldUpdate) > 0)
                     {
@@ -825,13 +842,83 @@ namespace BeauRoutine.Internal
 
         #endregion // Groups
 
+        #region Frame Timing
+
+        /// <summary>
+        /// Marks a frame as having started.
+        /// </summary>
+        public void MarkFrameStart()
+        {
+            if (!m_FrameTimer.IsRunning)
+            {
+                m_FrameTimer.Restart();
+            }
+        }
+
+        /// <summary>
+        /// Marks a frame as having ended.
+        /// </summary>
+        public void MarkFrameEnd()
+        {
+            if (m_FrameTimer.IsRunning)
+            {
+                // Log(string.Format("Frame {0} - {1}ms/ left ({2}ms original budget)", Time.frameCount, CalculateRemainingFrameBudgetMS(), FrameDurationBudgetTicks / (double) TimeSpan.TicksPerMillisecond));
+                m_FrameTimer.Stop();
+            }
+        }
+
+        /// <summary>
+        /// Returns the remaining milliseconds for this frame.
+        /// </summary>
+        public double CalculateRemainingFrameBudgetMS()
+        {
+            if (m_FrameTimer.IsRunning)
+            {
+                return (FrameDurationBudgetTicks - m_FrameTimer.ElapsedTicks) / (double) TimeSpan.TicksPerMillisecond;
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// Calculates the default frame budget.
+        /// </summary>
+        static public long CalculateDefaultFrameBudgetTicks()
+        {
+            return TimeSpan.TicksPerSecond / GetTargetFramerate();
+        }
+
+        /// <summary>
+        /// Gets the default framerate for this platform.
+        /// </summary>
+        static public int GetTargetFramerate()
+        {
+            if (QualitySettings.vSyncCount > 0)
+            {
+                return Screen.currentResolution.refreshRate / QualitySettings.vSyncCount;
+            }
+
+            if (Application.targetFrameRate > 0)
+            {
+                return Application.targetFrameRate;
+            }
+
+            if (Application.isMobilePlatform || Application.platform == RuntimePlatform.WebGLPlayer)
+            {
+                return 30;
+            }
+
+            return 60;
+        }
+
+        #endregion // Frame Timing
+
         /// <summary>
         /// Logs a message to the console in Debug Mode.
         /// </summary>
         [Conditional("DEVELOPMENT")]
         public void Log(string inMessage)
         {
-#if DEVELOPMENT
+            #if DEVELOPMENT
             if (DebugMode)
             {
                 m_LogBuilder.Insert(0, "[BeauRoutine] ");
@@ -840,7 +927,7 @@ namespace BeauRoutine.Internal
                 m_LogBuilder.Length = 0;
                 UnityEngine.Debug.Log(logged);
             }
-#endif // DEVELOPMENT
+            #endif // DEVELOPMENT
         }
     }
 }

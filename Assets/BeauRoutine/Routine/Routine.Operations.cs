@@ -6,16 +6,16 @@
  * File:    Routine.Operations.cs
  * Purpose: Public API for starting, stopping, pausing, resuming,
  *          and querying Routines.
-*/
+ */
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
 #endif
 
-using BeauRoutine.Internal;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using BeauRoutine.Internal;
 using UnityEngine;
 
 namespace BeauRoutine
@@ -439,20 +439,20 @@ namespace BeauRoutine
             {
                 get
                 {
-#if DEVELOPMENT
+                    #if DEVELOPMENT
                     Manager m = Manager.Get();
                     if (m != null)
                         return m.DebugMode;
-#endif // DEVELOPMENT
+                    #endif // DEVELOPMENT
                     return false;
                 }
                 set
                 {
-#if DEVELOPMENT
+                    #if DEVELOPMENT
                     Manager m = Manager.Get();
                     if (m != null)
                         m.DebugMode = value;
-#endif // DEVELOPMENT
+                    #endif // DEVELOPMENT
                 }
             }
 
@@ -465,20 +465,20 @@ namespace BeauRoutine
             {
                 get
                 {
-#if DEVELOPMENT
+                    #if DEVELOPMENT
                     Manager m = Manager.Get();
                     if (m != null)
                         return m.ProfilingEnabled;
-#endif // DEVELOPMENT
+                    #endif // DEVELOPMENT
                     return false;
                 }
                 set
                 {
-#if DEVELOPMENT
+                    #if DEVELOPMENT
                     Manager m = Manager.Get();
                     if (m != null)
                         m.ProfilingEnabled = value;
-#endif // DEVELOPMENT
+                    #endif // DEVELOPMENT
                 }
             }
 
@@ -540,11 +540,11 @@ namespace BeauRoutine
                 }
                 set
                 {
-#if DEVELOPMENT
+                    #if DEVELOPMENT
                     Manager m = Manager.Get();
                     if (m != null)
                         m.SnapshotEnabled = value;
-#endif // DEVELOPMENT
+                    #endif // DEVELOPMENT
                 }
             }
 
@@ -605,6 +605,26 @@ namespace BeauRoutine
                     Manager m = Manager.Get();
                     if (m != null)
                         m.SetCustomUpdateInterval(value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the expected milliseconds budget per frame.
+            /// </summary>
+            static public double FrameDurationBudgetMS
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.FrameDurationBudgetTicks / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() / TimeSpan.TicksPerMillisecond;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.FrameDurationBudgetTicks = (long)(TimeSpan.TicksPerMillisecond * value);
                 }
             }
         }
