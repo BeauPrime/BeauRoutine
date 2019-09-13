@@ -1,7 +1,7 @@
 # BeauRoutine
 
-**Current Version: 0.10.0**  
-Updated 30 April 2019 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
+**Current Version: 0.10.1**  
+Updated 13 September 2019 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
@@ -1193,6 +1193,7 @@ These functions can be called directly on a Routine handle.
 | **Time** | |
 | ``Routine.DeltaTime`` | Delta time for the current routine, with all applicable scaling applied. |
 | ``Routine.UnscaledDeltaTime`` | Unscaled delta time for all routines. |
+| ``Routine.RemainingFrameBudgetMS`` | Remaining milliseconds left in the current frame, relative to the frame budget. |
 | **Flow** | |
 | ``Routine.Pause`` | Pauses the BeauRoutine with the given name. |
 | ``Routine.PauseAll`` | Pauses all BeauRoutines. |
@@ -1234,11 +1235,19 @@ These functions can be called directly on a Routine handle.
 | ``Routine.SetGroupTimeScale`` | Sets the time scale for the given group |
 | ``Routine.ResetGroupTimeScale`` | Resets the time scale for the given group |
 | ``Routine.GetGroupMask`` | Returns the bitmask for the given groups |
+| **Collections** | |
+| ``Routine.ForEach`` | Generates and executes, in sequence, a coroutine for every element in the given collection. |
+| ``Routine.ForEachParallel`` | Generates and executes, in parallel, a coroutine for every element in the given collection. |
+| ``Routine.ForEachParallelChunked`` | Generates and executes, in parallel, a coroutine for every element in the given collection, in batches. |
+| **Amortization** | |
+| ``Amortize`` | Executes a series of actions across multiple frames, executing for a certain number of milliseconds per frame. |
+| ``ForEachAmortize`` | Executes an action on every element in the given collection across multiple frames, executing for a certain number of milliseconds per frame. |
+| ``AmortizeQueue`` | Executes an action on every element in the given queue across multiple frames, executing for a certain number of milliseconds per frame, until the queue is exhausted. |
+| ``AmortizeQueueLoop`` | Executes an action on every element in the given queue across multiple frames, executing for a certain number of milliseconds per frame. When the queue is exhausted, will wait until more elements are available to continue. |
 | **Misc** | |
 | ``Routine.Timer`` | Counts down for the given number of seconds, with a callback for time remaining. |
 | ``Routine.Accumulate`` | Counts up for the given number of seconds, with a callback for time accumulated. |
-| ``Routine.ForEach`` | Generates and executes, in sequence, a coroutine for every element in the given collection. |
-| ``Routine.ForEachParallel`` | Generates and executes, in parallel, a coroutine for every element in the given collection. |
+| ``Routine.WaitForSpareTime`` | Waits until the desired number of milliseconds are available at the end of the frame before continuing. |
 
 ### Routine Extensions
 
@@ -1282,6 +1291,7 @@ All settings are available in the editor. Non-development builds disable access 
 | ``Routine.Settings.DebugMode`` | Enabled or disables additional error checks. | Debug Only |
 | ``Routine.Settings.ProfilingEnabled`` | Enabled or disables profiling. This will track execution time stats and periodically log them to the debug console. This will only function if Debug Mode is enabled. | Debug Only |
 | ``Routine.Settings.SnapshotEnabled`` | Enables or disables snapshot profiling. This will take snapshots of the highest number of simultaneous executing BeauRoutines. This will only function if Profiling is enabled. | Debug Only |
+| ``Routine.Settings.FrameDurationBudgetMS`` | Sets the expected millisecond duration per frame. | --- |
 | **Functions** | | |
 | ``Routine.Settings.SetCapacity`` | Pre-allocates for the given number of simultaneous executing BeauRoutines. Useful for avoiding unexpected allocations. | --- |
 | ``Routine.Initialize`` | Initializes BeauRoutine. BeauRoutine will auto-initialize when you perform your first BeauRoutine operation, but this can be called earlier to allocate the necessary resources. | --- |
@@ -1466,6 +1476,7 @@ These functions will modify Tween objects. Do not call once the Tween has starte
 | ``Tween.SetPooled`` | | Enables Tween pooling. This will reuse Tween instances when possible to reduce garbage generation. |
 | **TweenUtil** | | |
 | ``TweenUtil.Evaluate`` | ``Curve`` | Evaluates an easing function for a given percentage. |
+| ``TweenUtil.EvaluateMirrored`` | ``Curve`` | Evaluates an easing function, mirrored in its progression rate (in becomes out, out becomes in, etc), for a given percentage. |
 | ``TweenUtil.Lerp `` | | Returns an interpolation percentage, corrected for delta time. |
 | ``TweenUtil.LerpDecay`` | | Returns a decay multiplier, corrected for delta time. |
 | ``TweenUtil.SetDefaultLerpPeriod`` | | Sets the default lerp period for use in ``TweenUtil.Lerp`` and ``TweenUtil.LerpDecay`` |
