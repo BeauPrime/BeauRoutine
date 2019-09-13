@@ -81,7 +81,7 @@ namespace BeauRoutine
                 Rect indentedPos = EditorGUI.IndentedRect(position);
                 float toShift = EditorGUIUtility.labelWidth - 2 * (indentedPos.x - position.x);
 
-                EditorGUI.BeginProperty(indentedPos, label, property);
+                label = EditorGUI.BeginProperty(indentedPos, label, property);
                 {
                     GUI.Label(indentedPos, label);
 

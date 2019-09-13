@@ -717,6 +717,9 @@ namespace BeauRoutine.Internal
                                 }
                                 bExecuteStack = true;
                                 break;
+                            case Routine.Command.Continue:
+                                bExecuteStack = true;
+                                break;
                         }
 
                         if (!bExecuteStack)

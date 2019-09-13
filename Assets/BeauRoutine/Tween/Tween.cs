@@ -665,10 +665,9 @@ namespace BeauRoutine
                     m_TweenData.ApplyTween(curvedPercent);
                     if (m_OnUpdate != null)
                         m_OnUpdate(m_FromMode ? 1 - curvedPercent : curvedPercent);
-
-                    m_TweenData.OnTweenEnd();
                 }
 
+                m_TweenData.OnTweenEnd();
                 m_TweenData = null;
                 TweenPool.Free(this);
             }

@@ -195,6 +195,14 @@ namespace BeauRoutine
             );
         }
 
+        /// <summary>
+        /// Evaluates a mirrored version of the curve.
+        /// </summary>
+        static public float EvaluateMirrored(this Curve inCurve, float t)
+        {
+            return 1 - Evaluate(inCurve, 1 - t);
+        }
+
         #endregion // Curves
 
         #region Time-Independent Lerp

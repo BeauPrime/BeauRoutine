@@ -15,7 +15,8 @@ namespace BeauRoutine.Internal
     [Flags]
     internal enum RoutineDecoratorFlag
     {
-        Inline = 0x001
+        Inline = 0x001,
+        ContinueIfNull = 0x002,
     }
 
     internal class RoutineDecorator : IEnumerator, IDisposable

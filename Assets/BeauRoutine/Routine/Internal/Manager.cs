@@ -851,7 +851,8 @@ namespace BeauRoutine.Internal
         {
             if (!m_FrameTimer.IsRunning)
             {
-                m_FrameTimer.Restart();
+                m_FrameTimer.Reset();
+                m_FrameTimer.Start();
             }
         }
 

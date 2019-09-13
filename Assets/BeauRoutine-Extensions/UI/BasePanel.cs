@@ -7,7 +7,9 @@
  * Purpose: Abstract two-state UI panel.
  */
 
+using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace BeauRoutine.Extensions
@@ -24,6 +26,22 @@ namespace BeauRoutine.Extensions
             DisableRaycasts = 2
         }
 
+        /// <summary>
+        /// Interface for performing transition animations.
+        /// </summary>
+        public interface IAnimator
+        {
+            /// <summary>
+            /// Performs an instant transition to the given state.
+            /// </summary>
+            void InstantTransitionTo(bool inbOn);
+
+            /// <summary>
+            /// Returns an IEnumerator for transitioning to the given state.
+            /// </summary>
+            IEnumerator TransitionTo(bool inbOn);
+        }
+
         #region Inspector
 
         [SerializeField]
@@ -38,12 +56,14 @@ namespace BeauRoutine.Extensions
         [SerializeField]
         private bool m_HideOnStart = true;
 
+        [SerializeField]
+        private BasePanelAnimator[] m_PanelAnimators = null;
+
         #endregion // Inspector
 
         private Routine m_ShowHideAnim;
-        private bool m_Showing;
-
-        private bool m_StateInitialized;
+        [NonSerialized] private bool m_Showing;
+        [NonSerialized] private bool m_StateInitialized;
 
         public RectTransform Root { get { return m_RootTransform; } }
         public CanvasGroup CanvasGroup { get { return m_RootGroup; } }
@@ -112,8 +132,10 @@ namespace BeauRoutine.Extensions
             m_StateInitialized = true;
 
             OnShow(true);
+            SubAnimatorInstantTransition(true);
             InstantTransitionToShow();
             SetInputState(true);
+            OnShowComplete(true);
         }
 
         public IEnumerator Hide(float inDelay = 0)
@@ -141,11 +163,14 @@ namespace BeauRoutine.Extensions
             m_StateInitialized = true;
 
             OnHide(true);
+            SubAnimatorInstantTransition(false);
             InstantTransitionToHide();
             SetInputState(false);
 
             if (m_RootTransform)
                 m_RootTransform.gameObject.SetActive(false);
+
+            OnHideComplete(true);
         }
 
         #endregion // Show/Hide
@@ -160,8 +185,12 @@ namespace BeauRoutine.Extensions
                 yield return inDelay;
 
             OnShow(false);
-            yield return Routine.Inline(TransitionToShow());
+            yield return Routine.Inline(Routine.Combine(
+                TransitionToShow(),
+                SubAnimatorTransition(true)
+            ));
             SetInputState(true);
+            OnShowComplete(false);
         }
 
         private IEnumerator HideImpl(float inDelay)
@@ -172,10 +201,15 @@ namespace BeauRoutine.Extensions
                 yield return inDelay;
 
             OnHide(false);
-            yield return Routine.Inline(TransitionToHide());
+            yield return Routine.Inline(Routine.Combine(
+                TransitionToHide(),
+                SubAnimatorTransition(false)
+            ));
 
             if (m_RootTransform)
                 m_RootTransform.gameObject.SetActive(false);
+
+            OnHideComplete(false);
         }
 
         protected virtual void SetInputState(bool inbEnabled)
@@ -195,17 +229,66 @@ namespace BeauRoutine.Extensions
             }
         }
 
+        private IEnumerator SubAnimatorTransition(bool inbOn)
+        {
+            if (m_PanelAnimators == null || m_PanelAnimators.Length == 0)
+                return null;
+
+            if (m_PanelAnimators.Length == 1)
+                return m_PanelAnimators[0].TransitionTo(inbOn);
+
+            IEnumerator[] children = new IEnumerator[m_PanelAnimators.Length];
+            for (int i = 0; i < m_PanelAnimators.Length; ++i)
+            {
+                children[i] = Routine.Inline(m_PanelAnimators[i].TransitionTo(inbOn));
+            }
+            return Routine.Inline(Routine.Combine(children));
+        }
+
+        private void SubAnimatorInstantTransition(bool inbOn)
+        {
+            if (m_PanelAnimators != null)
+            {
+                for (int i = 0; i < m_PanelAnimators.Length; ++i)
+                {
+                    m_PanelAnimators[i].InstantTransitionTo(inbOn);
+                }
+            }
+        }
+
         #endregion // Animations
 
         #region Abstract
 
         protected virtual void OnShow(bool inbInstant) { }
-        protected abstract IEnumerator TransitionToShow();
-        protected abstract void InstantTransitionToShow();
+        protected virtual void OnShowComplete(bool inbInstant) { }
+
+        protected virtual IEnumerator TransitionToShow()
+        {
+            InstantTransitionToShow();
+            return null;
+        }
+
+        protected virtual void InstantTransitionToShow()
+        {
+            if (m_RootTransform)
+                m_RootTransform.gameObject.SetActive(true);
+        }
 
         protected virtual void OnHide(bool inbInstant) { }
-        protected abstract IEnumerator TransitionToHide();
-        protected abstract void InstantTransitionToHide();
+        protected virtual void OnHideComplete(bool inbInstant) { }
+
+        protected virtual IEnumerator TransitionToHide()
+        {
+            InstantTransitionToHide();
+            return null;
+        }
+
+        protected virtual void InstantTransitionToHide()
+        {
+            if (m_RootTransform)
+                m_RootTransform.gameObject.SetActive(false);
+        }
 
         #endregion // Abstract
 
