@@ -26,7 +26,7 @@ namespace BeauRoutine.Internal
         public const float DEFAULT_CUSTOMUPDATE_INTERVAL = 1f / 8f;
 
         // Version number
-        static public readonly Version VERSION = new Version("0.9.1");
+        static public readonly Version VERSION = new Version("0.10.1");
 
         // Used to perform check for starting a Routine.Inline in development builds
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;

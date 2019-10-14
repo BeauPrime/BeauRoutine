@@ -1243,7 +1243,7 @@ These functions can be called directly on a Routine handle.
 | ``Amortize`` | Executes a series of actions across multiple frames, executing for a certain number of milliseconds per frame. |
 | ``ForEachAmortize`` | Executes an action on every element in the given collection across multiple frames, executing for a certain number of milliseconds per frame. |
 | ``AmortizeQueue`` | Executes an action on every element in the given queue across multiple frames, executing for a certain number of milliseconds per frame, until the queue is exhausted. |
-| ``AmortizeQueueLoop`` | Executes an action on every element in the given queue across multiple frames, executing for a certain number of milliseconds per frame. When the queue is exhausted, will wait until more elements are available to continue. |
+| ``AmortizeQueueLoop`` | Executes an action on every element in the given queue across multiple frames, executing for a certain number of milliseconds per frame. When the queue is exhausted, will wait until more elements are available and restart. |
 | **Misc** | |
 | ``Routine.Timer`` | Counts down for the given number of seconds, with a callback for time remaining. |
 | ``Routine.Accumulate`` | Counts up for the given number of seconds, with a callback for time accumulated. |
