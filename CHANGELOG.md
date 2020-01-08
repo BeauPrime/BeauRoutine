@@ -1,3 +1,29 @@
+### Version 0.10.1
+**13 September 2019**
+
+Added amortization helper methods. Several bug fixes.
+
+#### Features
+
+* Added amortization methods for splitting work across multiple frames
+* Added frame milliseconds budget concept
+
+#### Fixes
+
+* Fixed case where ``ITweenData.OnTweenEnd`` would not be called when canceling a tween when no cancel mode is set
+** This fixes a case where cancelling an euler rotation tween would sometimes result in future euler rotation tweens on the same object starting with the wrong rotation
+* Fixed WaitForEndOfFrame not dispatching properly
+* Fixed RoutineGroupRef property drawer not respecting property label
+
+#### Improvements
+
+* Switched Routine.Inline result to class to avoid inevitable boxing
+* Added ``TweenUtil.EvaluateMirrored`` for evaluating a mirrored version of an easing curve
+
+#### Breaking Changes
+
+* Renamed chunked version of ``Routine.ForEachParallel`` to ``Routine.ForEachParallelChunked``
+
 ### Version 0.10.0
 **30 April 2019**
 

@@ -28,7 +28,7 @@ namespace BeauRoutine.Internal
         public const double DEFAULT_ASYNC_PERCENTAGE = 0.4f;
 
         // Version number
-        static public readonly Version VERSION = new Version("0.9.1");
+        static public readonly Version VERSION = new Version("0.10.1");
 
         // Used to perform check for starting a Routine.Inline in development builds
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
