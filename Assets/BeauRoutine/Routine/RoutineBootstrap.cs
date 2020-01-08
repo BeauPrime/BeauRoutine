@@ -5,11 +5,11 @@
  * 
  * File:    RoutineBootstrap.cs
  * Purpose: Component that initializes Routine settings.
-*/
+ */
 
-using UnityEngine;
-using BeauRoutine.Internal;
 using System;
+using BeauRoutine.Internal;
+using UnityEngine;
 
 namespace BeauRoutine
 {
@@ -55,18 +55,32 @@ namespace BeauRoutine
         [SerializeField, Tooltip("Interval between CustomUpdate phases, in seconds.")]
         private float m_CustomUpdateInterval = Manager.DEFAULT_CUSTOMUPDATE_INTERVAL;
 
+        [Header("Async Settings")]
+
+        [SerializeField, Tooltip("Frame budget, in milliseconds.\nSet to 0 or less to use default budget for framerate.")]
+        private double m_FrameBudget = -1;
+
+        [SerializeField, Tooltip("Async budget, in milliseconds.\nSet to 0 or less to use default budget for async.")]
+        private double m_AsyncBudget = -1;
+
+        [SerializeField, Tooltip("If set, single-threaded mode will be enabled for async operations.")]
+        private bool m_ForceSingleThreaded = false;
+
+        // private float m_
+
         #endregion // Inspector
 
-#if UNITY_EDITOR
+        #if UNITY_EDITOR
         [NonSerialized]
         private bool m_Awoken = false;
-#endif // UNITY_EDITOR
+        #endif // UNITY_EDITOR
 
         private void Awake()
         {
-#if UNITY_EDITOR
+            #if UNITY_EDITOR
             m_Awoken = true;
-#endif // UNITY_EDITOR
+            #endif // UNITY_EDITOR
+
             Apply();
         }
 
@@ -86,6 +100,17 @@ namespace BeauRoutine
             Routine.Settings.DefaultPhase = m_DefaultPhase;
             Routine.Settings.ThinkUpdateInterval = m_ThinkUpdateInterval;
             Routine.Settings.CustomUpdateInterval = m_CustomUpdateInterval;
+
+            if (m_FrameBudget > 0)
+            {
+                Routine.Settings.FrameDurationBudgetMS = m_FrameBudget;
+                Routine.Settings.AsyncBudgetMS = m_FrameBudget * Manager.DEFAULT_ASYNC_PERCENTAGE;
+            }
+
+            if (m_AsyncBudget > 0)
+            {
+                Routine.Settings.AsyncBudgetMS = m_AsyncBudget;
+            }
         }
 
         #if UNITY_EDITOR
@@ -94,6 +119,11 @@ namespace BeauRoutine
         {
             if (UnityEditor.EditorApplication.isPlaying && m_Awoken)
                 Apply();
+
+            if (m_FrameBudget > 0 && m_AsyncBudget > m_FrameBudget)
+            {
+                m_AsyncBudget = m_FrameBudget;
+            }
         }
 
         #endif // UNITY_EDITOR

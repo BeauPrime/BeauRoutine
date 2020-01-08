@@ -25,6 +25,8 @@ namespace BeauRoutine.Internal
         public const float DEFAULT_THINKUPDATE_INTERVAL = 1f / 10f;
         public const float DEFAULT_CUSTOMUPDATE_INTERVAL = 1f / 8f;
 
+        public const double DEFAULT_ASYNC_PERCENTAGE = 0.4f;
+
         // Version number
         static public readonly Version VERSION = new Version("0.9.1");
 
@@ -117,6 +119,7 @@ namespace BeauRoutine.Internal
 
         // Frame timing
         private Stopwatch m_FrameTimer;
+        private bool m_ForceSingleThreaded;
 
         // Profiling
         private Stopwatch m_UpdateTimer;
@@ -134,6 +137,11 @@ namespace BeauRoutine.Internal
         /// Table containing all fibers.
         /// </summary>
         public readonly Table Fibers;
+
+        /// <summary>
+        /// Scheduler for async calls.
+        /// </summary>
+        public readonly AsyncScheduler Scheduler;
 
         /// <summary>
         /// Unity host object.
@@ -202,6 +210,11 @@ namespace BeauRoutine.Internal
         public long FrameDurationBudgetTicks;
 
         /// <summary>
+        /// Async budget, in ticks.
+        /// </summary>
+        public long AsyncBudgetTicks;
+
+        /// <summary>
         /// Is the manager in the middle of updating routines right now?
         /// </summary>
         public bool IsUpdating()
@@ -224,6 +237,7 @@ namespace BeauRoutine.Internal
             s_Instance = this;
 
             Fibers = new Table(this);
+            Scheduler = new AsyncScheduler();
 
             m_FrameTimer = new Stopwatch();
             m_UpdateTimer = new Stopwatch();
@@ -247,6 +261,7 @@ namespace BeauRoutine.Internal
             #endif // DEVELOPMENT
 
             HandleExceptions = DebugMode;
+            m_ForceSingleThreaded = AsyncScheduler.SupportsThreading;
         }
 
         /// <summary>
@@ -518,6 +533,7 @@ namespace BeauRoutine.Internal
 
             Fibers.ClearAll();
             TweenPool.StopPooling();
+            Scheduler.Destroy();
 
             if (Host != null)
             {
@@ -881,6 +897,18 @@ namespace BeauRoutine.Internal
         }
 
         /// <summary>
+        /// Returns the remaining ticks for this frame.
+        /// </summary>
+        public long CalculateRemainingFrameBudgetTicks()
+        {
+            if (m_FrameTimer.IsRunning)
+            {
+                return FrameDurationBudgetTicks - m_FrameTimer.ElapsedTicks;
+            }
+            return 0;
+        }
+
+        /// <summary>
         /// Calculates the default frame budget.
         /// </summary>
         static public long CalculateDefaultFrameBudgetTicks()
@@ -912,6 +940,42 @@ namespace BeauRoutine.Internal
         }
 
         #endregion // Frame Timing
+
+        #region Async
+
+        /// <summary>
+        /// Updates the async scheduler.
+        /// </summary>
+        public void UpdateAsync()
+        {
+            long currentTicks = m_FrameTimer.ElapsedTicks;
+            long ticksRemaining = FrameDurationBudgetTicks - currentTicks;
+            long asyncBudget = Math.Min(AsyncBudgetTicks, ticksRemaining);
+            Scheduler.Process(m_FrameTimer, currentTicks, asyncBudget);
+        }
+
+        /// <summary>
+        /// Returns if only a single thread is assumed.
+        /// </summary>
+        public bool IsSingleThreaded()
+        {
+            return m_ForceSingleThreaded || !AsyncScheduler.SupportsThreading;
+        }
+
+        /// <summary>
+        /// Gets/sets whether to force single-threaded mode for async operations.
+        /// </summary>
+        public bool ForceSingleThreaded
+        {
+            get { return m_ForceSingleThreaded; }
+            set
+            {
+                m_ForceSingleThreaded = value;
+                Scheduler.SetForceSingleThread(value);
+            }
+        }
+
+        #endregion // Async
 
         /// <summary>
         /// Logs a message to the console in Debug Mode.

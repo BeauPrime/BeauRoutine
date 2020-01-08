@@ -8,6 +8,10 @@
  *          and creating routine functions for common tasks.
  */
 
+#if UNITY_WEBGL
+#define DISABLE_THREADING
+#endif // UNITY_WEBGL
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -871,11 +875,28 @@ namespace BeauRoutine
         /// Delegate for returning a coroutine operation for the given element.
         /// </summary>
         public delegate IEnumerator ElementOperationGenerator<T>(T inElement);
-        
+
         /// <summary>
         /// Delegate for returning a coroutine operation for the given element and element index.
         /// </summary>
         public delegate IEnumerator IndexedElementOperationGenerator<T>(int inIndex, T inElement);
+
+        /// <summary>
+        /// Delegate for returning a coroutine operation for the given index.
+        /// </summary>
+        public delegate IEnumerator IndexOperationGenerator(int inIndex);
+
+        /// <summary>
+        /// Executes an enumerator function for every integer between the from (inclusive) and to (exclusive).
+        /// </summary>
+        static public IEnumerator For(int inFrom, int inTo, IndexOperationGenerator inOperation)
+        {
+            if (inOperation != null && inFrom < inTo)
+            {
+                for (int i = inFrom; i < inTo; ++i)
+                    yield return inOperation(i);
+            }
+        }
 
         /// <summary>
         /// Executes, in order, an enumerator function for every element in the given enumerable.
@@ -923,6 +944,22 @@ namespace BeauRoutine
             {
                 for (int i = 0; i < inArray.Length; ++i)
                     yield return inOperation(i, inArray[i]);
+            }
+        }
+
+        /// <summary>
+        /// Executes, in parallel, an enumerator function for every integer between the from (inclusive) and to (exclusive).
+        /// </summary>
+        static public IEnumerator ForParallel(int inFrom, int inTo, IndexOperationGenerator inOperation)
+        {
+            if (inOperation != null && inFrom < inTo)
+            {
+                ParallelFibers combine = CreateEmptyParallel(false, inTo - inFrom);
+                for (int i = inFrom; i < inTo; ++i)
+                {
+                    combine.AddEnumerator(inOperation(i));
+                }
+                yield return Routine.Inline(combine);
             }
         }
 
@@ -1111,17 +1148,22 @@ namespace BeauRoutine
 
         #endregion
 
-        #region Frame Budget
+        #region Amortize
 
         /// <summary>
         /// Delegate for performing an operation on the given element.
         /// </summary>
         public delegate void ElementOperation<T>(T inElement);
-        
+
         /// <summary>
-        /// Delegate for performing an  operation on the given element for the given element index.
+        /// Delegate for performing an operation on the given element for the given element index.
         /// </summary>
         public delegate void IndexedElementOperation<T>(int inIndex, T inElement);
+
+        /// <summary>
+        /// Delegate for performing an operation on the given index.
+        /// </summary>
+        public delegate void IndexOperation(int inIndex);
 
         /// <summary>
         /// Parameters for amortized methods.
@@ -1316,6 +1358,47 @@ namespace BeauRoutine
         static public IEnumerator Amortize(AmortizeParams inParams, params Action[] inActions)
         {
             return Amortize(inActions, inParams);
+        }
+
+        /// <summary>
+        /// Executes, in order, a function for every index between from (inclusive) and to (exclusive).
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator ForAmortize(int inFrom, int inTo, IndexOperation inOperation, double inMaxMillisecsPerFrame)
+        {
+            return ForAmortize(inFrom, inTo, inOperation, new AmortizeParams(inMaxMillisecsPerFrame));
+        }
+
+        /// <summary>
+        /// Executes, in order, a function for every index between from (inclusive) and to (exclusive).
+        /// This will attempt to not execute for longer than the given number of milliseconds per frame.
+        /// </summary>
+        static public IEnumerator ForAmortize(int inFrom, int inTo, IndexOperation inOperation, AmortizeParams inParams)
+        {
+            if (inFrom < inTo && inOperation != null)
+            {
+                AmortizeTimer tracker = new AmortizeTimer(inParams);
+
+                while (!tracker.CanStartFrame())
+                    yield return null;
+                tracker.ResetFrame();
+
+                for (int i = inFrom; i < inTo; ++i)
+                {
+                    if (tracker.IsOverBudgetForFrame())
+                    {
+                        yield return null;
+
+                        while (!tracker.CanStartFrame())
+                            yield return null;
+                        tracker.ResetFrame();
+                    }
+
+                    inOperation(i);
+
+                    tracker.Tick();
+                }
+            }
         }
 
         /// <summary>
@@ -1590,7 +1673,7 @@ namespace BeauRoutine
             }
         }
 
-        #endregion // Frame Budget
+        #endregion // Amortize
 
         #region Yield
 

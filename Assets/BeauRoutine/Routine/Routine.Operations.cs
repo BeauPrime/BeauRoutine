@@ -624,7 +624,51 @@ namespace BeauRoutine
                 {
                     Manager m = Manager.Get();
                     if (m != null)
-                        m.FrameDurationBudgetTicks = (long)(TimeSpan.TicksPerMillisecond * value);
+                    {
+                        double asyncRatio = (double) m.AsyncBudgetTicks / m.FrameDurationBudgetTicks;
+                        m.FrameDurationBudgetTicks = (long) (TimeSpan.TicksPerMillisecond * value);
+                        m.AsyncBudgetTicks = (long) (asyncRatio * m.FrameDurationBudgetTicks);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the async milliseconds budget per frame.
+            /// </summary>
+            static public double AsyncBudgetMS
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.AsyncBudgetTicks / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE / TimeSpan.TicksPerMillisecond;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.AsyncBudgetTicks = (long) (TimeSpan.TicksPerMillisecond * value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets whether or not to force single-threaded mode for async operations.
+            /// </summary>
+            static public bool ForceSingleThreaded
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.ForceSingleThreaded;
+                    return false;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.ForceSingleThreaded = value;
                 }
             }
         }

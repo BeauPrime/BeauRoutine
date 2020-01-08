@@ -155,6 +155,8 @@ namespace BeauRoutine.Internal
                 {
                     m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
                 }
+                
+                m_Manager.UpdateAsync();
                 m_Manager.MarkFrameEnd();
             }
         }

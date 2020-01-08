@@ -159,7 +159,7 @@ namespace BeauRoutine.Internal
             m_RootFunction = inStart;
             m_Stack[m_StackPosition = 0] = inStart;
 
-            CheckForNesting(inStart);
+            CheckForNesting(inStart, true);
 
             if (!m_Chained)
             {
@@ -262,11 +262,17 @@ namespace BeauRoutine.Internal
 
         // HACK: We need to pass a parent fiber into nested fibers
         //       in order for timescale to work appropriately during a yield update.
-        private void CheckForNesting(IEnumerator inEnumerator)
+        private void CheckForNesting(IEnumerator inEnumerator, bool inbCheckDecorator)
         {
             INestedFiberContainer container = inEnumerator as INestedFiberContainer;
             if (container != null)
                 container.SetParentFiber(this);
+            else if (inbCheckDecorator)
+            {
+                RoutineDecorator decorator = inEnumerator as RoutineDecorator;
+                if (decorator != null && decorator.Enumerator != null)
+                    CheckForNesting(decorator.Enumerator, true);
+            }
         }
 
         #endregion
@@ -741,7 +747,7 @@ namespace BeauRoutine.Internal
                                 Array.Resize(ref m_Stack, m_StackSize *= 2);
                             m_Stack[++m_StackPosition] = decorator;
 
-                            CheckForNesting(decoratedEnumerator);
+                            CheckForNesting(decoratedEnumerator, false);
                         }
 
                         if (!bExecuteStack)
@@ -925,10 +931,10 @@ namespace BeauRoutine.Internal
                     {
                         // Check if we need to resize the stack
                         if (m_StackPosition == m_StackSize - 1)
-                            Array.Resize(ref m_Stack, m_StackSize *= 2);
+                        Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
-                        CheckForNesting(enumerator);
+                        CheckForNesting(enumerator, false);
 
                         return true;
                     }
