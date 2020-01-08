@@ -13,6 +13,7 @@
 
 using System;
 using System.Collections;
+using System.Collections.Generic;
 
 namespace BeauRoutine.Internal
 {
@@ -33,6 +34,11 @@ namespace BeauRoutine.Internal
         private ushort m_Serial;
         private Action m_Action;
         private IEnumerator m_Enumerator;
+        internal AsyncFlags AsyncFlags;
+
+        // misc
+        private List<AsyncHandle> m_Nested = new List<AsyncHandle>();
+        private Action m_OnStop;
 
         #if SUPPORTS_THREADING
         private readonly object m_LockContext = new object();
@@ -43,7 +49,7 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Initializes the work unit with new work.
         /// </summary>
-        internal void Initialize(Action inAction, IEnumerator inEnumerator)
+        internal void Initialize(Action inAction, IEnumerator inEnumerator, AsyncFlags inFlags)
         {
             m_Status = AllCompleteFlag;
 
@@ -54,6 +60,8 @@ namespace BeauRoutine.Internal
             m_Enumerator = inEnumerator;
             if (m_Enumerator != null)
                 m_Status = (ushort) (m_Status & ~EnumeratorCompleteFlag);
+
+            AsyncFlags = inFlags;
 
             if (m_Serial == ushort.MaxValue)
             {
@@ -66,6 +74,50 @@ namespace BeauRoutine.Internal
         }
 
         /// <summary>
+        /// Schedules a callback when the work unit is stopped.
+        /// </summary>
+        internal void OnStopCallback(ushort inSerial, Action inOnStop)
+        {
+            #if SUPPORTS_THREADING
+            lock(m_LockContext)
+            {
+                if (m_Serial == inSerial)
+                {
+                    m_OnStop += inOnStop;
+                }
+            }
+            #else
+            if (m_Serial == inSerial)
+            {
+                m_OnStop += inOnStop;
+            }
+            #endif // SUPPORTS_THREADING
+        }
+
+        /// <summary>
+        /// Dispatch any callbacks.
+        /// </summary>
+        internal void DispatchStop(AsyncDispatcher inDispatcher)
+        {
+            #if SUPPORTS_THREADING
+            lock(m_LockContext)
+            {
+                if (m_OnStop != null)
+                {
+                    inDispatcher.EnqueueInvoke(m_OnStop);
+                    m_OnStop = null;
+                }
+            }
+            #else
+            if (m_OnStop != null)
+            {
+                inDispatcher.EnqueueInvoke(m_OnStop);
+                m_OnStop = null;
+            }
+            #endif // SUPPORTS_THREADING
+        }
+
+        /// <summary>
         /// Clears the work unit's contents.
         /// </summary>
         internal void Clear()
@@ -73,6 +125,9 @@ namespace BeauRoutine.Internal
             m_Status = AllCompleteFlag;
             m_Action = null;
             DisposeUtils.DisposeObject(ref m_Enumerator);
+            AsyncFlags = 0;
+            m_Nested.Clear();
+            m_OnStop = null;
         }
 
         #endregion // Lifecycle
@@ -147,6 +202,11 @@ namespace BeauRoutine.Internal
         private void Cancel()
         {
             m_Status = AllCompleteFlag;
+            for (int i = m_Nested.Count - 1; i >= 0; --i)
+            {
+                m_Nested[i].Cancel();
+            }
+            m_Nested.Clear();
         }
 
         /// <summary>

@@ -74,35 +74,35 @@ namespace BeauRoutine
         /// <summary>
         /// Waits for the other handles to complete.
         /// </summary>
-        static public AsyncHandle Combine(AsyncPriority inPriority, params AsyncHandle[] inHandles)
+        static public AsyncHandle Combine(AsyncFlags inFlags, params AsyncHandle[] inHandles)
         {
-            return Combine(inPriority, inHandles);
+            return Combine(inFlags, inHandles);
         }
 
         /// <summary>
         /// Waits for the other handles to complete.
         /// </summary>
-        static public AsyncHandle Combine(AsyncHandle[] inHandles, AsyncPriority inPriority)
+        static public AsyncHandle Combine(AsyncHandle[] inHandles, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inHandles == null || inHandles.Length == 0)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(CombineImpl((AsyncHandle[]) inHandles.Clone()), inPriority);
+            return Schedule(CombineImpl((AsyncHandle[]) inHandles.Clone()), inFlags);
         }
 
         /// <summary>
         /// Waits for the other handles to complete.
         /// </summary>
-        static public AsyncHandle Combine(List<AsyncHandle> inHandles, AsyncPriority inPriority)
+        static public AsyncHandle Combine(List<AsyncHandle> inHandles, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inHandles == null || inHandles.Count == 0)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(CombineImpl(inHandles.ToArray()), inPriority);
+            return Schedule(CombineImpl(inHandles.ToArray()), inFlags);
         }
 
         static private IEnumerator CombineImpl(AsyncHandle[] inHandles)
@@ -123,13 +123,13 @@ namespace BeauRoutine
         /// <summary>
         /// Schedules an action to be executed asynchronously.
         /// </summary>
-        static public AsyncHandle Schedule(Action inAction, AsyncPriority inPriority)
+        static public AsyncHandle Schedule(Action inAction, AsyncFlags inFlags = AsyncFlags.Default)
         {
             Manager m = Manager.Get();
             if (m != null)
             {
                 m.InitializeAsync();
-                return m.Scheduler.Schedule(inAction, inPriority);
+                return m.Scheduler.Schedule(inAction, inFlags);
             }
             return AsyncHandle.Null;
         }
@@ -137,13 +137,13 @@ namespace BeauRoutine
         /// <summary>
         /// Schedules an enumerated procedure to be executed asynchronously.
         /// </summary>
-        static public AsyncHandle Schedule(IEnumerator inEnumerator, AsyncPriority inPriority)
+        static public AsyncHandle Schedule(IEnumerator inEnumerator, AsyncFlags inFlags = AsyncFlags.Default)
         {
             Manager m = Manager.Get();
             if (m != null)
             {
                 m.InitializeAsync();
-                return m.Scheduler.Schedule(inEnumerator, inPriority);
+                return m.Scheduler.Schedule(inEnumerator, inFlags);
             }
             return AsyncHandle.Null;
         }
@@ -155,12 +155,12 @@ namespace BeauRoutine
         /// <summary>
         /// Executes a set of operations on the indices between from (inclusive) and to (exclusive).
         /// </summary>
-        static public AsyncHandle For(int inFrom, int inTo, Routine.IndexOperation inOperation, AsyncPriority inPriority)
+        static public AsyncHandle For(int inFrom, int inTo, Routine.IndexOperation inOperation, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inOperation == null || inFrom >= inTo)
                 return AsyncHandle.Null;
 
-            return Schedule(ForImpl(inFrom, inTo, inOperation), inPriority);
+            return Schedule(ForImpl(inFrom, inTo, inOperation), inFlags);
         }
 
         static private IEnumerator ForImpl(int inFrom, int inTo, Routine.IndexOperation inOperation)
@@ -179,12 +179,12 @@ namespace BeauRoutine
         /// <summary>
         /// Executes a set of actions.
         /// </summary>
-        static public AsyncHandle Sequence(IEnumerable<Action> inActions, AsyncPriority inPriority)
+        static public AsyncHandle Sequence(IEnumerable<Action> inActions, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inActions == null)
                 return AsyncHandle.Null;
 
-            return Schedule(SequenceImpl(inActions), inPriority);
+            return Schedule(SequenceImpl(inActions), inFlags);
         }
 
         static private IEnumerator SequenceImpl(IEnumerable<Action> inActions)
@@ -199,9 +199,9 @@ namespace BeauRoutine
         /// <summary>
         /// Executes a set of actions.
         /// </summary>
-        static public AsyncHandle Sequence(AsyncPriority inPriority, params Action[] inActions)
+        static public AsyncHandle Sequence(AsyncFlags inFlags, params Action[] inActions)
         {
-            return Sequence(inActions, inPriority);
+            return Sequence(inActions, inFlags);
         }
 
         #endregion // Sequence
@@ -211,27 +211,27 @@ namespace BeauRoutine
         /// <summary>
         /// Executes an operation on each element in a set.
         /// </summary>
-        static public AsyncHandle ForEach<T>(IEnumerable<T> inElements, Routine.ElementOperation<T> inOperation, AsyncPriority inPriority)
+        static public AsyncHandle ForEach<T>(IEnumerable<T> inElements, Routine.ElementOperation<T> inOperation, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inElements == null || inOperation == null)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(ForEachImpl<T>(inElements, inOperation), inPriority);
+            return Schedule(ForEachImpl<T>(inElements, inOperation), inFlags);
         }
 
         /// <summary>
         /// Executes an operation on each element in a set, additionally passing in the element index.
         /// </summary>
-        static public AsyncHandle ForEach<T>(IEnumerable<T> inElements, Routine.IndexedElementOperation<T> inOperation, AsyncPriority inPriority)
+        static public AsyncHandle ForEach<T>(IEnumerable<T> inElements, Routine.IndexedElementOperation<T> inOperation, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inElements == null || inOperation == null)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(ForEachImpl<T>(inElements, inOperation), inPriority);
+            return Schedule(ForEachImpl<T>(inElements, inOperation), inFlags);
         }
 
         static private IEnumerator ForEachImpl<T>(IEnumerable<T> inElements, Routine.ElementOperation<T> inOperation)
@@ -256,27 +256,27 @@ namespace BeauRoutine
         /// <summary>
         /// Executes an operation on each element in an array.
         /// </summary>
-        static public AsyncHandle ForEach<T>(T[] inElements, Routine.ElementOperation<T> inOperation, AsyncPriority inPriority)
+        static public AsyncHandle ForEach<T>(T[] inElements, Routine.ElementOperation<T> inOperation, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inElements == null || inElements.Length == 0 || inOperation == null)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(ForEachImpl<T>(inElements, inOperation), inPriority);
+            return Schedule(ForEachImpl<T>(inElements, inOperation), inFlags);
         }
 
         /// <summary>
         /// Executes an operation on each element in an array, additionally passing in the element index.
         /// </summary>
-        static public AsyncHandle ForEach<T>(T[] inElements, Routine.IndexedElementOperation<T> inOperation, AsyncPriority inPriority)
+        static public AsyncHandle ForEach<T>(T[] inElements, Routine.IndexedElementOperation<T> inOperation, AsyncFlags inFlags = AsyncFlags.Default)
         {
             if (inElements == null || inElements.Length == 0 || inOperation == null)
             {
                 return AsyncHandle.Null;
             }
 
-            return Schedule(ForEachImpl<T>(inElements, inOperation), inPriority);
+            return Schedule(ForEachImpl<T>(inElements, inOperation), inFlags);
         }
 
         static private IEnumerator ForEachImpl<T>(T[] inElements, Routine.ElementOperation<T> inOperation)

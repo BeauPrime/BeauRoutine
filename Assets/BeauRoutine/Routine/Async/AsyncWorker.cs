@@ -23,8 +23,11 @@ namespace BeauRoutine.Internal
 {
     internal sealed class AsyncWorker
     {
+        private const double BackgroundProcessingPortion = 0.5;
+
         #if SUPPORTS_THREADING
-        private const int ThreadSleepMS = 2;
+        private const int PausedSleepMS = 10;
+        private const int StarvationSleepMS = 2;
         private const int ThreadAbortTimeoutMS = 150;
         static private readonly string ThreadAbortWarning = string.Format("Thread did not close within {0}ms", ThreadAbortTimeoutMS);
 
@@ -33,18 +36,21 @@ namespace BeauRoutine.Internal
         #endif // SUPPORTS_THREADING
 
         private readonly AsyncScheduler m_Scheduler;
-        private readonly Queue<AsyncWorkUnit> m_Queue;
-        private readonly AsyncPriority m_Priority;
+        private readonly Queue<AsyncWorkUnit> m_MainThreadOnlyQueue;
+        private readonly Queue<AsyncWorkUnit> m_BackgroundQueue;
+        private readonly AsyncFlags m_PriorityFlags;
 
         internal bool ForceSingleThreaded;
+        internal bool Paused;
 
         #region Lifecycle
 
-        internal AsyncWorker(AsyncScheduler inScheduler, AsyncPriority inPriority)
+        internal AsyncWorker(AsyncScheduler inScheduler, AsyncFlags inPriorityFlags)
         {
             m_Scheduler = inScheduler;
-            m_Queue = new Queue<AsyncWorkUnit>(64);
-            m_Priority = inPriority;
+            m_BackgroundQueue = new Queue<AsyncWorkUnit>(64);
+            m_MainThreadOnlyQueue = new Queue<AsyncWorkUnit>(64);
+            m_PriorityFlags = inPriorityFlags;
         }
 
         /// <summary>
@@ -76,38 +82,51 @@ namespace BeauRoutine.Internal
 
             lock(m_LockObject)
             {
-                while (m_Queue.Count > 0)
-                {
-                    m_Scheduler.FreeUnit(m_Queue.Dequeue());
-                }
-                m_Queue.Clear();
+                ClearQueues();
             }
 
             #else
 
-            while (m_Queue.Count > 0)
-            {
-                m_Scheduler.FreeUnit(m_Queue.Dequeue());
-            }
-            m_Queue.Clear();
+            ClearQueues();
 
             #endif // SUPPORTS_THREADING
+        }
+
+        // Clears all queues
+        private void ClearQueues()
+        {
+            while (m_BackgroundQueue.Count > 0)
+            {
+                m_Scheduler.FreeUnit(m_BackgroundQueue.Dequeue(), false);
+            }
+            m_BackgroundQueue.Clear();
+
+            while (m_MainThreadOnlyQueue.Count > 0)
+            {
+                m_Scheduler.FreeUnit(m_MainThreadOnlyQueue.Dequeue(), false);
+            }
+            m_MainThreadOnlyQueue.Clear();
         }
 
         #endregion // Lifecycle
 
         /// <summary>
-        /// Returns if there is scheduled work.
+        /// Returns if there is scheduled work on the main thread.
         /// </summary>
-        internal bool HasWork()
+        internal bool HasBlockingWork()
         {
             #if SUPPORTS_THREADING
             lock(m_LockObject)
             {
-                return m_Queue.Count > 0;
+                if (ForceSingleThreaded)
+                {
+                    return m_BackgroundQueue.Count > 0 || m_MainThreadOnlyQueue.Count > 0;
+                }
+
+                return m_MainThreadOnlyQueue.Count > 0;
             }
             #else
-            return m_Queue.Count > 0;
+            return m_BackgroundQueue.Count > 0 || m_MainThreadOnlyQueue.Count > 0;
             #endif // SUPPORTS_THREADING
         }
 
@@ -119,10 +138,24 @@ namespace BeauRoutine.Internal
             #if SUPPORTS_THREADING
             lock(m_LockObject)
             {
-                m_Queue.Enqueue(inUnit);
+                if ((inUnit.AsyncFlags & AsyncFlags.MainThreadOnly) != 0)
+                {
+                    m_MainThreadOnlyQueue.Enqueue(inUnit);
+                }
+                else
+                {
+                    m_BackgroundQueue.Enqueue(inUnit);
+                }
             }
             #else
-            m_Queue.Enqueue(inUnit);
+            if ((inUnit.AsyncFlags & AsyncFlags.MainThreadOnly) != 0)
+            {
+                m_MainThreadOnlyQueue.Enqueue(inUnit);
+            }
+            else
+            {
+                m_BackgroundQueue.Enqueue(inUnit);
+            }
             #endif // SUPPORTS_THREADING
         }
 
@@ -131,36 +164,52 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Processes scheduled work by time-slicing.
         /// </summary>
-        internal void ProcessBlocking(Stopwatch inStopwatch, long inStartTimestamp, long inTotalBudget, long inSliceBudget, ref long ioTicksRemaining)
+        internal void ProcessBlocking(Stopwatch inStopwatch, long inTotalBudget, long inSliceBudget, bool inbProcessBackground, ref long ioTicksRemaining)
+        {
+            long backgroundPortion = inbProcessBackground ? 0 : (long) (inSliceBudget * BackgroundProcessingPortion);
+            long mainThreadPortion = inSliceBudget - backgroundPortion;
+
+            ProcessBlockingQueue(inStopwatch, inTotalBudget, mainThreadPortion, m_MainThreadOnlyQueue, false, ref ioTicksRemaining);
+            if (inbProcessBackground && ioTicksRemaining > 0)
+            {
+                ProcessBlockingQueue(inStopwatch, inTotalBudget, backgroundPortion, m_BackgroundQueue, true, ref ioTicksRemaining);
+            }
+        }
+
+        // Processes scheduled work by time-slicing.
+        private void ProcessBlockingQueue(Stopwatch inStopwatch, long inTotalBudget, long inSliceBudget, Queue<AsyncWorkUnit> ioQueue, bool inbCheckThread, ref long ioTicksRemaining)
         {
             #if SUPPORTS_THREADING
 
-            // if we have a running thread, don't process this frame
-            lock(m_LockObject)
+            if (inbCheckThread)
             {
-                if (m_Thread != null)
+                // if we have a running thread, don't process this frame
+                lock(m_LockObject)
                 {
-                    ioTicksRemaining = inTotalBudget - (inStopwatch.ElapsedTicks - inStartTimestamp);
-                    return;
+                    if (m_Thread != null)
+                    {
+                        ioTicksRemaining = inTotalBudget - inStopwatch.ElapsedTicks;
+                        return;
+                    }
                 }
             }
 
             #endif // SUPPORTS_THREADING
 
             long cutoff = inStopwatch.ElapsedTicks + inSliceBudget;
-            while (ioTicksRemaining > 0 && m_Queue.Count > 0)
+            while (!Paused && ioTicksRemaining > 0 && ioQueue.Count > 0)
             {
-                AsyncWorkUnit unit = m_Queue.Peek();
+                AsyncWorkUnit unit = ioQueue.Peek();
 
                 bool bWorkRemains = unit.Step() == AsyncWorkUnit.StepResult.Incomplete;
                 if (!bWorkRemains)
                 {
-                    m_Queue.Dequeue();
+                    ioQueue.Dequeue();
                     m_Scheduler.FreeUnit(unit);
                 }
 
                 long timestamp = inStopwatch.ElapsedTicks;
-                ioTicksRemaining = inTotalBudget - (timestamp - inStartTimestamp);
+                ioTicksRemaining = inTotalBudget - timestamp;
 
                 // if we exceeded our max time, exit
                 if (timestamp >= cutoff)
@@ -181,12 +230,12 @@ namespace BeauRoutine.Internal
         {
             lock(m_LockObject)
             {
-                if (!ForceSingleThreaded && m_Thread == null && m_Queue.Count > 0)
+                if (!ForceSingleThreaded && m_Thread == null && m_BackgroundQueue.Count > 0)
                 {
-                    m_Thread = new Thread(ProcessOnThread);
+                    m_Thread = new Thread(ProcessBackgroundQueueOnThread);
                     m_Thread.Priority = GetThreadPriority();
                     m_Thread.IsBackground = true;
-                    m_Thread.Name = "Worker[BeauRoutine::Async]:" + m_Priority.ToString();
+                    m_Thread.Name = string.Format("BeauRoutineWorker[{0}]", m_PriorityFlags.ToString());
                     m_Thread.Start();
                 }
             }
@@ -194,43 +243,45 @@ namespace BeauRoutine.Internal
 
         private System.Threading.ThreadPriority GetThreadPriority()
         {
-            switch (m_Priority)
+            if ((m_PriorityFlags & AsyncFlags.HighPriority) != 0)
             {
-                case AsyncPriority.Low:
-                    return ThreadPriority.Lowest;
-                case AsyncPriority.BelowNormal:
-                    return ThreadPriority.BelowNormal;
-                case AsyncPriority.Normal:
-                    return ThreadPriority.Normal;
-                case AsyncPriority.High:
-                    return ThreadPriority.AboveNormal;
-                default:
-                    throw new ArgumentException("Unknown priority " + m_Priority.ToString(), "inPriority");
+                return ThreadPriority.Highest;
             }
+            if ((m_PriorityFlags & AsyncFlags.LowPriority) != 0)
+            {
+                return ThreadPriority.Lowest;
+            }
+            return ThreadPriority.Normal;
         }
 
         // Loop to run on thread
-        private void ProcessOnThread()
+        private void ProcessBackgroundQueueOnThread()
         {
             while (!ForceSingleThreaded)
             {
+                if (Paused)
+                {
+                    Thread.Sleep(PausedSleepMS);
+                    continue;
+                }
+
                 AsyncWorkUnit unit = null;
                 lock(m_LockObject)
                 {
-                    if (m_Queue.Count > 0)
+                    if (m_BackgroundQueue.Count > 0)
                     {
-                        unit = m_Queue.Peek();
+                        unit = m_BackgroundQueue.Peek();
                     }
                 }
 
                 if (unit == null)
                 {
-                    Thread.Sleep(ThreadSleepMS);
+                    Thread.Sleep(StarvationSleepMS);
                     continue;
                 }
 
                 bool bWorkRemains = true;
-                while (bWorkRemains && !ForceSingleThreaded)
+                while (bWorkRemains && !ForceSingleThreaded && !Paused)
                 {
                     bWorkRemains = unit.ThreadedStep() == AsyncWorkUnit.StepResult.Incomplete;
                 }
@@ -239,7 +290,7 @@ namespace BeauRoutine.Internal
                 {
                     lock(m_LockObject)
                     {
-                        m_Queue.Dequeue();
+                        m_BackgroundQueue.Dequeue();
                     }
 
                     m_Scheduler.FreeUnit(unit);

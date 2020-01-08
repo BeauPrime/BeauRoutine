@@ -111,6 +111,8 @@ namespace BeauRoutine
             {
                 Routine.Settings.AsyncBudgetMS = m_AsyncBudget;
             }
+
+            Routine.Settings.ForceSingleThreaded = m_ForceSingleThreaded;
         }
 
         #if UNITY_EDITOR

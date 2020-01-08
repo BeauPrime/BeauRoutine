@@ -650,8 +650,7 @@ namespace BeauRoutine
             if (m_Async == AsyncHandle.Null && m_State == State.InProgress)
             {
                 m_Async = inAsync;
-                // m_Prophet.OnStop(OnProphetStopped);
-                // TODO(Beau): Hook up callback
+                m_Async.OnStop(OnLinkedStopped);
             }
             return this;
         }

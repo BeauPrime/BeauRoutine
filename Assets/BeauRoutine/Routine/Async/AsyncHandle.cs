@@ -49,6 +49,17 @@ namespace BeauRoutine
             }
         }
 
+        /// <summary>
+        /// Schedules a callback to occur when the async operation completes.
+        /// </summary>
+        public void OnStop(Action inOnStopCallback)
+        {
+            if (m_Unit != null)
+            {
+                m_Unit.OnStopCallback(m_Serial, inOnStopCallback);
+            }
+        }
+
         #region Static
 
         static private AsyncHandle s_Default = default(AsyncHandle);

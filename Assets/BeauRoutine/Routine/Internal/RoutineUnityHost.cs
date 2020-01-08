@@ -3,9 +3,19 @@
  * Author:  Alex Beauchesne
  * Date:    4 Apr 2017
  * 
- * File:    UnityHost.cs
+ * File:    RoutineUnityHost.cs
  * Purpose: Host behavior. Contains hooks for executing BeauRoutines.
  */
+
+#if UNITY_EDITOR
+
+#if UNITY_2017_2_OR_NEWER
+#define USE_PAUSE_STATE_EVENT
+#endif // UNITY_2017_2_OR_NEWER
+
+using UnityEditor;
+
+#endif // UNITY_EDITOR
 
 using System.Collections;
 using System.Diagnostics;
@@ -30,12 +40,42 @@ namespace BeauRoutine.Internal
 
             if (m_WaitForEndOfFrameRoutine == null)
                 m_WaitForEndOfFrameRoutine = StartCoroutine(ApplyWaitForEndOfFrame());
+
+            RegisterCallbacks();
         }
 
         public void Shutdown()
         {
             StopYieldInstructions();
             m_Manager = null;
+
+            DeregisterCallbacks();
+        }
+
+        private void RegisterCallbacks()
+        {
+            #if UNITY_EDITOR
+
+            #if USE_PAUSE_STATE_EVENT
+            EditorApplication.pauseStateChanged += OnEditorPauseChanged;
+            #else
+            EditorApplication.playmodeStateChanged += OnEditorPausedNoArgs;
+            #endif // USE_PAUSE_STATE_EVENT
+
+            #endif // UNITY_EDITOR
+        }
+
+        private void DeregisterCallbacks()
+        {
+            #if UNITY_EDITOR
+
+            #if USE_PAUSE_STATE_EVENT
+            EditorApplication.pauseStateChanged -= OnEditorPauseChanged;
+            #else
+            EditorApplication.playmodeStateChanged -= OnEditorPausedNoArgs;
+            #endif // USE_PAUSE_STATE_EVENT
+
+            #endif // UNITY_EDITOR
         }
 
         #region Unity Events
@@ -48,6 +88,15 @@ namespace BeauRoutine.Internal
                 m_Manager.OnApplicationQuit();
                 m_Manager = null;
                 Routine.Shutdown();
+                DeregisterCallbacks();
+            }
+        }
+
+        private void OnApplicationPause(bool inbPaused)
+        {
+            if (m_Manager != null)
+            {
+                m_Manager.SetAsyncPaused(inbPaused);
             }
         }
 
@@ -126,6 +175,26 @@ namespace BeauRoutine.Internal
             }
         }
 
+        #if UNITY_EDITOR
+
+        #if USE_PAUSE_STATE_EVENT
+
+        private void OnEditorPauseChanged(PauseState inState)
+        {
+            OnApplicationPause(inState == PauseState.Paused);
+        }
+
+        #else
+
+        private void OnEditorPausedNoArgs()
+        {
+            OnApplicationPause(EditorApplication.isPaused);
+        }
+
+        #endif // USE_PAUSE_STATE_EVENT
+
+        #endif // UNITY_EDITOR
+
         #endregion
 
         #region Yield Instructions
@@ -155,7 +224,7 @@ namespace BeauRoutine.Internal
                 {
                     m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
                 }
-                
+
                 m_Manager.UpdateAsync();
                 m_Manager.MarkFrameEnd();
             }

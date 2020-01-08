@@ -961,7 +961,7 @@ namespace BeauRoutine.Internal
             long currentTicks = m_FrameTimer.ElapsedTicks;
             long ticksRemaining = FrameDurationBudgetTicks - currentTicks;
             long asyncBudget = Math.Min(AsyncBudgetTicks, ticksRemaining);
-            Scheduler.Process(m_FrameTimer, currentTicks, asyncBudget);
+            Scheduler.Process(asyncBudget);
         }
 
         /// <summary>
@@ -983,6 +983,14 @@ namespace BeauRoutine.Internal
                 m_ForceSingleThreaded = value;
                 Scheduler.SetForceSingleThread(value);
             }
+        }
+
+        /// <summary>
+        /// Pauses/resumes async execution.
+        /// </summary>
+        public void SetAsyncPaused(bool inbPaused)
+        {
+            Scheduler.SetPaused(inbPaused);
         }
 
         #endregion // Async
