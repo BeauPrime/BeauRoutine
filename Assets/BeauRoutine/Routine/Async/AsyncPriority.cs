@@ -7,7 +7,7 @@
  * Purpose: Priority for async operations.
  */
 
-namespace BeauRoutine.Internal
+namespace BeauRoutine
 {
     /// <summary>
     /// Priority for async work.

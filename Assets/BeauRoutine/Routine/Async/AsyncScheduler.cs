@@ -111,13 +111,13 @@ namespace BeauRoutine.Internal
         // Processes workers with time-slicing.
         private void ProcessBlocking(Stopwatch inStopwatch, long inStartTimestamp, long inAsyncBudget)
         {
-            long ticksRemaining = inStopwatch.ElapsedTicks - inStartTimestamp;
+            long ticksRemaining = inAsyncBudget;
             while (ticksRemaining > 0 && HasWork())
             {
-                m_HighPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, (long) (inAsyncBudget * HighPriorityPercentage), ref ticksRemaining);
-                m_NormalPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, (long) (inAsyncBudget * NormalPriorityPercentage), ref ticksRemaining);
-                m_BelowNormalPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, (long) (inAsyncBudget * BelowNormalPriorityPercentage), ref ticksRemaining);
-                m_LowPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, (long) (inAsyncBudget * LowPriorityPercentage), ref ticksRemaining);
+                m_HighPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, inAsyncBudget, (long) (inAsyncBudget * HighPriorityPercentage), ref ticksRemaining);
+                m_NormalPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, inAsyncBudget, (long) (inAsyncBudget * NormalPriorityPercentage), ref ticksRemaining);
+                m_BelowNormalPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, inAsyncBudget, (long) (inAsyncBudget * BelowNormalPriorityPercentage), ref ticksRemaining);
+                m_LowPriorityWorker.ProcessBlocking(inStopwatch, inStartTimestamp, inAsyncBudget, (long) (inAsyncBudget * LowPriorityPercentage), ref ticksRemaining);
             }
         }
 

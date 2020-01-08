@@ -16,6 +16,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 #if SUPPORTS_THREADING
 using System.Threading;
+using ThreadState = System.Threading.ThreadState;
 #endif // SUPPORTS_THREADING
 
 namespace BeauRoutine.Internal
@@ -24,6 +25,8 @@ namespace BeauRoutine.Internal
     {
         #if SUPPORTS_THREADING
         private const int ThreadSleepMS = 2;
+        private const int ThreadAbortTimeoutMS = 150;
+        static private readonly string ThreadAbortWarning = string.Format("Thread did not close within {0}ms", ThreadAbortTimeoutMS);
 
         private Thread m_Thread;
         private readonly object m_LockObject = new object();
@@ -56,9 +59,19 @@ namespace BeauRoutine.Internal
             // if we have a running thread, join and exit
             if (m_Thread != null)
             {
-                m_Thread.Join();
-                m_Thread = null;
-                return;
+                m_Thread.Join(ThreadAbortTimeoutMS);
+                if (m_Thread != null)
+                {
+                    lock(m_LockObject)
+                    {
+                        if (m_Thread.ThreadState != ThreadState.Stopped)
+                        {
+                            Console.Error.Write(ThreadAbortWarning);
+                            m_Thread.Abort();
+                            m_Thread = null;
+                        }
+                    }
+                }
             }
 
             lock(m_LockObject)
@@ -118,7 +131,7 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Processes scheduled work by time-slicing.
         /// </summary>
-        internal void ProcessBlocking(Stopwatch inStopwatch, long inStartTimestamp, long inBudget, ref long ioTicksRemaining)
+        internal void ProcessBlocking(Stopwatch inStopwatch, long inStartTimestamp, long inTotalBudget, long inSliceBudget, ref long ioTicksRemaining)
         {
             #if SUPPORTS_THREADING
 
@@ -127,27 +140,27 @@ namespace BeauRoutine.Internal
             {
                 if (m_Thread != null)
                 {
-                    ioTicksRemaining = inStopwatch.ElapsedTicks - inStartTimestamp;
+                    ioTicksRemaining = inTotalBudget - (inStopwatch.ElapsedTicks - inStartTimestamp);
                     return;
                 }
             }
 
             #endif // SUPPORTS_THREADING
 
-            long cutoff = inStopwatch.ElapsedTicks + inBudget;
+            long cutoff = inStopwatch.ElapsedTicks + inSliceBudget;
             while (ioTicksRemaining > 0 && m_Queue.Count > 0)
             {
                 AsyncWorkUnit unit = m_Queue.Peek();
 
-                bool bComplete = unit.Step();
-                if (bComplete)
+                bool bWorkRemains = unit.Step() == AsyncWorkUnit.StepResult.Incomplete;
+                if (!bWorkRemains)
                 {
                     m_Queue.Dequeue();
                     m_Scheduler.FreeUnit(unit);
                 }
 
                 long timestamp = inStopwatch.ElapsedTicks;
-                ioTicksRemaining = timestamp - inStartTimestamp;
+                ioTicksRemaining = inTotalBudget - (timestamp - inStartTimestamp);
 
                 // if we exceeded our max time, exit
                 if (timestamp >= cutoff)
@@ -168,10 +181,12 @@ namespace BeauRoutine.Internal
         {
             lock(m_LockObject)
             {
-                if (m_Thread == null && m_Queue.Count > 0)
+                if (!ForceSingleThreaded && m_Thread == null && m_Queue.Count > 0)
                 {
                     m_Thread = new Thread(ProcessOnThread);
                     m_Thread.Priority = GetThreadPriority();
+                    m_Thread.IsBackground = true;
+                    m_Thread.Name = "Worker[BeauRoutine::Async]:" + m_Priority.ToString();
                     m_Thread.Start();
                 }
             }
@@ -214,13 +229,13 @@ namespace BeauRoutine.Internal
                     continue;
                 }
 
-                bool bComplete = false;
-                while (!bComplete && !ForceSingleThreaded)
+                bool bWorkRemains = true;
+                while (bWorkRemains && !ForceSingleThreaded)
                 {
-                    bComplete = unit.ThreadedStep();
+                    bWorkRemains = unit.ThreadedStep() == AsyncWorkUnit.StepResult.Incomplete;
                 }
 
-                if (bComplete)
+                if (!bWorkRemains)
                 {
                     lock(m_LockObject)
                     {

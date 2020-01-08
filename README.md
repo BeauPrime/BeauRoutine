@@ -1,6 +1,6 @@
 # BeauRoutine
 
-**Current Version: 0.10.1**  
+**Current Version: 0.11.0**  
 Updated 13 September 2019 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About

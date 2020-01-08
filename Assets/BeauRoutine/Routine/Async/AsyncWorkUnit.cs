@@ -1,10 +1,10 @@
 /*
  * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
  * Author:  Alex Beauchesne
- * Date:    6 Jan 2020
+ * Date:    7 Jan 2020
  * 
- * File:    AsyncScheduler.cs
- * Purpose: Manager for async utilities.
+ * File:    AsyncWOrkUnit.cs
+ * Purpose: Single unit of work for an async worker.
  */
 
 #if !UNITY_WEBGL
@@ -13,16 +13,17 @@
 
 using System;
 using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
-#if SUPPORTS_THREADING
-using System.Threading;
-#endif // SUPPORTS_THREADING
 
 namespace BeauRoutine.Internal
 {
     internal sealed class AsyncWorkUnit
     {
+        internal enum StepResult : byte
+        {
+            Incomplete,
+            Complete
+        }
+
         private const ushort ActionCompleteFlag = 0x01;
         private const ushort EnumeratorCompleteFlag = 0x02;
         private const ushort AllCompleteFlag = ActionCompleteFlag | EnumeratorCompleteFlag;
@@ -34,7 +35,7 @@ namespace BeauRoutine.Internal
         private IEnumerator m_Enumerator;
 
         #if SUPPORTS_THREADING
-        private readonly object m_LockContext = null;
+        private readonly object m_LockContext = new object();
         #endif // SUPPORTS_THREADING
 
         #region Lifecycle
@@ -102,7 +103,7 @@ namespace BeauRoutine.Internal
         /// Performs a step (not thread-safe).
         /// Returns if work remains.
         /// </summary>
-        internal bool Step()
+        internal StepResult Step()
         {
             if ((m_Status & ActionCompleteFlag) == 0)
             {
@@ -119,7 +120,7 @@ namespace BeauRoutine.Internal
                 }
             }
 
-            return m_Status != AllCompleteFlag;
+            return m_Status != AllCompleteFlag ? StepResult.Incomplete : StepResult.Complete;
         }
 
         #if SUPPORTS_THREADING
@@ -128,7 +129,7 @@ namespace BeauRoutine.Internal
         /// Performs a step (thread-safe).
         /// Returns if work remains.
         /// </summary>
-        internal bool ThreadedStep()
+        internal StepResult ThreadedStep()
         {
             lock(m_LockContext)
             {

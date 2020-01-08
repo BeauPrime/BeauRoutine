@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Threading;
 using BeauRoutine;
 using UnityEngine;
@@ -8,19 +9,28 @@ namespace BeauRoutine.Examples
 {
     public class Example9_Script : MonoBehaviour
     {
+        public bool forceSingleThread = false;
+
+        private AsyncHandle handle;
+
         private void Start()
         {
-            Async.Schedule(ThreadedThing, Internal.AsyncPriority.Normal);
+            Routine.Settings.ForceSingleThreaded = forceSingleThread;
+            handle = Async.For(0, int.MaxValue, LogTimestamp, AsyncPriority.Normal);
         }
 
-        private void ThreadedThing()
+        private void Update()
         {
-            int i = 0;
-            while (i++ < 1000)
+            if (Input.GetKeyDown(KeyCode.Space))
             {
-                Debug.Log(i);
-                Thread.Sleep(100 + i * 2);
+                handle.Cancel();
             }
+        }
+
+        private void LogTimestamp(int i)
+        {
+            TimeSpan currentTime = DateTime.UtcNow.TimeOfDay;
+            Debug.Log(string.Format("[{0}] {1}", currentTime.TotalMilliseconds, i));
         }
     }
 }

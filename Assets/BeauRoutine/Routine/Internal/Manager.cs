@@ -28,7 +28,7 @@ namespace BeauRoutine.Internal
         public const double DEFAULT_ASYNC_PERCENTAGE = 0.4f;
 
         // Version number
-        static public readonly Version VERSION = new Version("0.10.1");
+        static public readonly Version VERSION = new Version("0.11.0");
 
         // Used to perform check for starting a Routine.Inline in development builds
         static private readonly IntPtr TYPEHANDLE_DECORATOR = typeof(RoutineDecorator).TypeHandle.Value;
@@ -244,6 +244,7 @@ namespace BeauRoutine.Internal
 
             Frame.ResetTime(Time.deltaTime, TimeScale);
             FrameDurationBudgetTicks = CalculateDefaultFrameBudgetTicks();
+            AsyncBudgetTicks = (long) (FrameDurationBudgetTicks * DEFAULT_ASYNC_PERCENTAGE);
 
             m_QueuedGroupTimescale = new float[Routine.MAX_GROUPS];
             Frame.GroupTimeScale = new float[Routine.MAX_GROUPS];
@@ -942,6 +943,15 @@ namespace BeauRoutine.Internal
         #endregion // Frame Timing
 
         #region Async
+
+        /// <summary>
+        /// Initializes for calls.
+        /// </summary>
+        public void InitializeAsync()
+        {
+            if (!m_Initialized)
+                Initialize();
+        }
 
         /// <summary>
         /// Updates the async scheduler.
