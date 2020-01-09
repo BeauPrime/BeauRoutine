@@ -1172,7 +1172,7 @@ namespace BeauRoutine.Internal
 
         static private Dictionary<IntPtr, string> s_IteratorNames = new Dictionary<IntPtr, string>();
 
-        static private string GetTypeName(Type inType)
+        static internal string GetTypeName(Type inType)
         {
             IntPtr typeID = inType.TypeHandle.Value;
             string name;

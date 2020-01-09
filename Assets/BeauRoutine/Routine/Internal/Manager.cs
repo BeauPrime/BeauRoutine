@@ -11,6 +11,10 @@
 #define DEVELOPMENT
 #endif
 
+#if !UNITY_WEBGL
+#define SUPPORTS_THREADING
+#endif // UNITY_WEBGL
+
 using System;
 using System.Collections;
 using System.Diagnostics;
@@ -133,6 +137,12 @@ namespace BeauRoutine.Internal
         private const long MAX_UPDATE_MS = 1000;
         private StringBuilder m_LogBuilder = new StringBuilder(128);
 
+        private bool m_DebugMode;
+
+        #if SUPPORTS_THREADING
+        private readonly object m_LoggerLock = new object();
+        #endif // SUPPORTS_THREADING
+
         /// <summary>
         /// Table containing all fibers.
         /// </summary>
@@ -171,7 +181,15 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Additional checking and profiling.
         /// </summary>
-        public bool DebugMode = false;
+        public bool DebugMode
+        {
+            get { return m_DebugMode; }
+            set
+            {
+                m_DebugMode = value;
+                Scheduler.DebugMode = value;
+            }
+        }
 
         /// <summary>
         /// Determines whether snapshots should be taken
@@ -237,7 +255,11 @@ namespace BeauRoutine.Internal
             s_Instance = this;
 
             Fibers = new Table(this);
-            Scheduler = new AsyncScheduler();
+            #if DEVELOPMENT
+            Scheduler = new AsyncScheduler(UnityEngine.Debug.Log);
+            #else
+            Scheduler = new AsyncScheduler(null);
+            #endif // DEVELOPMENT
 
             m_FrameTimer = new Stopwatch();
             m_UpdateTimer = new Stopwatch();
@@ -306,7 +328,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
                 #if DEVELOPMENT
-                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
+                if (m_DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -407,7 +429,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
                 #if DEVELOPMENT
-                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
+                if (m_DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -484,7 +506,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
                 #if DEVELOPMENT
-                if (DebugMode && !bPrevUpdating && ProfilingEnabled)
+                if (m_DebugMode && !bPrevUpdating && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -695,7 +717,7 @@ namespace BeauRoutine.Internal
             outHandle = fiber.Initialize(inHost, inStart, inbChained);
 
             #if DEVELOPMENT
-            if (DebugMode)
+            if (m_DebugMode)
             {
                 int running = Fibers.TotalRunning;
                 if (running > m_MaxConcurrent)
@@ -727,7 +749,7 @@ namespace BeauRoutine.Internal
             m_Updating = true;
             {
                 #if DEVELOPMENT
-                if (DebugMode && ProfilingEnabled)
+                if (m_DebugMode && ProfilingEnabled)
                 {
                     m_UpdateTimer.Reset();
                     m_UpdateTimer.Start();
@@ -1002,15 +1024,28 @@ namespace BeauRoutine.Internal
         public void Log(string inMessage)
         {
             #if DEVELOPMENT
-            if (DebugMode)
+            if (m_DebugMode)
             {
-                m_LogBuilder.Insert(0, "[BeauRoutine] ");
-                m_LogBuilder.Append(inMessage);
-                string logged = m_LogBuilder.ToString();
-                m_LogBuilder.Length = 0;
-                UnityEngine.Debug.Log(logged);
+                #if SUPPORTS_THREADING
+                lock(m_LoggerLock)
+                {
+                    LogImpl(inMessage);
+                }
+                #else
+                LogImpl(inMessage);
+                #endif // SUPPORTS_THREADING
             }
             #endif // DEVELOPMENT
+        }
+
+        // Log implementation
+        private void LogImpl(string inMessage)
+        {
+            m_LogBuilder.Insert(0, "[BeauRoutine] ");
+            m_LogBuilder.Append(inMessage);
+            string logged = m_LogBuilder.ToString();
+            m_LogBuilder.Length = 0;
+            UnityEngine.Debug.Log(logged);
         }
     }
 }

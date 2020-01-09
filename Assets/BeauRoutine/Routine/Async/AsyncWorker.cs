@@ -23,11 +23,11 @@ namespace BeauRoutine.Internal
 {
     internal sealed class AsyncWorker
     {
-        private const double BackgroundProcessingPortion = 0.5;
+        private const double BackgroundProcessingPortion = 0.4;
 
         #if SUPPORTS_THREADING
         private const int PausedSleepMS = 10;
-        private const int StarvationSleepMS = 2;
+        private const int StarvationSleepMS = 5;
         private const int ThreadAbortTimeoutMS = 150;
         static private readonly string ThreadAbortWarning = string.Format("Thread did not close within {0}ms", ThreadAbortTimeoutMS);
 
@@ -140,20 +140,24 @@ namespace BeauRoutine.Internal
             {
                 if ((inUnit.AsyncFlags & AsyncFlags.MainThreadOnly) != 0)
                 {
+                    m_Scheduler.Log("Scheduling {0} on main thread", inUnit);
                     m_MainThreadOnlyQueue.Enqueue(inUnit);
                 }
                 else
                 {
+                    m_Scheduler.Log("Scheduling {0} in background", inUnit);
                     m_BackgroundQueue.Enqueue(inUnit);
                 }
             }
             #else
             if ((inUnit.AsyncFlags & AsyncFlags.MainThreadOnly) != 0)
             {
+                m_Scheduler.Log("Scheduling {0} on main thread", inUnit);
                 m_MainThreadOnlyQueue.Enqueue(inUnit);
             }
             else
             {
+                m_Scheduler.Log("Scheduling {0} in background", inUnit);
                 m_BackgroundQueue.Enqueue(inUnit);
             }
             #endif // SUPPORTS_THREADING
@@ -201,9 +205,14 @@ namespace BeauRoutine.Internal
             {
                 AsyncWorkUnit unit = ioQueue.Peek();
 
-                bool bWorkRemains = unit.Step() == AsyncWorkUnit.StepResult.Incomplete;
-                if (!bWorkRemains)
+                AsyncWorkUnit.StepResult result = unit.Step();
+                if (result != AsyncWorkUnit.StepResult.Incomplete)
                 {
+                    if (result == AsyncWorkUnit.StepResult.Complete)
+                    {
+                        m_Scheduler.Log("Completed {0}", unit);
+                    }
+
                     ioQueue.Dequeue();
                     m_Scheduler.FreeUnit(unit);
                 }
@@ -245,11 +254,11 @@ namespace BeauRoutine.Internal
         {
             if ((m_PriorityFlags & AsyncFlags.HighPriority) != 0)
             {
-                return ThreadPriority.Highest;
+                return ThreadPriority.AboveNormal;
             }
             if ((m_PriorityFlags & AsyncFlags.LowPriority) != 0)
             {
-                return ThreadPriority.Lowest;
+                return ThreadPriority.BelowNormal;
             }
             return ThreadPriority.Normal;
         }
@@ -280,14 +289,19 @@ namespace BeauRoutine.Internal
                     continue;
                 }
 
-                bool bWorkRemains = true;
-                while (bWorkRemains && !ForceSingleThreaded && !Paused)
+                AsyncWorkUnit.StepResult result = AsyncWorkUnit.StepResult.Incomplete;
+                while (result == AsyncWorkUnit.StepResult.Incomplete && !ForceSingleThreaded && !Paused)
                 {
-                    bWorkRemains = unit.ThreadedStep() == AsyncWorkUnit.StepResult.Incomplete;
+                    result = unit.ThreadedStep();
                 }
 
-                if (!bWorkRemains)
+                if (result != AsyncWorkUnit.StepResult.Incomplete)
                 {
+                    if (result == AsyncWorkUnit.StepResult.Complete)
+                    {
+                        m_Scheduler.Log("Completed {0}", unit);
+                    }
+
                     lock(m_LockObject)
                     {
                         m_BackgroundQueue.Dequeue();

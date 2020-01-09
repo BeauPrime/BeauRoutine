@@ -22,12 +22,16 @@ namespace BeauRoutine.Internal
         internal enum StepResult : byte
         {
             Incomplete,
-            Complete
+            Complete,
+            Cancelled
         }
 
         private const ushort ActionCompleteFlag = 0x01;
         private const ushort EnumeratorCompleteFlag = 0x02;
         private const ushort AllCompleteFlag = ActionCompleteFlag | EnumeratorCompleteFlag;
+        private const ushort CancelledFlag = 0x04;
+
+        private readonly AsyncScheduler m_Scheduler;
 
         // state
         private ushort m_Status;
@@ -37,6 +41,7 @@ namespace BeauRoutine.Internal
         internal AsyncFlags AsyncFlags;
 
         // misc
+        private string m_Name;
         private List<AsyncHandle> m_Nested = new List<AsyncHandle>();
         private Action m_OnStop;
 
@@ -46,20 +51,30 @@ namespace BeauRoutine.Internal
 
         #region Lifecycle
 
+        internal AsyncWorkUnit(AsyncScheduler inScheduler)
+        {
+            m_Scheduler = inScheduler;
+        }
+
         /// <summary>
         /// Initializes the work unit with new work.
         /// </summary>
-        internal void Initialize(Action inAction, IEnumerator inEnumerator, AsyncFlags inFlags)
+        internal void Initialize(Action inAction, IEnumerator inEnumerator, AsyncFlags inFlags, string inName)
         {
             m_Status = AllCompleteFlag;
+            m_Name = inName;
 
             m_Action = inAction;
             if (m_Action != null)
+            {
                 m_Status = (ushort) (m_Status & ~ActionCompleteFlag);
+            }
 
             m_Enumerator = inEnumerator;
             if (m_Enumerator != null)
+            {
                 m_Status = (ushort) (m_Status & ~EnumeratorCompleteFlag);
+            }
 
             AsyncFlags = inFlags;
 
@@ -128,6 +143,7 @@ namespace BeauRoutine.Internal
             AsyncFlags = 0;
             m_Nested.Clear();
             m_OnStop = null;
+            m_Name = null;
         }
 
         #endregion // Lifecycle
@@ -140,6 +156,14 @@ namespace BeauRoutine.Internal
         internal bool IsRunning(ushort inSerial)
         {
             return m_Serial == inSerial && m_Status != AllCompleteFlag;
+        }
+
+        /// <summary>
+        /// Returns if this work was cancelled.
+        /// </summary>
+        internal bool IsCancelled()
+        {
+            return (m_Status & CancelledFlag) != 0;
         }
 
         /// <summary>
@@ -160,6 +184,11 @@ namespace BeauRoutine.Internal
         /// </summary>
         internal StepResult Step()
         {
+            if ((m_Status & CancelledFlag) != 0)
+            {
+                return StepResult.Cancelled;
+            }
+
             if ((m_Status & ActionCompleteFlag) == 0)
             {
                 m_Action();
@@ -201,12 +230,20 @@ namespace BeauRoutine.Internal
         // Cancels all future steps
         private void Cancel()
         {
-            m_Status = AllCompleteFlag;
             for (int i = m_Nested.Count - 1; i >= 0; --i)
             {
                 m_Nested[i].Cancel();
             }
             m_Nested.Clear();
+
+            if (m_Status == AllCompleteFlag)
+                return;
+            
+            if ((m_Status & CancelledFlag) == 0)
+            {
+                m_Scheduler.Log("Cancelling {0}", m_Name);
+                m_Status |= CancelledFlag;
+            }
         }
 
         /// <summary>
@@ -231,5 +268,14 @@ namespace BeauRoutine.Internal
         }
 
         #endregion // Cancel
+
+        #region Overrides
+
+        public override string ToString()
+        {
+            return m_Name;
+        }
+
+        #endregion // Overrides
     }
 }

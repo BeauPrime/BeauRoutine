@@ -34,6 +34,7 @@ namespace BeauRoutine.Internal
         #endif // SUPPORTS_THREADING
 
         private readonly Queue<Action> m_Queue = new Queue<Action>(512);
+        private bool m_Processing;
 
         #region Lifecycle
 
@@ -72,9 +73,16 @@ namespace BeauRoutine.Internal
         internal void EnqueueInvoke(Action inAction)
         {
             #if SUPPORTS_THREADING
-            lock(m_LockObject)
+            if (IsMainThread() && m_Processing)
             {
                 m_Queue.Enqueue(inAction);
+            }
+            else
+            {
+                lock(m_LockObject)
+                {
+                    m_Queue.Enqueue(inAction);
+                }
             }
             #else
             m_Queue.Enqueue(inAction);
@@ -129,17 +137,22 @@ namespace BeauRoutine.Internal
             #if SUPPORTS_THREADING
             lock(m_LockObject)
             {
+                m_Processing = true;
                 while (m_Queue.Count > 0)
                 {
                     m_Queue.Dequeue().Invoke();
                 }
+                m_Processing = false;
             }
             #else
+            m_Processing = true;
             while (m_Queue.Count > 0)
             {
                 m_Queue.Dequeue().Invoke();
             }
+            m_Processing = false;
             #endif // SUPPORTS_THREADING
+
         }
 
         #endregion // Invocation

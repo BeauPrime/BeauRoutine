@@ -4,8 +4,12 @@
  * Date:    6 Jan 2020
  * 
  * File:    AsyncScheduler.cs
- * Purpose: Manager for async utilities.
+ * Purpose: Manager for async scheduling, processing, and dispatching.
  */
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#define DEVELOPMENT
+#endif
 
 #if !UNITY_WEBGL
 #define SUPPORTS_THREADING
@@ -15,9 +19,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-#if SUPPORTS_THREADING
-using System.Threading;
-#endif // SUPPORTS_THREADING
+using System.Text;
 
 namespace BeauRoutine.Internal
 {
@@ -41,6 +43,7 @@ namespace BeauRoutine.Internal
 
         #if SUPPORTS_THREADING
         private readonly object m_PoolLock = new object();
+        private readonly object m_LoggerLock = new object();
         #endif // SUPPORTS_THREADING
 
         private readonly List<AsyncWorkUnit> m_WorkUnitPool;
@@ -64,9 +67,18 @@ namespace BeauRoutine.Internal
 
         #endregion // Workers
 
+        #region Logging
+
+        private readonly Action<string> m_Logger;
+        private readonly StringBuilder m_LogBuilder;
+
+        public bool DebugMode;
+
+        #endregion // Logging
+
         #region Lifecycle
 
-        internal AsyncScheduler()
+        internal AsyncScheduler(Action<string> inLogger)
         {
             m_LowPriorityWorker = new AsyncWorker(this, AsyncFlags.LowPriority);
             m_NormalPriorityWorker = new AsyncWorker(this, AsyncFlags.NormalPriority);
@@ -77,10 +89,22 @@ namespace BeauRoutine.Internal
             m_WorkUnitPool = new List<AsyncWorkUnit>(StartingPoolSize);
             for (int i = 0; i < StartingPoolSize; ++i)
             {
-                m_WorkUnitPool.Add(new AsyncWorkUnit());
+                m_WorkUnitPool.Add(new AsyncWorkUnit(this));
             }
 
             m_Stopwatch = new Stopwatch();
+
+            m_Logger = inLogger;
+            if (m_Logger != null)
+            {
+                m_LogBuilder = new StringBuilder(256);
+            }
+
+            #if DEVELOPMENT
+            DebugMode = true;
+            #else
+            DebugMode = false;
+            #endif // DEVELOPMENT
         }
 
         /// <summary>
@@ -209,7 +233,8 @@ namespace BeauRoutine.Internal
         private AsyncWorkUnit AllocUnit(Action inAction, AsyncFlags inFlags)
         {
             AsyncWorkUnit unit = AllocUnitImpl();
-            unit.Initialize(inAction, null, inFlags);
+            string name = string.Format("{0}->{1}::{2}", inAction.Target, inAction.Method.DeclaringType.FullName, inAction.Method.Name);
+            unit.Initialize(inAction, null, inFlags, name);
             return unit;
         }
 
@@ -217,7 +242,8 @@ namespace BeauRoutine.Internal
         private AsyncWorkUnit AllocUnit(IEnumerator inEnumerator, AsyncFlags inFlags)
         {
             AsyncWorkUnit unit = AllocUnitImpl();
-            unit.Initialize(null, inEnumerator, inFlags);
+            string name = Fiber.GetTypeName(inEnumerator.GetType());
+            unit.Initialize(null, inEnumerator, inFlags, name);
             return unit;
         }
 
@@ -232,7 +258,7 @@ namespace BeauRoutine.Internal
                 int idx = m_WorkUnitPool.Count - 1;
                 if (idx < 0)
                 {
-                    return new AsyncWorkUnit();
+                    return new AsyncWorkUnit(this);
                 }
 
                 AsyncWorkUnit unit = m_WorkUnitPool[idx];
@@ -287,6 +313,58 @@ namespace BeauRoutine.Internal
             m_LowPriorityWorker.Paused = inbPaused;
             m_NormalPriorityWorker.Paused = inbPaused;
             m_HighPriorityWorker.Paused = inbPaused;
+        }
+
+        /// <summary>
+        /// Logs to the debug console.
+        /// </summary>
+        [Conditional("DEVELOPMENT")]
+        internal void Log(string inLog)
+        {
+            if (!DebugMode || m_Logger == null)
+                return;
+
+            #if SUPPORTS_THREADING
+            lock(m_LoggerLock)
+            {
+                LogImpl(inLog);
+            }
+            #else
+            LogImpl(inLog);
+            #endif // SUPPORTS_THREADING
+        }
+
+        /// <summary>
+        /// Logs to the debug console.
+        /// </summary>
+        [Conditional("DEVELOPMENT")]
+        internal void Log(string inFormat, object inArg)
+        {
+            if (!DebugMode || m_Logger == null)
+                return;
+
+            string formatted = string.Format(inFormat, inArg);
+
+            #if SUPPORTS_THREADING
+            lock(m_LoggerLock)
+            {
+                LogImpl(formatted);
+            }
+            #else
+            LogImpl(formatted);
+            #endif // SUPPORTS_THREADING
+        }
+
+        // Logs to debug console
+        private void LogImpl(string inString)
+        {
+            m_LogBuilder.Append(inString);
+            m_LogBuilder.Insert(0, "[AsyncScheduler] ");
+
+            string str = m_LogBuilder.ToString();
+            m_LogBuilder.Length = 0;
+
+            m_Logger(str);
         }
     }
 }

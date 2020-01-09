@@ -30,6 +30,14 @@ namespace BeauRoutine
         internal AsyncWorkUnit Unit { get { return m_Unit; } }
 
         /// <summary>
+        /// Returns if this handle does not reference an async operation.
+        /// </summary>
+        public bool IsNull()
+        {
+            return m_Unit == null;
+        }
+
+        /// <summary>
         /// Returns if the async operation is still running.
         /// </summary>
         public bool IsRunning()
