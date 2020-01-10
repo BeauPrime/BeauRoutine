@@ -200,12 +200,20 @@ namespace BeauRoutine.Internal
 
             #endif // SUPPORTS_THREADING
 
-            long cutoff = inStopwatch.ElapsedTicks + inSliceBudget;
-            while (!Paused && ioTicksRemaining > 0 && ioQueue.Count > 0)
+            long timestamp = inStopwatch.ElapsedTicks;
+            long cutoff = timestamp + inSliceBudget;
+            while (!Paused && ioTicksRemaining > 0 && ioQueue.Count > 0 && timestamp < cutoff)
             {
                 AsyncWorkUnit unit = ioQueue.Peek();
 
-                AsyncWorkUnit.StepResult result = unit.Step();
+                AsyncWorkUnit.StepResult result = AsyncWorkUnit.StepResult.Incomplete;
+                while (result == AsyncWorkUnit.StepResult.Incomplete && ioTicksRemaining > 0 && !Paused && timestamp < cutoff)
+                {
+                    result = unit.Step();
+                    timestamp = inStopwatch.ElapsedTicks;
+                    ioTicksRemaining = inTotalBudget - timestamp;
+                }
+                
                 if (result != AsyncWorkUnit.StepResult.Incomplete)
                 {
                     if (result == AsyncWorkUnit.StepResult.Complete)
@@ -215,14 +223,10 @@ namespace BeauRoutine.Internal
 
                     ioQueue.Dequeue();
                     m_Scheduler.FreeUnit(unit);
+
+                    timestamp = inStopwatch.ElapsedTicks;
+                    ioTicksRemaining = inTotalBudget - timestamp;
                 }
-
-                long timestamp = inStopwatch.ElapsedTicks;
-                ioTicksRemaining = inTotalBudget - timestamp;
-
-                // if we exceeded our max time, exit
-                if (timestamp >= cutoff)
-                    break;
             }
         }
 

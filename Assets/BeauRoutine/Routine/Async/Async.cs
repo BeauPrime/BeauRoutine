@@ -125,11 +125,6 @@ namespace BeauRoutine
         /// </summary>
         static public AsyncHandle Schedule(Action inAction, AsyncFlags inFlags = AsyncFlags.Default)
         {
-            if (inAction == null)
-            {
-                return AsyncHandle.Null;
-            }
-
             Manager m = Manager.Get();
             if (m != null)
             {
@@ -144,11 +139,6 @@ namespace BeauRoutine
         /// </summary>
         static public AsyncHandle Schedule(IEnumerator inEnumerator, AsyncFlags inFlags = AsyncFlags.Default)
         {
-            if (inEnumerator == null)
-            {
-                return AsyncHandle.Null;
-            }
-
             Manager m = Manager.Get();
             if (m != null)
             {

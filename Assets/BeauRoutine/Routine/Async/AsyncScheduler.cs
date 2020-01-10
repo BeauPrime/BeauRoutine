@@ -189,6 +189,11 @@ namespace BeauRoutine.Internal
         /// </summary>
         internal AsyncHandle Schedule(Action inAction, AsyncFlags inFlags)
         {
+            if (inAction == null)
+            {
+                return AsyncHandle.Null;
+            }
+
             AsyncWorkUnit unit = AllocUnit(inAction, inFlags);
             ScheduleImpl(unit);
             return unit.GetHandle();
@@ -199,6 +204,11 @@ namespace BeauRoutine.Internal
         /// </summary>
         internal AsyncHandle Schedule(IEnumerator inEnumerator, AsyncFlags inFlags)
         {
+            if (inEnumerator == null)
+            {
+                return AsyncHandle.Null;
+            }
+
             AsyncWorkUnit unit = AllocUnit(inEnumerator, inFlags);
             ScheduleImpl(unit);
             return unit.GetHandle();
@@ -233,7 +243,11 @@ namespace BeauRoutine.Internal
         private AsyncWorkUnit AllocUnit(Action inAction, AsyncFlags inFlags)
         {
             AsyncWorkUnit unit = AllocUnitImpl();
+            #if DEVELOPMENT
             string name = string.Format("{0}->{1}::{2}", inAction.Target, inAction.Method.DeclaringType.FullName, inAction.Method.Name);
+            #else
+            string name = "[not used]";
+            #endif // DEVELOPMENT
             unit.Initialize(inAction, null, inFlags, name);
             return unit;
         }
@@ -242,7 +256,11 @@ namespace BeauRoutine.Internal
         private AsyncWorkUnit AllocUnit(IEnumerator inEnumerator, AsyncFlags inFlags)
         {
             AsyncWorkUnit unit = AllocUnitImpl();
+            #if DEVELOPMENT
             string name = Fiber.GetTypeName(inEnumerator.GetType());
+            #else
+            string name = "[not used]";
+            #endif // DEVELOPMENT
             unit.Initialize(null, inEnumerator, inFlags, name);
             return unit;
         }
