@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Filament Games, LLC. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    4 June 2018
  * 
  * File:    SplineRenderer.cs
