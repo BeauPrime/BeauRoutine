@@ -4,7 +4,7 @@
  * Date:    7 Jan 2020
  * 
  * File:    AsyncFlags.cs
- * Purpose: Priority for async operations.
+ * Purpose: Priority and additional flags for async operations.
  */
 
 using System;

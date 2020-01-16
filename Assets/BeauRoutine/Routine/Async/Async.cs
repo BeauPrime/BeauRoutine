@@ -69,43 +69,45 @@ namespace BeauRoutine
 
         #endregion // Invoke
 
-        #region Combine
+        #region Wait All
 
         /// <summary>
         /// Waits for the other handles to complete.
         /// </summary>
-        static public AsyncHandle Combine(AsyncFlags inFlags, params AsyncHandle[] inHandles)
-        {
-            return Combine(inFlags, inHandles);
-        }
-
-        /// <summary>
-        /// Waits for the other handles to complete.
-        /// </summary>
-        static public AsyncHandle Combine(AsyncHandle[] inHandles, AsyncFlags inFlags = AsyncFlags.Default)
+        static public IEnumerator WaitAll(params AsyncHandle[] inHandles)
         {
             if (inHandles == null || inHandles.Length == 0)
             {
-                return AsyncHandle.Null;
+                return null;
             }
 
-            return Schedule(CombineImpl((AsyncHandle[]) inHandles.Clone()), inFlags);
+            if (inHandles.Length == 1)
+            {
+                return inHandles[0];
+            }
+
+            return WaitAllImpl((AsyncHandle[]) inHandles.Clone());
         }
 
         /// <summary>
         /// Waits for the other handles to complete.
         /// </summary>
-        static public AsyncHandle Combine(List<AsyncHandle> inHandles, AsyncFlags inFlags = AsyncFlags.Default)
+        static public IEnumerator WaitAll(List<AsyncHandle> inHandles)
         {
             if (inHandles == null || inHandles.Count == 0)
             {
-                return AsyncHandle.Null;
+                return null;
             }
 
-            return Schedule(CombineImpl(inHandles.ToArray()), inFlags);
+            if (inHandles.Count == 1)
+            {
+                return inHandles[0];
+            }
+
+            return WaitAllImpl(inHandles.ToArray());
         }
 
-        static private IEnumerator CombineImpl(AsyncHandle[] inHandles)
+        static private IEnumerator WaitAllImpl(AsyncHandle[] inHandles)
         {
             for (int i = inHandles.Length - 1; i >= 0; --i)
             {
@@ -114,9 +116,32 @@ namespace BeauRoutine
                     yield return null;
                 }
             }
+            yield return Routine.Command.BreakAndResume;
         }
 
-        #endregion // Combine
+        #endregion // Wait All
+
+        #region Sleep
+
+        /// <summary>
+        /// Commands the current operation to sleep for the given number of milliseconds.
+        /// Must be yielded in an IEnumerator operation to function.
+        /// </summary>
+        static public AsyncSleep Sleep(int inMillisecs)
+        {
+            return new AsyncSleep((long) inMillisecs * TimeSpan.TicksPerMillisecond);
+        }
+
+        /// <summary>
+        /// Commands the current operation to sleep for the given duration.
+        /// Must be yielded in an IEnumerator operation to function.
+        /// </summary>
+        static public AsyncSleep Sleep(TimeSpan inTimespan)
+        {
+            return new AsyncSleep(inTimespan);
+        }
+
+        #endregion // Sleep
 
         #region Schedule
 

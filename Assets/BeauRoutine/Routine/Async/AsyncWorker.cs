@@ -40,6 +40,8 @@ namespace BeauRoutine.Internal
         private readonly Queue<AsyncWorkUnit> m_BackgroundQueue;
         private readonly AsyncFlags m_PriorityFlags;
 
+        private long m_NextBlockingTick = -1;
+
         internal bool ForceSingleThreaded;
         internal bool Paused;
 
@@ -200,23 +202,40 @@ namespace BeauRoutine.Internal
 
             #endif // SUPPORTS_THREADING
 
+            if (m_NextBlockingTick > 0)
+            {
+                long current = Stopwatch.GetTimestamp();
+                if (current < m_NextBlockingTick)
+                {
+                    ioTicksRemaining = inTotalBudget - inStopwatch.ElapsedTicks;
+                    return;
+                }
+
+                m_NextBlockingTick = 0;
+            }
+
             long timestamp = inStopwatch.ElapsedTicks;
             long cutoff = timestamp + inSliceBudget;
-            while (!Paused && ioTicksRemaining > 0 && ioQueue.Count > 0 && timestamp < cutoff)
+            while (!Paused && ioTicksRemaining > 0 && ioQueue.Count > 0 && timestamp < cutoff && m_NextBlockingTick <= 0)
             {
                 AsyncWorkUnit unit = ioQueue.Peek();
 
                 AsyncWorkUnit.StepResult result = AsyncWorkUnit.StepResult.Incomplete;
-                while (result == AsyncWorkUnit.StepResult.Incomplete && ioTicksRemaining > 0 && !Paused && timestamp < cutoff)
+                while (result.IsIncomplete() && ioTicksRemaining > 0 && !Paused && timestamp < cutoff && m_NextBlockingTick <= 0)
                 {
                     result = unit.Step();
+                    if (result.TickDelay > 0)
+                    {
+                        m_NextBlockingTick = Stopwatch.GetTimestamp() + result.TickDelay;
+                    }
+                    
                     timestamp = inStopwatch.ElapsedTicks;
                     ioTicksRemaining = inTotalBudget - timestamp;
                 }
-                
-                if (result != AsyncWorkUnit.StepResult.Incomplete)
+
+                if (!result.IsIncomplete())
                 {
-                    if (result == AsyncWorkUnit.StepResult.Complete)
+                    if (result.Type == AsyncWorkUnit.StepResultType.Complete)
                     {
                         m_Scheduler.Log("Completed {0}", unit);
                     }
@@ -294,14 +313,18 @@ namespace BeauRoutine.Internal
                 }
 
                 AsyncWorkUnit.StepResult result = AsyncWorkUnit.StepResult.Incomplete;
-                while (result == AsyncWorkUnit.StepResult.Incomplete && !ForceSingleThreaded && !Paused)
+                while (result.IsIncomplete() && !ForceSingleThreaded && !Paused)
                 {
                     result = unit.ThreadedStep();
+                    if (result.TickDelay > 0)
+                    {
+                        Thread.Sleep(TimeSpan.FromTicks(result.TickDelay));
+                    }
                 }
 
-                if (result != AsyncWorkUnit.StepResult.Incomplete)
+                if (!result.IsIncomplete())
                 {
-                    if (result == AsyncWorkUnit.StepResult.Complete)
+                    if (result.Type == AsyncWorkUnit.StepResultType.Complete)
                     {
                         m_Scheduler.Log("Completed {0}", unit);
                     }

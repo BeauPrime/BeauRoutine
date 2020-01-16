@@ -6,7 +6,7 @@
  * File:    RoutineButton.cs
  * Purpose: Button replacement, animated through BeauRoutines.
  */
-
+ 
 using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
@@ -22,7 +22,7 @@ namespace BeauRoutine.Extensions
         /// <summary>
         /// Button transition states.
         /// </summary>
-        public enum State { Normal = 0, Highlighted = 1, Pressed = 2, Disabled = 3 }
+        public enum State { Normal = 0, Highlighted = 1, Pressed = 2, Selected = 3, Disabled = 4 }
 
         /// <summary>
         /// Interface for performing transition animations.
@@ -33,7 +33,7 @@ namespace BeauRoutine.Extensions
             /// Performs an instant transition to the given state.
             /// </summary>
             void InstantTransitionTo(State inState);
-            
+
             /// <summary>
             /// Returns an IEnumerator for transitioning to the given state.
             /// </summary>
@@ -79,10 +79,11 @@ namespace BeauRoutine.Extensions
 
             if (m_CurrentAnimator == null)
             {
-                if (!m_RoutineAnimator)
-                    m_RoutineAnimator = GetComponent<RoutineButtonAnimator>();
-                if (m_RoutineAnimator)
-                    m_CurrentAnimator = m_RoutineAnimator;
+                IAnimator animator = GetDefaultAnimator();
+                if (ReferenceEquals(animator, null))
+                    animator = GetComponent<RoutineButtonAnimator>();
+                if (animator != null)
+                    m_CurrentAnimator = animator;
             }
         }
 
@@ -108,13 +109,28 @@ namespace BeauRoutine.Extensions
             if (instant)
             {
                 m_CurrentAnimation.Stop();
-                m_CurrentAnimator.InstantTransitionTo((State) state);
+                m_CurrentAnimator.InstantTransitionTo(GetStateForSelectionState(state));
             }
             else
             {
-                IEnumerator anim = m_CurrentAnimator.TransitionTo((State) state);
+                IEnumerator anim = m_CurrentAnimator.TransitionTo(GetStateForSelectionState(state));
                 m_CurrentAnimation.Replace(this, anim);
             }
+        }
+
+        protected virtual IAnimator GetDefaultAnimator()
+        {
+            return m_RoutineAnimator;
+        }
+
+        static private State GetStateForSelectionState(SelectionState inState)
+        {
+            #if !UNITY_2019_1_OR_NEWER
+            if (inState == SelectionState.Disabled)
+                return State.Disabled;
+            #endif // !UNITY_2019_1_OR_NEWER
+            
+            return (State) inState;
         }
 
         #if UNITY_EDITOR

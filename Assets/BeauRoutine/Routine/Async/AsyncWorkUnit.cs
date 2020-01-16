@@ -3,7 +3,7 @@
  * Author:  Autumn Beauchesne
  * Date:    7 Jan 2020
  * 
- * File:    AsyncWOrkUnit.cs
+ * File:    AsyncWorkUnit.cs
  * Purpose: Single unit of work for an async worker.
  */
 
@@ -19,7 +19,28 @@ namespace BeauRoutine.Internal
 {
     internal sealed class AsyncWorkUnit
     {
-        internal enum StepResult : byte
+        internal struct StepResult
+        {
+            internal readonly StepResultType Type;
+            internal readonly long TickDelay;
+
+            internal StepResult(StepResultType inType, long inDelay = 0)
+            {
+                Type = inType;
+                TickDelay = inDelay;
+            }
+
+            internal bool IsIncomplete()
+            {
+                return Type == StepResultType.Incomplete;
+            }
+
+            internal static readonly StepResult Incomplete = new StepResult(StepResultType.Incomplete);
+            internal static readonly StepResult Complete = new StepResult(StepResultType.Complete);
+            internal static readonly StepResult Cancelled = new StepResult(StepResultType.Cancelled);
+        }
+
+        internal enum StepResultType : byte
         {
             Incomplete,
             Complete,
@@ -189,6 +210,8 @@ namespace BeauRoutine.Internal
                 return StepResult.Cancelled;
             }
 
+            long tickDelay = 0;
+
             if ((m_Status & ActionCompleteFlag) == 0)
             {
                 m_Action();
@@ -202,9 +225,26 @@ namespace BeauRoutine.Internal
                     DisposeUtils.DisposeObject(ref m_Enumerator);
                     m_Status |= EnumeratorCompleteFlag;
                 }
+                else
+                {
+                    object result = m_Enumerator.Current;
+                    if (result != null)
+                    {
+                        if (result is AsyncSleep)
+                        {
+                            AsyncSleep sleep = (AsyncSleep) result;
+                            tickDelay = sleep.Ticks;
+                        }
+                    }
+                }
             }
 
-            return m_Status != AllCompleteFlag ? StepResult.Incomplete : StepResult.Complete;
+            if (m_Status != AllCompleteFlag)
+            {
+                return new StepResult(StepResultType.Incomplete, tickDelay);
+            }
+
+            return StepResult.Complete;
         }
 
         #if SUPPORTS_THREADING
@@ -238,7 +278,7 @@ namespace BeauRoutine.Internal
 
             if (m_Status == AllCompleteFlag)
                 return;
-            
+
             if ((m_Status & CancelledFlag) == 0)
             {
                 m_Scheduler.Log("Cancelling {0}", m_Name);

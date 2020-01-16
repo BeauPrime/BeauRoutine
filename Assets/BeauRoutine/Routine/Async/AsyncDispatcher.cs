@@ -120,7 +120,7 @@ namespace BeauRoutine.Internal
         }
 
         // Returns if executing on the main thread.
-        private bool IsMainThread()
+        internal bool IsMainThread()
         {
             #if SUPPORTS_THREADING
             return m_MainThread == Thread.CurrentThread;
