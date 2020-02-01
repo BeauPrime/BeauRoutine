@@ -60,8 +60,11 @@ namespace BeauRoutine
         [SerializeField, Tooltip("Frame budget, in milliseconds.\nSet to 0 or less to use default budget for framerate.")]
         private double m_FrameBudget = -1;
 
-        [SerializeField, Tooltip("Async budget, in milliseconds.\nSet to 0 or less to use default budget for async.")]
-        private double m_AsyncBudget = -1;
+        [SerializeField, Tooltip("Minimum async budget, in milliseconds.\nSet to 0 or less to use default budget for async.")]
+        private double m_AsyncBudgetMin = -1;
+
+        [SerializeField, Tooltip("Maximum async budget, in milliseconds.\nSet to 0 or less to use default budget for async.")]
+        private double m_AsyncBudgetMax = -1;
 
         [SerializeField, Tooltip("If set, single-threaded mode will be enabled for async operations.")]
         private bool m_ForceSingleThreaded = false;
@@ -104,12 +107,18 @@ namespace BeauRoutine
             if (m_FrameBudget > 0)
             {
                 Routine.Settings.FrameDurationBudgetMS = m_FrameBudget;
-                Routine.Settings.AsyncBudgetMS = m_FrameBudget * Manager.DEFAULT_ASYNC_PERCENTAGE;
+                Routine.Settings.AsyncBudgetMinMS = m_FrameBudget * Manager.DEFAULT_ASYNC_PERCENTAGE_MIN;
+                Routine.Settings.AsyncBudgetMaxMS = m_FrameBudget * Manager.DEFAULT_ASYNC_PERCENTAGE_MAX;
             }
 
-            if (m_AsyncBudget > 0)
+            if (m_AsyncBudgetMin > 0)
             {
-                Routine.Settings.AsyncBudgetMS = m_AsyncBudget;
+                Routine.Settings.AsyncBudgetMinMS = m_AsyncBudgetMin;
+            }
+
+            if (m_AsyncBudgetMax > 0)
+            {
+                Routine.Settings.AsyncBudgetMaxMS = m_AsyncBudgetMax;
             }
 
             Routine.Settings.ForceSingleThreaded = m_ForceSingleThreaded;
@@ -122,9 +131,9 @@ namespace BeauRoutine
             if (UnityEditor.EditorApplication.isPlaying && m_Awoken)
                 Apply();
 
-            if (m_FrameBudget > 0 && m_AsyncBudget > m_FrameBudget)
+            if (m_FrameBudget > 0 && m_AsyncBudgetMin > m_FrameBudget)
             {
-                m_AsyncBudget = m_FrameBudget;
+                m_AsyncBudgetMin = m_FrameBudget;
             }
         }
 

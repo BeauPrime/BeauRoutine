@@ -625,30 +625,48 @@ namespace BeauRoutine
                     Manager m = Manager.Get();
                     if (m != null)
                     {
-                        double asyncRatio = (double) m.AsyncBudgetTicks / m.FrameDurationBudgetTicks;
-                        m.FrameDurationBudgetTicks = (long) (TimeSpan.TicksPerMillisecond * value);
-                        m.AsyncBudgetTicks = (long) (asyncRatio * m.FrameDurationBudgetTicks);
+                        m.SetFrameBudget(value);
                     }
                 }
             }
 
             /// <summary>
-            /// Gets/sets the async milliseconds budget per frame.
+            /// Gets/sets the minimum async milliseconds budget per frame.
             /// </summary>
-            static public double AsyncBudgetMS
+            static public double AsyncBudgetMinMS
             {
                 get
                 {
                     Manager m = Manager.Get();
                     if (m != null)
-                        return m.AsyncBudgetTicks / TimeSpan.TicksPerMillisecond;
-                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE / TimeSpan.TicksPerMillisecond;
+                        return m.AsyncBudgetTicksMin / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE_MIN / TimeSpan.TicksPerMillisecond;
                 }
                 set
                 {
                     Manager m = Manager.Get();
                     if (m != null)
-                        m.AsyncBudgetTicks = (long) (TimeSpan.TicksPerMillisecond * value);
+                        m.AsyncBudgetTicksMin = (long) (TimeSpan.TicksPerMillisecond * value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the maximum async milliseconds budget per frame.
+            /// </summary>
+            static public double AsyncBudgetMaxMS
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.AsyncBudgetTicksMax / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE_MAX / TimeSpan.TicksPerMillisecond;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.AsyncBudgetTicksMax = (long) (TimeSpan.TicksPerMillisecond * value);
                 }
             }
 

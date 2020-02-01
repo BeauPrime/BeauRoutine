@@ -29,7 +29,8 @@ namespace BeauRoutine.Internal
         public const float DEFAULT_THINKUPDATE_INTERVAL = 1f / 10f;
         public const float DEFAULT_CUSTOMUPDATE_INTERVAL = 1f / 8f;
 
-        public const double DEFAULT_ASYNC_PERCENTAGE = 0.4f;
+        public const double DEFAULT_ASYNC_PERCENTAGE_MIN = 0.05f;
+        public const double DEFAULT_ASYNC_PERCENTAGE_MAX = 0.4f;
 
         // Version number
         static public readonly Version VERSION = new Version("0.11.0");
@@ -228,9 +229,14 @@ namespace BeauRoutine.Internal
         public long FrameDurationBudgetTicks;
 
         /// <summary>
+        /// Minimum async budget, in ticks.
+        /// </summary>
+        public long AsyncBudgetTicksMin;
+
+        /// <summary>
         /// Async budget, in ticks.
         /// </summary>
-        public long AsyncBudgetTicks;
+        public long AsyncBudgetTicksMax;
 
         /// <summary>
         /// Is the manager in the middle of updating routines right now?
@@ -266,7 +272,8 @@ namespace BeauRoutine.Internal
 
             Frame.ResetTime(Time.deltaTime, TimeScale);
             FrameDurationBudgetTicks = CalculateDefaultFrameBudgetTicks();
-            AsyncBudgetTicks = (long) (FrameDurationBudgetTicks * DEFAULT_ASYNC_PERCENTAGE);
+            AsyncBudgetTicksMin = (long) (FrameDurationBudgetTicks * DEFAULT_ASYNC_PERCENTAGE_MIN);
+            AsyncBudgetTicksMax = (long) (FrameDurationBudgetTicks * DEFAULT_ASYNC_PERCENTAGE_MAX);
 
             m_QueuedGroupTimescale = new float[Routine.MAX_GROUPS];
             Frame.GroupTimeScale = new float[Routine.MAX_GROUPS];
@@ -884,6 +891,18 @@ namespace BeauRoutine.Internal
         #region Frame Timing
 
         /// <summary>
+        /// Adjusts the frame budget and preserves the async budget ratio.
+        /// </summary>
+        public void SetFrameBudget(double inMillisecs)
+        {
+            double asyncRatioMin = (double) AsyncBudgetTicksMin / FrameDurationBudgetTicks;
+            double asyncRatioMax = (double) AsyncBudgetTicksMax / FrameDurationBudgetTicks;
+            FrameDurationBudgetTicks = (long) (TimeSpan.TicksPerMillisecond * inMillisecs);
+            AsyncBudgetTicksMin = (long) (asyncRatioMin * FrameDurationBudgetTicks);
+            AsyncBudgetTicksMax = (long) (asyncRatioMax * FrameDurationBudgetTicks);
+        }
+
+        /// <summary>
         /// Marks a frame as having started.
         /// </summary>
         public void MarkFrameStart()
@@ -980,10 +999,16 @@ namespace BeauRoutine.Internal
         /// </summary>
         public void UpdateAsync(float inPortion)
         {
-            long desiredAsyncTicks = (long) (AsyncBudgetTicks * inPortion);
+            long minAsyncTicks = (long) (AsyncBudgetTicksMin * inPortion);
+            long maxAsyncTicks = (long) (AsyncBudgetTicksMax * inPortion);
+
             long currentTicks = m_FrameTimer.ElapsedTicks;
             long ticksRemaining = FrameDurationBudgetTicks - currentTicks;
-            long asyncBudget = Math.Min(desiredAsyncTicks, ticksRemaining);
+            long asyncBudget = ticksRemaining;
+            if (asyncBudget > maxAsyncTicks)
+                asyncBudget = maxAsyncTicks;
+            if (asyncBudget < minAsyncTicks)
+                asyncBudget = minAsyncTicks;
             Scheduler.Process(asyncBudget);
         }
 
