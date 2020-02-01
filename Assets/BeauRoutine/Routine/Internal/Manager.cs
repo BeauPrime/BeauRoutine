@@ -978,11 +978,12 @@ namespace BeauRoutine.Internal
         /// <summary>
         /// Updates the async scheduler.
         /// </summary>
-        public void UpdateAsync()
+        public void UpdateAsync(float inPortion)
         {
+            long desiredAsyncTicks = (long) (AsyncBudgetTicks * inPortion);
             long currentTicks = m_FrameTimer.ElapsedTicks;
             long ticksRemaining = FrameDurationBudgetTicks - currentTicks;
-            long asyncBudget = Math.Min(AsyncBudgetTicks, ticksRemaining);
+            long asyncBudget = Math.Min(desiredAsyncTicks, ticksRemaining);
             Scheduler.Process(asyncBudget);
         }
 

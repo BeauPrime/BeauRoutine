@@ -771,7 +771,6 @@ namespace BeauRoutine.Internal
                                 case RoutinePhase.FixedUpdate:
                                     {
                                         Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
-                                        Manager.Host.WaitForFixedUpdate();
                                         m_YieldPhase = YieldPhase.WaitForFixedUpdate;
                                         m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
                                         return true;
@@ -837,7 +836,6 @@ namespace BeauRoutine.Internal
                         if (resultType == TYPEHANDLE_WAITFORFIXEDUPDATE)
                         {
                             Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
-                            Manager.Host.WaitForFixedUpdate();
                             m_YieldPhase = YieldPhase.WaitForFixedUpdate;
                             m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
                             return true;
