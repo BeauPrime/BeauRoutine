@@ -135,6 +135,11 @@ namespace BeauRoutine
             {
                 m_AsyncBudgetMin = m_FrameBudget;
             }
+
+            if (m_FrameBudget > 0 && m_AsyncBudgetMax > m_FrameBudget)
+            {
+                m_AsyncBudgetMax = m_FrameBudget;
+            }
         }
 
         #endif // UNITY_EDITOR
