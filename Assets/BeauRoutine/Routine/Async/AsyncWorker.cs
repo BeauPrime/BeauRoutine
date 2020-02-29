@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2020. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
  * Author:  Autumn Beauchesne
  * Date:    6 Jan 2020
  * 
@@ -172,7 +172,7 @@ namespace BeauRoutine.Internal
         /// </summary>
         internal void ProcessBlocking(Stopwatch inStopwatch, long inTotalBudget, long inSliceBudget, bool inbProcessBackground, ref long ioTicksRemaining)
         {
-            long backgroundPortion = inbProcessBackground ? 0 : (long) (inSliceBudget * BackgroundProcessingPortion);
+            long backgroundPortion = !inbProcessBackground ? 0 : (long) (inSliceBudget * BackgroundProcessingPortion);
             long mainThreadPortion = inSliceBudget - backgroundPortion;
 
             ProcessBlockingQueue(inStopwatch, inTotalBudget, mainThreadPortion, m_MainThreadOnlyQueue, false, ref ioTicksRemaining);
@@ -180,6 +180,8 @@ namespace BeauRoutine.Internal
             {
                 ProcessBlockingQueue(inStopwatch, inTotalBudget, backgroundPortion, m_BackgroundQueue, true, ref ioTicksRemaining);
             }
+
+            ioTicksRemaining = inTotalBudget - inStopwatch.ElapsedTicks;
         }
 
         // Processes scheduled work by time-slicing.

@@ -1,5 +1,5 @@
 ﻿/*
- * Copyright (C) 2016-2020. Filament Games, LLC. All rights reserved.
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
  * Author:  Autumn Beauchesne
  * Date:    21 Nov 2016
  * 
