@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    16 Oct 2017
  * 
  * File:    Future.Download.cs
@@ -636,7 +636,7 @@ namespace BeauRoutine
 
             static private bool TextureIsValid(Texture2D inTexture)
             {
-                // TODO(Alex): Replace this with something better?
+                // TODO(Autumn): Replace this with something better?
                 // The default texture returned by Unity is 8x8,
                 // but if we try downloading an 8x8 texture (no matter how unlikely),
                 // this will fail

@@ -1,6 +1,6 @@
 ﻿/*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    4 Apr 2017
  * 
  * File:    Fiber.cs
@@ -159,7 +159,7 @@ namespace BeauRoutine.Internal
             m_RootFunction = inStart;
             m_Stack[m_StackPosition = 0] = inStart;
 
-            CheckForNesting(inStart);
+            CheckForNesting(inStart, true);
 
             if (!m_Chained)
             {
@@ -262,11 +262,17 @@ namespace BeauRoutine.Internal
 
         // HACK: We need to pass a parent fiber into nested fibers
         //       in order for timescale to work appropriately during a yield update.
-        private void CheckForNesting(IEnumerator inEnumerator)
+        private void CheckForNesting(IEnumerator inEnumerator, bool inbCheckDecorator)
         {
             INestedFiberContainer container = inEnumerator as INestedFiberContainer;
             if (container != null)
                 container.SetParentFiber(this);
+            else if (inbCheckDecorator)
+            {
+                RoutineDecorator decorator = inEnumerator as RoutineDecorator;
+                if (decorator != null && decorator.Enumerator != null)
+                    CheckForNesting(decorator.Enumerator, true);
+            }
         }
 
         #endregion
@@ -741,7 +747,7 @@ namespace BeauRoutine.Internal
                                 Array.Resize(ref m_Stack, m_StackSize *= 2);
                             m_Stack[++m_StackPosition] = decorator;
 
-                            CheckForNesting(decoratedEnumerator);
+                            CheckForNesting(decoratedEnumerator, false);
                         }
 
                         if (!bExecuteStack)
@@ -765,7 +771,6 @@ namespace BeauRoutine.Internal
                                 case RoutinePhase.FixedUpdate:
                                     {
                                         Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
-                                        Manager.Host.WaitForFixedUpdate();
                                         m_YieldPhase = YieldPhase.WaitForFixedUpdate;
                                         m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
                                         return true;
@@ -831,7 +836,6 @@ namespace BeauRoutine.Internal
                         if (resultType == TYPEHANDLE_WAITFORFIXEDUPDATE)
                         {
                             Manager.Fibers.AddFiberToYieldList(this, YieldPhase.WaitForFixedUpdate);
-                            Manager.Host.WaitForFixedUpdate();
                             m_YieldPhase = YieldPhase.WaitForFixedUpdate;
                             m_YieldFrameDelay = bApplyYieldDelay && m_UpdatePhase == RoutinePhase.FixedUpdate && Manager.IsUpdating(RoutinePhase.FixedUpdate) ? 1 : 0;
                             return true;
@@ -925,10 +929,10 @@ namespace BeauRoutine.Internal
                     {
                         // Check if we need to resize the stack
                         if (m_StackPosition == m_StackSize - 1)
-                            Array.Resize(ref m_Stack, m_StackSize *= 2);
+                        Array.Resize(ref m_Stack, m_StackSize *= 2);
                         m_Stack[++m_StackPosition] = enumerator;
 
-                        CheckForNesting(enumerator);
+                        CheckForNesting(enumerator, false);
 
                         return true;
                     }
@@ -1166,7 +1170,7 @@ namespace BeauRoutine.Internal
 
         static private Dictionary<IntPtr, string> s_IteratorNames = new Dictionary<IntPtr, string>();
 
-        static private string GetTypeName(Type inType)
+        static internal string GetTypeName(Type inType)
         {
             IntPtr typeID = inType.TypeHandle.Value;
             string name;

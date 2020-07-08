@@ -1,6 +1,6 @@
 ﻿/*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    4 Nov 2017
  * 
  * File:    Routine.Operations.cs
@@ -624,7 +624,69 @@ namespace BeauRoutine
                 {
                     Manager m = Manager.Get();
                     if (m != null)
-                        m.FrameDurationBudgetTicks = (long)(TimeSpan.TicksPerMillisecond * value);
+                    {
+                        m.SetFrameBudget(value);
+                    }
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the minimum async milliseconds budget per frame.
+            /// </summary>
+            static public double AsyncBudgetMinMS
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.AsyncBudgetTicksMin / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE_MIN / TimeSpan.TicksPerMillisecond;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.AsyncBudgetTicksMin = (long) (TimeSpan.TicksPerMillisecond * value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets the maximum async milliseconds budget per frame.
+            /// </summary>
+            static public double AsyncBudgetMaxMS
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.AsyncBudgetTicksMax / TimeSpan.TicksPerMillisecond;
+                    return Manager.CalculateDefaultFrameBudgetTicks() * Manager.DEFAULT_ASYNC_PERCENTAGE_MAX / TimeSpan.TicksPerMillisecond;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.AsyncBudgetTicksMax = (long) (TimeSpan.TicksPerMillisecond * value);
+                }
+            }
+
+            /// <summary>
+            /// Gets/sets whether or not to force single-threaded mode for async operations.
+            /// </summary>
+            static public bool ForceSingleThreaded
+            {
+                get
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        return m.ForceSingleThreaded;
+                    return false;
+                }
+                set
+                {
+                    Manager m = Manager.Get();
+                    if (m != null)
+                        m.ForceSingleThreaded = value;
                 }
             }
         }

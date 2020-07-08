@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    8 Oct 2017
  * 
  * File:    Future.cs
@@ -254,6 +254,7 @@ namespace BeauRoutine
         private Action<Future.Failure> m_CallbackFailWithArgs;
 
         private Routine m_Prophet;
+        private AsyncHandle m_Async;
 
         public Future()
         {
@@ -338,7 +339,7 @@ namespace BeauRoutine
             {
                 m_Progress = inProgress;
                 if (m_CallbackProgress != null)
-                    Routine.StartCall(m_CallbackProgress, m_Progress);
+                    Async.InvokeAsync(m_CallbackProgress, m_Progress);
             }
         }
 
@@ -415,13 +416,13 @@ namespace BeauRoutine
             {
                 m_Progress = 1;
                 if (m_CallbackProgress != null)
-                    Routine.StartCall(m_CallbackProgress, m_Progress);
+                    Async.InvokeAsync(m_CallbackProgress, m_Progress);
                 m_CallbackProgress = null;
             }
 
             if (m_CallbackComplete != null)
             {
-                Routine.StartCall(m_CallbackComplete, m_Value);
+                Async.InvokeAsync(m_CallbackComplete, m_Value);
                 m_CallbackComplete = null;
             }
 
@@ -537,13 +538,13 @@ namespace BeauRoutine
 
             if (m_CallbackFail != null)
             {
-                Routine.StartCall(m_CallbackFail);
+                Async.InvokeAsync(m_CallbackFail);
                 m_CallbackFail = null;
             }
 
             if (m_CallbackFailWithArgs != null)
             {
-                Routine.StartCall(InvokeFailure, m_CallbackFailWithArgs);
+                Async.InvokeAsync(InvokeFailure, m_CallbackFailWithArgs);
                 m_CallbackFailWithArgs = null;
             }
 
@@ -613,6 +614,7 @@ namespace BeauRoutine
             {
                 m_State = State.Cancelled;
                 m_Prophet.Stop();
+                m_Async.Cancel();
             }
         }
 
@@ -633,7 +635,22 @@ namespace BeauRoutine
             if (!m_Prophet && m_State == State.InProgress)
             {
                 m_Prophet = inRoutine;
-                m_Prophet.OnStop(OnProphetStopped);
+                m_Prophet.OnStop(OnLinkedStopped);
+            }
+            return this;
+        }
+
+        /// <summary>
+        /// Links an async handle to the Future.
+        /// If the async operation stops, the Future will fail.
+        /// If the Future is cancelled, the operation will Stop.
+        /// </summary>
+        public Future<T> LinkTo(AsyncHandle inAsync)
+        {
+            if (m_Async == AsyncHandle.Null && m_State == State.InProgress)
+            {
+                m_Async = inAsync;
+                m_Async.OnStop(OnLinkedStopped);
             }
             return this;
         }
@@ -654,7 +671,7 @@ namespace BeauRoutine
                 yield return null;
         }
 
-        private void OnProphetStopped()
+        private void OnLinkedStopped()
         {
             if (m_State == State.InProgress)
                 Fail(Future.FailureType.RoutineStopped);
