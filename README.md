@@ -1,14 +1,14 @@
 # BeauRoutine
 
-**Current Version: 0.10.1**  
-Updated 13 September 2019 | [Changelog](https://github.com/FilamentGames/BeauRoutine/blob/master/CHANGELOG.md)
+**Current Version: 0.11.0**  
+Updated 13 September 2019 | [Changelog](https://github.com/BeauPrime/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.
 
 BeauRoutine also includes a powerful coroutine-driven tweening system. Tweens are highly configurable and easily integrated into a coroutine, allowing you to quickly iterate on programmatic animations and implement visual polish.
 
-**Note**: BeauRoutine is still in development. If you encounter any issues, please either [create an issue in GitHub](https://github.com/FilamentGames/BeauRoutine/issues/new) or [send me an email](mailto:abeauchesne@filamentgames.com).
+**Note**: BeauRoutine is still in development. If you encounter any issues, please either [create an issue in GitHub](https://github.com/BeauPrime/BeauRoutine/issues/new) or [send me an email](mailto:beauchesne@beauprime.com).
 
 ### Table of Contents
 1. [Basic Usage](#basic-usage)
@@ -63,7 +63,7 @@ BeauRoutine also includes a powerful coroutine-driven tweening system. Tweens ar
 
 **Note:** BeauRoutine requires Unity version 5.2 or newer.
 
-1. Download the package from the repository: [BeauRoutine.unitypackage](https://github.com/FilamentGames/BeauRoutine/raw/master/BeauRoutine.unitypackage)
+1. Download the package from the repository: [BeauRoutine.unitypackage](https://github.com/BeauPrime/BeauRoutine/raw/master/BeauRoutine.unitypackage)
 2. Unpack into your project.
 
 BeauRoutine uses the ``BeauRoutine`` namespace. You'll need to add the statement ``using BeauRoutine;`` to the top of any scripts using it.

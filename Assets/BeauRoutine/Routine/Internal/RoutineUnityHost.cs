@@ -1,11 +1,21 @@
 ﻿/*
- * Copyright (C) 2016-2018. Filament Games, LLC. All rights reserved.
- * Author:  Alex Beauchesne
+ * Copyright (C) 2016-2020. Autumn Beauchesne. All rights reserved.
+ * Author:  Autumn Beauchesne
  * Date:    4 Apr 2017
  * 
- * File:    UnityHost.cs
+ * File:    RoutineUnityHost.cs
  * Purpose: Host behavior. Contains hooks for executing BeauRoutines.
  */
+
+#if UNITY_EDITOR
+
+#if UNITY_2017_2_OR_NEWER
+#define USE_PAUSE_STATE_EVENT
+#endif // UNITY_2017_2_OR_NEWER
+
+using UnityEditor;
+
+#endif // UNITY_EDITOR
 
 using System.Collections;
 using System.Diagnostics;
@@ -24,18 +34,55 @@ namespace BeauRoutine.Internal
         private Coroutine m_WaitForFixedUpdateRoutine;
         private Coroutine m_WaitForEndOfFrameRoutine;
 
+        private bool m_LastKnownVsync;
+
         public void Initialize(Manager inManager)
         {
             m_Manager = inManager;
 
             if (m_WaitForEndOfFrameRoutine == null)
                 m_WaitForEndOfFrameRoutine = StartCoroutine(ApplyWaitForEndOfFrame());
+
+            if (m_WaitForFixedUpdateRoutine == null)
+                m_WaitForFixedUpdateRoutine = StartCoroutine(ApplyWaitForFixedUpdate());
+
+            RegisterCallbacks();
+
+            m_LastKnownVsync = QualitySettings.vSyncCount > 0;
         }
 
         public void Shutdown()
         {
             StopYieldInstructions();
             m_Manager = null;
+
+            DeregisterCallbacks();
+        }
+
+        private void RegisterCallbacks()
+        {
+            #if UNITY_EDITOR
+
+            #if USE_PAUSE_STATE_EVENT
+            EditorApplication.pauseStateChanged += OnEditorPauseChanged;
+            #else
+            EditorApplication.playmodeStateChanged += OnEditorPausedNoArgs;
+            #endif // USE_PAUSE_STATE_EVENT
+
+            #endif // UNITY_EDITOR
+        }
+
+        private void DeregisterCallbacks()
+        {
+            #if UNITY_EDITOR
+
+            #if USE_PAUSE_STATE_EVENT
+            EditorApplication.pauseStateChanged -= OnEditorPauseChanged;
+            #else
+            EditorApplication.playmodeStateChanged -= OnEditorPausedNoArgs;
+            #endif // USE_PAUSE_STATE_EVENT
+
+            #endif // UNITY_EDITOR
         }
 
         #region Unity Events
@@ -48,6 +95,15 @@ namespace BeauRoutine.Internal
                 m_Manager.OnApplicationQuit();
                 m_Manager = null;
                 Routine.Shutdown();
+                DeregisterCallbacks();
+            }
+        }
+
+        private void OnApplicationPause(bool inbPaused)
+        {
+            if (m_Manager != null)
+            {
+                m_Manager.SetAsyncPaused(inbPaused);
             }
         }
 
@@ -72,6 +128,11 @@ namespace BeauRoutine.Internal
                 m.Update(deltaTime, RoutinePhase.LateUpdate);
                 if (m.Fibers.GetYieldCount(YieldPhase.WaitForLateUpdate) > 0)
                     m.UpdateYield(deltaTime, YieldPhase.WaitForLateUpdate);
+
+                if (m_LastKnownVsync)
+                {
+                    m_Manager.UpdateAsync(1);
+                }
             }
         }
 
@@ -126,24 +187,40 @@ namespace BeauRoutine.Internal
             }
         }
 
+        #if UNITY_EDITOR
+
+        #if USE_PAUSE_STATE_EVENT
+
+        private void OnEditorPauseChanged(PauseState inState)
+        {
+            OnApplicationPause(inState == PauseState.Paused);
+        }
+
+        #else
+
+        private void OnEditorPausedNoArgs()
+        {
+            OnApplicationPause(EditorApplication.isPaused);
+        }
+
+        #endif // USE_PAUSE_STATE_EVENT
+
+        #endif // UNITY_EDITOR
+
         #endregion
 
         #region Yield Instructions
 
-        public void WaitForFixedUpdate()
-        {
-            if (m_WaitForFixedUpdateRoutine == null)
-                m_WaitForFixedUpdateRoutine = StartCoroutine(ApplyWaitForFixedUpdate());
-        }
-
         private IEnumerator ApplyWaitForFixedUpdate()
         {
-            while (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
+            while(true)
             {
                 yield return s_CachedWaitForFixedUpdate;
-                m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForFixedUpdate);
+                if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
+                {
+                    m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForFixedUpdate);
+                }
             }
-            m_WaitForFixedUpdateRoutine = null;
         }
 
         private IEnumerator ApplyWaitForEndOfFrame()
@@ -155,7 +232,14 @@ namespace BeauRoutine.Internal
                 {
                     m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
                 }
+
+                if (!m_LastKnownVsync)
+                {
+                    m_Manager.UpdateAsync(1);
+                }
                 m_Manager.MarkFrameEnd();
+
+                m_LastKnownVsync = QualitySettings.vSyncCount > 0;
             }
         }
 
