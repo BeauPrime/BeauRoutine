@@ -15,7 +15,7 @@ namespace BeauRoutine.Extensions
 {
     /// <summary>
     /// Abstract MonoBehaviour implementation of BasePanel.IAnimator
-    /// Able to be linked up to a BasePanelAnimator via the inspector
+    /// Able to be linked up to a BasePanel via the inspector
     /// </summary>
     public abstract class BasePanelAnimator : MonoBehaviour, BasePanel.IAnimator
     {

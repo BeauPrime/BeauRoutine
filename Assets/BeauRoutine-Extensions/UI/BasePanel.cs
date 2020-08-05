@@ -11,6 +11,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace BeauRoutine.Extensions
 {
@@ -19,6 +20,20 @@ namespace BeauRoutine.Extensions
     /// </summary>
     public abstract class BasePanel : MonoBehaviour
     {
+        /// <summary>
+        /// Animation type.
+        /// </summary>
+        public enum TransitionType : byte
+        {
+            Animated,
+            Instant
+        }
+
+        /// <summary>
+        /// Event for transitions.
+        /// </summary>
+        public class TransitionEvent : UnityEvent<TransitionType> { }
+
         protected enum InputAnimationBehavior
         {
             AlwaysOn = 0,
@@ -44,29 +59,36 @@ namespace BeauRoutine.Extensions
 
         #region Inspector
 
-        [SerializeField]
-        protected RectTransform m_RootTransform = null;
+        [Header("Components")]
+        
+        [SerializeField] protected RectTransform m_RootTransform = null;
+        [SerializeField] protected CanvasGroup m_RootGroup = null;
+        [SerializeField] private BasePanelAnimator[] m_PanelAnimators = null;
 
-        [SerializeField]
-        protected CanvasGroup m_RootGroup = null;
+        [Header("Behavior")]
+        [SerializeField] private InputAnimationBehavior m_InputBehavior = InputAnimationBehavior.DisableInteract;
+        [SerializeField] private bool m_HideOnStart = true;
 
-        [SerializeField]
-        private InputAnimationBehavior m_InputBehavior = InputAnimationBehavior.DisableInteract;
-
-        [SerializeField]
-        private bool m_HideOnStart = true;
-
-        [SerializeField]
-        private BasePanelAnimator[] m_PanelAnimators = null;
+        [Header("Events")]
+        [SerializeField] private TransitionEvent m_OnShowEvent = new TransitionEvent();
+        [SerializeField] private TransitionEvent m_OnShowCompleteEvent = new TransitionEvent();
+        [SerializeField] private TransitionEvent m_OnHideEvent = new TransitionEvent();
+        [SerializeField] private TransitionEvent m_OnHideCompleteEvent = new TransitionEvent();
 
         #endregion // Inspector
 
-        private Routine m_ShowHideAnim;
+        [NonSerialized] private Routine m_ShowHideAnim;
         [NonSerialized] private bool m_Showing;
         [NonSerialized] private bool m_StateInitialized;
 
         public RectTransform Root { get { return m_RootTransform; } }
         public CanvasGroup CanvasGroup { get { return m_RootGroup; } }
+
+        public TransitionEvent OnShowEvent { get { return m_OnShowEvent; } }
+        public TransitionEvent OnShowCompleteEvent { get { return m_OnShowCompleteEvent; } }
+
+        public TransitionEvent OnHideEvent { get { return m_OnHideEvent; } }
+        public TransitionEvent OnHideCompleteEvent { get { return m_OnHideCompleteEvent; } }
 
         #region Unity Events
 
@@ -131,11 +153,11 @@ namespace BeauRoutine.Extensions
             m_Showing = true;
             m_StateInitialized = true;
 
-            OnShow(true);
+            InvokeOnShow(TransitionType.Instant);
             SubAnimatorInstantTransition(true);
             InstantTransitionToShow();
             SetInputState(true);
-            OnShowComplete(true);
+            InvokeOnShowComplete(TransitionType.Instant);
         }
 
         public IEnumerator Hide(float inDelay = 0)
@@ -162,7 +184,7 @@ namespace BeauRoutine.Extensions
             m_Showing = false;
             m_StateInitialized = true;
 
-            OnHide(true);
+            InvokeOnHide(TransitionType.Instant);
             SubAnimatorInstantTransition(false);
             InstantTransitionToHide();
             SetInputState(false);
@@ -170,7 +192,7 @@ namespace BeauRoutine.Extensions
             if (m_RootTransform)
                 m_RootTransform.gameObject.SetActive(false);
 
-            OnHideComplete(true);
+            InvokeOnHideComplete(TransitionType.Instant);
         }
 
         #endregion // Show/Hide
@@ -184,13 +206,13 @@ namespace BeauRoutine.Extensions
             if (inDelay > 0)
                 yield return inDelay;
 
-            OnShow(false);
+            InvokeOnShow(TransitionType.Animated);
             yield return Routine.Inline(Routine.Combine(
                 TransitionToShow(),
                 SubAnimatorTransition(true)
             ));
             SetInputState(true);
-            OnShowComplete(false);
+            InvokeOnShowComplete(TransitionType.Animated);
         }
 
         private IEnumerator HideImpl(float inDelay)
@@ -200,7 +222,7 @@ namespace BeauRoutine.Extensions
             if (inDelay > 0)
                 yield return inDelay;
 
-            OnHide(false);
+            InvokeOnHide(TransitionType.Animated);
             yield return Routine.Inline(Routine.Combine(
                 TransitionToHide(),
                 SubAnimatorTransition(false)
@@ -209,7 +231,7 @@ namespace BeauRoutine.Extensions
             if (m_RootTransform)
                 m_RootTransform.gameObject.SetActive(false);
 
-            OnHideComplete(false);
+            InvokeOnHideComplete(TransitionType.Animated);
         }
 
         protected virtual void SetInputState(bool inbEnabled)
@@ -254,6 +276,30 @@ namespace BeauRoutine.Extensions
                     m_PanelAnimators[i].InstantTransitionTo(inbOn);
                 }
             }
+        }
+
+        private void InvokeOnShow(TransitionType inType)
+        {
+            m_OnShowEvent.Invoke(inType);
+            OnShow(inType == TransitionType.Instant);
+        }
+
+        private void InvokeOnShowComplete(TransitionType inType)
+        {
+            m_OnShowCompleteEvent.Invoke(inType);
+            OnShowComplete(inType == TransitionType.Instant);
+        }
+
+        private void InvokeOnHide(TransitionType inType)
+        {
+            m_OnHideEvent.Invoke(inType);
+            OnHide(inType == TransitionType.Instant);
+        }
+
+        private void InvokeOnHideComplete(TransitionType inType)
+        {
+            m_OnHideCompleteEvent.Invoke(inType);
+            OnHideComplete(inType == TransitionType.Instant);
         }
 
         #endregion // Animations
