@@ -81,6 +81,8 @@ namespace BeauRoutine.Extensions
         [NonSerialized] private bool m_Showing;
         [NonSerialized] private bool m_StateInitialized;
 
+        [NonSerialized] private bool m_LastState;
+
         public RectTransform Root { get { return m_RootTransform; } }
         public CanvasGroup CanvasGroup { get { return m_RootGroup; } }
 
@@ -120,14 +122,28 @@ namespace BeauRoutine.Extensions
 
         #region Show/Hide
 
+        /// <summary>
+        /// Returns the current showing state.
+        /// </summary>
         public bool IsShowing()
         {
             return m_Showing;
         }
 
+        /// <summary>
+        /// Returns if a show/hide animation is currently playing.
+        /// </summary>
         public bool IsTransitioning()
         {
             return m_ShowHideAnim;
+        }
+
+        /// <summary>
+        /// Returns the previous showing state.
+        /// </summary>
+        public bool WasShowing()
+        {
+            return m_LastState;
         }
 
         public IEnumerator Show(float inDelay = 0)
@@ -140,6 +156,7 @@ namespace BeauRoutine.Extensions
 
             if (!m_Showing)
             {
+                m_LastState = m_Showing;
                 m_Showing = true;
                 m_ShowHideAnim.Replace(this, ShowImpl(inDelay)).ExecuteWhileDisabled();
             }
@@ -150,6 +167,7 @@ namespace BeauRoutine.Extensions
         public void InstantShow()
         {
             m_ShowHideAnim.Stop();
+            m_LastState = m_Showing;
             m_Showing = true;
             m_StateInitialized = true;
 
@@ -170,6 +188,7 @@ namespace BeauRoutine.Extensions
 
             if (m_Showing)
             {
+                m_LastState = m_Showing;
                 m_Showing = false;
                 SetInputState(false);
                 m_ShowHideAnim.Replace(this, HideImpl(inDelay)).ExecuteWhileDisabled();
@@ -181,6 +200,7 @@ namespace BeauRoutine.Extensions
         public void InstantHide()
         {
             m_ShowHideAnim.Stop();
+            m_LastState = m_Showing;
             m_Showing = false;
             m_StateInitialized = true;
 
