@@ -13,7 +13,7 @@ using UnityEngine;
 
 namespace BeauRoutine
 {
-    static public partial class Future
+    public partial class Future
     {
         /// <summary>
         /// Asynchronous resource loading methods. These will create Routines to load resources

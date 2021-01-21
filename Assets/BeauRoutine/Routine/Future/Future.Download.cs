@@ -41,7 +41,7 @@ using UnityEngine.Networking;
 
 namespace BeauRoutine
 {
-    static public partial class Future
+    public partial class Future
     {
         /// <summary>
         /// Download methods. These will create Routines to download data from a URL,
