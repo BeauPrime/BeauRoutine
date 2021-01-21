@@ -158,7 +158,7 @@ namespace BeauRoutine.Extensions
             {
                 m_LastState = m_Showing;
                 m_Showing = true;
-                m_ShowHideAnim.Replace(this, ShowImpl(inDelay)).ExecuteWhileDisabled();
+                m_ShowHideAnim.Replace(this, ShowImpl(inDelay)).ExecuteWhileDisabled().TryManuallyUpdate(0);
             }
 
             return m_ShowHideAnim.Wait();
@@ -191,7 +191,7 @@ namespace BeauRoutine.Extensions
                 m_LastState = m_Showing;
                 m_Showing = false;
                 SetInputState(false);
-                m_ShowHideAnim.Replace(this, HideImpl(inDelay)).ExecuteWhileDisabled();
+                m_ShowHideAnim.Replace(this, HideImpl(inDelay)).ExecuteWhileDisabled().TryManuallyUpdate(0);
             }
 
             return m_ShowHideAnim.Wait();
