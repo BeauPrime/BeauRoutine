@@ -1,7 +1,7 @@
 # BeauRoutine
 
-**Current Version: 0.11.0**  
-Updated 8 July 2020 | [Changelog](https://github.com/BeauPrime/BeauRoutine/blob/master/CHANGELOG.md)
+**Current Version: 0.11.1**  
+Updated 2 May 2021 | [Changelog](https://github.com/BeauPrime/BeauRoutine/blob/master/CHANGELOG.md)
 
 ## About
 BeauRoutine is a coroutine framework for Unity3D. Intended as a replacement for Unity's existing coroutine implementation, BeauRoutines are a fast, powerful, and flexible way of sequencing your logic. BeauRoutine implements all the features of default Unity coroutines and several advanced features on top, giving you precise control over how and when your coroutines execute.

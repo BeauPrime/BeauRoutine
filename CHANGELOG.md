@@ -1,3 +1,14 @@
+### Version 0.11.1
+**2 May 2021**
+
+Improvements to Futures and various BeauRoutine extension updates
+
+#### Improvements
+
+* Added `Future` with no generic arguments
+* Added show/hide events to `BasePanel`
+* Removed one-frame delay between `BasePanel.Show`/`BesePanel.Hide` and logic execution
+
 ### Version 0.11.0
 **8 July 2020**
 
