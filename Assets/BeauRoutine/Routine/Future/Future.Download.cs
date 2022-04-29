@@ -988,7 +988,8 @@ namespace BeauRoutine
             static private bool UnityWebRequest_IsError(UnityWebRequest inWebRequest)
             {
                 #if USE_SEPARATE_ERROR_CHECKS
-                return inWebRequest.isNetworkError || inWebRequest.isHttpError;
+                return (inWebRequest.result == UnityEngine.Networking.UnityWebRequest.Result.ConnectionError) || 
+                            (inWebRequest.result == UnityEngine.Networking.UnityWebRequest.Result.ProtocolError);
                 #else
                 return inWebRequest.isError;
                 #endif // USE_SEPARATE_ERROR_CHECKS
