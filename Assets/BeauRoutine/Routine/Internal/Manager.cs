@@ -306,7 +306,10 @@ namespace BeauRoutine.Internal
             Host = hostGO.AddComponent<RoutineUnityHost>();
             Host.Initialize(this);
             hostGO.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor;
+
+#if !UNITY_EDITOR
             GameObject.DontDestroyOnLoad(hostGO);
+#endif
 
             Log("Initialize() -- Version " + VERSION.ToString());
 
