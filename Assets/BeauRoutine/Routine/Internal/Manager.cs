@@ -307,9 +307,10 @@ namespace BeauRoutine.Internal
             Host.Initialize(this);
             hostGO.hideFlags = HideFlags.HideInHierarchy | HideFlags.DontSaveInEditor;
 
-#if !UNITY_EDITOR
-            GameObject.DontDestroyOnLoad(hostGO);
-#endif
+            if (Application.isPlaying)
+            {
+                GameObject.DontDestroyOnLoad(hostGO);
+            }
 
             Log("Initialize() -- Version " + VERSION.ToString());
 

@@ -193,6 +193,11 @@ namespace BeauRoutine.Internal
 
         private void OnEditorUpdate()
         {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+
             FixedUpdate();
             DoFixedUpdate();
             Update();
