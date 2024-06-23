@@ -62,6 +62,7 @@ namespace BeauRoutine.Internal
         private void RegisterCallbacks()
         {
             #if UNITY_EDITOR
+            EditorApplication.update += OnEditorUpdate;
 
             #if USE_PAUSE_STATE_EVENT
             EditorApplication.pauseStateChanged += OnEditorPauseChanged;
@@ -75,6 +76,7 @@ namespace BeauRoutine.Internal
         private void DeregisterCallbacks()
         {
             #if UNITY_EDITOR
+            EditorApplication.update -= OnEditorUpdate;
 
             #if USE_PAUSE_STATE_EVENT
             EditorApplication.pauseStateChanged -= OnEditorPauseChanged;
@@ -189,6 +191,20 @@ namespace BeauRoutine.Internal
 
         #if UNITY_EDITOR
 
+        private void OnEditorUpdate()
+        {
+            if (Application.isPlaying)
+            {
+                return;
+            }
+
+            FixedUpdate();
+            DoFixedUpdate();
+            Update();
+            LateUpdate();
+            DoEndOfFrame();
+        }
+
         #if USE_PAUSE_STATE_EVENT
 
         private void OnEditorPauseChanged(PauseState inState)
@@ -216,10 +232,15 @@ namespace BeauRoutine.Internal
             while(true)
             {
                 yield return s_CachedWaitForFixedUpdate;
+                DoFixedUpdate();
+            }
+        }
+
+        private void DoFixedUpdate()
+        {
                 if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForFixedUpdate) > 0)
                 {
                     m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForFixedUpdate);
-                }
             }
         }
 
@@ -228,6 +249,12 @@ namespace BeauRoutine.Internal
             while (true)
             {
                 yield return s_CachedWaitForEndOfFrame;
+                DoEndOfFrame();
+            }
+        }
+
+        private void DoEndOfFrame()
+        {
                 if (m_Manager.Fibers.GetYieldCount(YieldPhase.WaitForEndOfFrame) > 0)
                 {
                     m_Manager.UpdateYield(Time.deltaTime, YieldPhase.WaitForEndOfFrame);
@@ -240,7 +267,6 @@ namespace BeauRoutine.Internal
                 m_Manager.MarkFrameEnd();
 
                 m_LastKnownVsync = QualitySettings.vSyncCount > 0;
-            }
         }
 
         private void StopYieldInstructions()
